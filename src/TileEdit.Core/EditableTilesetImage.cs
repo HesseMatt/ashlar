@@ -19,6 +19,8 @@ public sealed class EditableTilesetImage : IDisposable
 
     public static EditableTilesetImage Load(string filePath) => new(Image.Load<Rgba32>(filePath));
 
+    public static EditableTilesetImage Load(byte[] encodedImageBytes) => new(Image.Load<Rgba32>(encodedImageBytes));
+
     public void ClearRegion(TileRegion region)
     {
         _image.ProcessPixelRows(accessor =>

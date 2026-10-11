@@ -20,8 +20,10 @@
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
             <Button Content="Open tileset..." Click="OnOpenTilesetClick" />
+            <Button Content="Open project..." Click="OnOpenProjectClick" />
             <Button Content="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" />
             <Button Content="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding HasImage}" />
+            <Button Content="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" />
             <Button Content="Delete" Click="OnDeleteSelectedTileClick" IsEnabled="{Binding HasSelectedTile}" />
             <Button Content="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
             <TextBlock Text="Tile width:" VerticalAlignment="Center" />

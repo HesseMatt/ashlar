@@ -84,6 +84,8 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = Path.GetFileName(filePath);
+        SelectedTile = null;
+        IsMovePending = false;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
 
         var suggestion = TileSizeDetector.DetectCandidates(image.Width, image.Height).First();
@@ -91,7 +93,49 @@ public partial class MainViewModel : ViewModelBase
         TileHeight = suggestion.TileHeight;
         RebuildGrid();
 
-        StatusMessage = $"{Path.GetFileName(filePath)} ({image.Width}x{image.Height}) - suggested tile size {TileWidth}x{TileHeight}.";
+        StatusMessage = $"{_sourceFileName} ({image.Width}x{image.Height}) - suggested tile size {TileWidth}x{TileHeight}.";
+    }
+
+    public void OpenProject(string filePath)
+    {
+        TilesetProject project;
+        try
+        {
+            project = TilesetProjectFile.Load(filePath);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not open project '{Path.GetFileName(filePath)}': {ex.Message}";
+            return;
+        }
+
+        EditableTilesetImage image;
+        try
+        {
+            image = EditableTilesetImage.Load(project.ImagePng);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not load the image stored in '{Path.GetFileName(filePath)}': {ex.Message}";
+            return;
+        }
+
+        _editableImage?.Dispose();
+        _editableImage = image;
+
+        ImageWidth = image.Width;
+        ImageHeight = image.Height;
+        RefreshPreviewBitmap();
+
+        _sourceFileName = project.ImageFileName;
+        SelectedTile = null;
+        IsMovePending = false;
+        TexturePath = project.TexturePath;
+        TileWidth = project.TileWidth;
+        TileHeight = project.TileHeight;
+        Tiles = new ObservableCollection<TileRegion>(project.Tiles);
+
+        StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
     }
 
     public void ExportXml(string outputPath)
@@ -163,6 +207,24 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             StatusMessage = $"Could not save image to '{Path.GetFileName(outputPath)}': {ex.Message}";
+        }
+    }
+
+    public void SaveProject(string outputPath)
+    {
+        if (_sourceFileName is null || _editableImage is null)
+            return;
+
+        var project = new TilesetProject(_sourceFileName, _editableImage.EncodeToPng(), TexturePath, TileWidth, TileHeight, Tiles);
+
+        try
+        {
+            TilesetProjectFile.Save(project, outputPath);
+            StatusMessage = $"Saved project to {Path.GetFileName(outputPath)}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}";
         }
     }
 

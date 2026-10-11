@@ -33,6 +33,26 @@ public partial class MainWindow : Window
             viewModel.LoadTileset(path);
     }
 
+    private async void OnOpenProjectClick(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open tileset project",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("TileEdit project") { Patterns = ["*.json"] }],
+        });
+
+        if (files.Count == 0)
+            return;
+
+        var path = files[0].TryGetLocalPath();
+        if (path is null)
+            return;
+
+        if (DataContext is MainViewModel viewModel)
+            viewModel.OpenProject(path);
+    }
+
     private async void OnExportXmlClick(object? sender, RoutedEventArgs e)
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -97,5 +117,26 @@ public partial class MainWindow : Window
 
         if (DataContext is MainViewModel viewModel)
             viewModel.SaveImage(path);
+    }
+
+    private async void OnSaveProjectClick(object? sender, RoutedEventArgs e)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save tileset project",
+            SuggestedFileName = "tileset",
+            DefaultExtension = "tileproj.json",
+            FileTypeChoices = [new FilePickerFileType("TileEdit project") { Patterns = ["*.tileproj.json"] }],
+        });
+
+        if (file is null)
+            return;
+
+        var path = file.TryGetLocalPath();
+        if (path is null)
+            return;
+
+        if (DataContext is MainViewModel viewModel)
+            viewModel.SaveProject(path);
     }
 }
