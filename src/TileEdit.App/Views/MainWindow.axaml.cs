@@ -65,4 +65,31 @@ public partial class MainWindow : Window
         var position = e.GetPosition(canvas);
         viewModel.SelectTileAt((int)position.X, (int)position.Y);
     }
+
+    private void OnDeleteSelectedTileClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.DeleteSelectedTile();
+    }
+
+    private async void OnSaveImageClick(object? sender, RoutedEventArgs e)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save tileset image",
+            SuggestedFileName = "tileset",
+            DefaultExtension = "png",
+            FileTypeChoices = [new FilePickerFileType("PNG image") { Patterns = ["*.png"] }],
+        });
+
+        if (file is null)
+            return;
+
+        var path = file.TryGetLocalPath();
+        if (path is null)
+            return;
+
+        if (DataContext is MainViewModel viewModel)
+            viewModel.SaveImage(path);
+    }
 }

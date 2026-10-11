@@ -39,11 +39,15 @@ public partial class MainViewModel : ViewModelBase
     private ObservableCollection<TileRegion> _tiles = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTile))]
     private TileRegion? _selectedTile;
 
     private string? _sourceFileName;
+    private EditableTilesetImage? _editableImage;
 
     public bool HasImage => PreviewBitmap is not null;
+
+    public bool HasSelectedTile => SelectedTile is not null;
 
     partial void OnTileWidthChanged(int value) => RebuildGrid();
 
@@ -51,10 +55,10 @@ public partial class MainViewModel : ViewModelBase
 
     public void LoadTileset(string filePath)
     {
-        TilesetImage image;
+        EditableTilesetImage image;
         try
         {
-            image = TilesetImageLoader.Load(filePath);
+            image = EditableTilesetImage.Load(filePath);
         }
         catch (Exception ex)
         {
@@ -62,10 +66,12 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        using var stream = new MemoryStream(image.Bytes);
-        PreviewBitmap = new Bitmap(stream);
+        _editableImage?.Dispose();
+        _editableImage = image;
+
         ImageWidth = image.Width;
         ImageHeight = image.Height;
+        RefreshPreviewBitmap();
 
         _sourceFileName = Path.GetFileName(filePath);
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
@@ -107,6 +113,35 @@ public partial class MainViewModel : ViewModelBase
             : $"Selected {SelectedTile.Name}.";
     }
 
+    public void DeleteSelectedTile()
+    {
+        if (SelectedTile is not { } tile || _editableImage is null)
+            return;
+
+        _editableImage.ClearRegion(tile);
+        Tiles.Remove(tile);
+        SelectedTile = null;
+        RefreshPreviewBitmap();
+
+        StatusMessage = $"Deleted {tile.Name}. Use \"Save image...\" to write this change to disk.";
+    }
+
+    public void SaveImage(string outputPath)
+    {
+        if (_editableImage is null)
+            return;
+
+        try
+        {
+            _editableImage.SaveAsPng(outputPath);
+            StatusMessage = $"Saved image to {Path.GetFileName(outputPath)}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not save image to '{Path.GetFileName(outputPath)}': {ex.Message}";
+        }
+    }
+
     private void RebuildGrid()
     {
         if (_sourceFileName is null)
@@ -115,5 +150,14 @@ public partial class MainViewModel : ViewModelBase
         Tiles = new ObservableCollection<TileRegion>(
             TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
         SelectedTile = null;
+    }
+
+    private void RefreshPreviewBitmap()
+    {
+        if (_editableImage is null)
+            return;
+
+        using var stream = new MemoryStream(_editableImage.EncodeToPng());
+        PreviewBitmap = new Bitmap(stream);
     }
 }
