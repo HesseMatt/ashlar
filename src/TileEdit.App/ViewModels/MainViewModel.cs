@@ -40,7 +40,13 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedTile))]
+    [NotifyPropertyChangedFor(nameof(CanToggleMove))]
     private TileRegion? _selectedTile;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MoveButtonLabel))]
+    [NotifyPropertyChangedFor(nameof(CanToggleMove))]
+    private bool _isMovePending;
 
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
@@ -48,6 +54,10 @@ public partial class MainViewModel : ViewModelBase
     public bool HasImage => PreviewBitmap is not null;
 
     public bool HasSelectedTile => SelectedTile is not null;
+
+    public bool CanToggleMove => HasSelectedTile || IsMovePending;
+
+    public string MoveButtonLabel => IsMovePending ? "Cancel move" : "Start move";
 
     partial void OnTileWidthChanged(int value) => RebuildGrid();
 
@@ -102,15 +112,12 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public void SelectTileAt(int pixelX, int pixelY)
+    public void HandleCanvasClick(int pixelX, int pixelY)
     {
-        SelectedTile = Tiles.FirstOrDefault(tile =>
-            pixelX >= tile.X && pixelX < tile.X + tile.Width &&
-            pixelY >= tile.Y && pixelY < tile.Y + tile.Height);
-
-        StatusMessage = SelectedTile is null
-            ? "No tile selected."
-            : $"Selected {SelectedTile.Name}.";
+        if (IsMovePending)
+            CompleteMove(pixelX, pixelY);
+        else
+            SelectTileAt(pixelX, pixelY);
     }
 
     public void DeleteSelectedTile()
@@ -118,12 +125,29 @@ public partial class MainViewModel : ViewModelBase
         if (SelectedTile is not { } tile || _editableImage is null)
             return;
 
+        IsMovePending = false;
         _editableImage.ClearRegion(tile);
         Tiles.Remove(tile);
         SelectedTile = null;
         RefreshPreviewBitmap();
 
         StatusMessage = $"Deleted {tile.Name}. Use \"Save image...\" to write this change to disk.";
+    }
+
+    public void ToggleMove()
+    {
+        if (IsMovePending)
+        {
+            IsMovePending = false;
+            StatusMessage = "Move cancelled.";
+            return;
+        }
+
+        if (SelectedTile is not { } tile)
+            return;
+
+        IsMovePending = true;
+        StatusMessage = $"Click a destination cell to move {tile.Name}, or click \"Cancel move\" to abort.";
     }
 
     public void SaveImage(string outputPath)
@@ -142,6 +166,73 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    private void SelectTileAt(int pixelX, int pixelY)
+    {
+        SelectedTile = Tiles.FirstOrDefault(tile =>
+            pixelX >= tile.X && pixelX < tile.X + tile.Width &&
+            pixelY >= tile.Y && pixelY < tile.Y + tile.Height);
+
+        StatusMessage = SelectedTile is null
+            ? "No tile selected."
+            : $"Selected {SelectedTile.Name}.";
+    }
+
+    private void CompleteMove(int pixelX, int pixelY)
+    {
+        IsMovePending = false;
+
+        if (SelectedTile is not { } tile || _editableImage is null)
+            return;
+
+        if (pixelX < 0 || pixelY < 0 || pixelX >= ImageWidth || pixelY >= ImageHeight)
+        {
+            StatusMessage = "Move cancelled: destination is outside the image.";
+            return;
+        }
+
+        var targetX = pixelX / TileWidth * TileWidth;
+        var targetY = pixelY / TileHeight * TileHeight;
+
+        if (targetX + TileWidth > ImageWidth || targetY + TileHeight > ImageHeight)
+        {
+            StatusMessage = "Move cancelled: destination is outside the tile grid.";
+            return;
+        }
+
+        if (targetX == tile.X && targetY == tile.Y)
+        {
+            StatusMessage = "Move cancelled: that's the tile's current cell.";
+            return;
+        }
+
+        _editableImage.MoveRegion(tile, targetX, targetY);
+
+        var occupant = Tiles.FirstOrDefault(t => t.X == targetX && t.Y == targetY);
+        var movedTile = tile with { X = targetX, Y = targetY };
+        ReplaceTile(tile, movedTile);
+
+        if (occupant is { } occupiedTile)
+        {
+            var displacedTile = occupiedTile with { X = tile.X, Y = tile.Y };
+            ReplaceTile(occupiedTile, displacedTile);
+            StatusMessage = $"Swapped {movedTile.Name} and {displacedTile.Name}.";
+        }
+        else
+        {
+            StatusMessage = $"Moved {movedTile.Name} to ({targetX}, {targetY}).";
+        }
+
+        SelectedTile = movedTile;
+        RefreshPreviewBitmap();
+    }
+
+    private void ReplaceTile(TileRegion oldTile, TileRegion newTile)
+    {
+        var index = Tiles.IndexOf(oldTile);
+        if (index >= 0)
+            Tiles[index] = newTile;
+    }
+
     private void RebuildGrid()
     {
         if (_sourceFileName is null)
@@ -150,6 +241,7 @@ public partial class MainViewModel : ViewModelBase
         Tiles = new ObservableCollection<TileRegion>(
             TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
         SelectedTile = null;
+        IsMovePending = false;
     }
 
     private void RefreshPreviewBitmap()

@@ -63,13 +63,19 @@ public partial class MainWindow : Window
             return;
 
         var position = e.GetPosition(canvas);
-        viewModel.SelectTileAt((int)position.X, (int)position.Y);
+        viewModel.HandleCanvasClick((int)position.X, (int)position.Y);
     }
 
     private void OnDeleteSelectedTileClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
             viewModel.DeleteSelectedTile();
+    }
+
+    private void OnToggleMoveClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.ToggleMove();
     }
 
     private async void OnSaveImageClick(object? sender, RoutedEventArgs e)

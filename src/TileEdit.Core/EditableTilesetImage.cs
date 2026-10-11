@@ -32,6 +32,38 @@ public sealed class EditableTilesetImage : IDisposable
         });
     }
 
+    // Always swaps both blocks, never just overwrites: if the target cell is
+    // empty, its pixels are already transparent (from an earlier delete), so
+    // swapping them into the source cell has the same effect as clearing it.
+    public void MoveRegion(TileRegion from, int targetX, int targetY)
+    {
+        var width = from.Width;
+        var height = from.Height;
+        var buffer = new Rgba32[width * height];
+
+        _image.ProcessPixelRows(accessor =>
+        {
+            for (var y = 0; y < height; y++)
+            {
+                var sourceRow = accessor.GetRowSpan(from.Y + y).Slice(from.X, width);
+                sourceRow.CopyTo(buffer.AsSpan(y * width, width));
+            }
+
+            for (var y = 0; y < height; y++)
+            {
+                var sourceRow = accessor.GetRowSpan(from.Y + y).Slice(from.X, width);
+                var targetRow = accessor.GetRowSpan(targetY + y).Slice(targetX, width);
+                targetRow.CopyTo(sourceRow);
+            }
+
+            for (var y = 0; y < height; y++)
+            {
+                var targetRow = accessor.GetRowSpan(targetY + y).Slice(targetX, width);
+                buffer.AsSpan(y * width, width).CopyTo(targetRow);
+            }
+        });
+    }
+
     public byte[] EncodeToPng()
     {
         using var stream = new MemoryStream();

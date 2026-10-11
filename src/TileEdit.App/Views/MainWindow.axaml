@@ -23,6 +23,7 @@
             <Button Content="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" />
             <Button Content="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding HasImage}" />
             <Button Content="Delete" Click="OnDeleteSelectedTileClick" IsEnabled="{Binding HasSelectedTile}" />
+            <Button Content="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
             <TextBlock Text="Tile width:" VerticalAlignment="Center" />
             <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" />
             <TextBlock Text="Tile height:" VerticalAlignment="Center" />

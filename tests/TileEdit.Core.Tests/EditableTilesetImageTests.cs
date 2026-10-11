@@ -49,6 +49,70 @@ public class EditableTilesetImageTests
     }
 
     [Fact]
+    public void MoveRegion_OntoAnEmptyCell_RelocatesThePixelsAndClearsTheSource()
+    {
+        var filePath = Path.GetTempFileName() + ".png";
+        try
+        {
+            using (var image = new Image<Rgba32>(4, 2))
+            {
+                for (var y = 0; y < 2; y++)
+                    for (var x = 0; x < 2; x++)
+                        image[x, y] = Red;
+                image.SaveAsPng(filePath);
+            }
+
+            using var editable = EditableTilesetImage.Load(filePath);
+            editable.MoveRegion(new TileRegion("tile_0001", 0, 0, 2, 2), 2, 0);
+
+            using var result = Image.Load<Rgba32>(editable.EncodeToPng());
+
+            Assert.Equal(default(Rgba32), result[0, 0]);
+            Assert.Equal(default(Rgba32), result[1, 1]);
+            Assert.Equal(Red, result[2, 0]);
+            Assert.Equal(Red, result[3, 1]);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void MoveRegion_OntoAnOccupiedCell_SwapsBothTilesPixels()
+    {
+        var filePath = Path.GetTempFileName() + ".png";
+        try
+        {
+            using (var image = new Image<Rgba32>(4, 2))
+            {
+                for (var y = 0; y < 2; y++)
+                {
+                    for (var x = 0; x < 2; x++)
+                        image[x, y] = Red;
+                    for (var x = 2; x < 4; x++)
+                        image[x, y] = Blue;
+                }
+                image.SaveAsPng(filePath);
+            }
+
+            using var editable = EditableTilesetImage.Load(filePath);
+            editable.MoveRegion(new TileRegion("tile_0001", 0, 0, 2, 2), 2, 0);
+
+            using var result = Image.Load<Rgba32>(editable.EncodeToPng());
+
+            Assert.Equal(Blue, result[0, 0]);
+            Assert.Equal(Blue, result[1, 1]);
+            Assert.Equal(Red, result[2, 0]);
+            Assert.Equal(Red, result[3, 1]);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
     public void SaveAsPng_WritesTheCurrentPixelsToDisk()
     {
         var sourcePath = CreateSampleImage(2, 2, Blue);
