@@ -38,6 +38,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<TileRegion> _tiles = new();
 
+    [ObservableProperty]
+    private TileRegion? _selectedTile;
+
     private string? _sourceFileName;
 
     public bool HasImage => PreviewBitmap is not null;
@@ -93,6 +96,17 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    public void SelectTileAt(int pixelX, int pixelY)
+    {
+        SelectedTile = Tiles.FirstOrDefault(tile =>
+            pixelX >= tile.X && pixelX < tile.X + tile.Width &&
+            pixelY >= tile.Y && pixelY < tile.Y + tile.Height);
+
+        StatusMessage = SelectedTile is null
+            ? "No tile selected."
+            : $"Selected {SelectedTile.Name}.";
+    }
+
     private void RebuildGrid()
     {
         if (_sourceFileName is null)
@@ -100,5 +114,6 @@ public partial class MainViewModel : ViewModelBase
 
         Tiles = new ObservableCollection<TileRegion>(
             TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
+        SelectedTile = null;
     }
 }

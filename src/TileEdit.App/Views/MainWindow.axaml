@@ -32,10 +32,12 @@
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,12,0,0" />
 
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}">
+            <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}"
+                   PointerPressed="OnTileCanvasPointerPressed">
                 <Image Source="{Binding PreviewBitmap}" Stretch="None" />
                 <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
+                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
+                                           SelectedTile="{Binding SelectedTile}" />
             </Panel>
         </ScrollViewer>
     </DockPanel>

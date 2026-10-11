@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using TileEdit.App.ViewModels;
@@ -51,5 +52,17 @@ public partial class MainWindow : Window
 
         if (DataContext is MainViewModel viewModel)
             viewModel.ExportXml(path);
+    }
+
+    private void OnTileCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control canvas)
+            return;
+
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        var position = e.GetPosition(canvas);
+        viewModel.SelectTileAt((int)position.X, (int)position.Y);
     }
 }

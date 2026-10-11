@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using TileEdit.Core.Model;
 
 namespace TileEdit.App.Controls;
 
@@ -18,9 +19,12 @@ public class TileGridOverlay : Control
     public static readonly StyledProperty<int> TileHeightProperty =
         AvaloniaProperty.Register<TileGridOverlay, int>(nameof(TileHeight));
 
+    public static readonly StyledProperty<TileRegion?> SelectedTileProperty =
+        AvaloniaProperty.Register<TileGridOverlay, TileRegion?>(nameof(SelectedTile));
+
     static TileGridOverlay()
     {
-        AffectsRender<TileGridOverlay>(ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty);
+        AffectsRender<TileGridOverlay>(ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTileProperty);
     }
 
     public int ImageWidth
@@ -47,6 +51,12 @@ public class TileGridOverlay : Control
         set => SetValue(TileHeightProperty, value);
     }
 
+    public TileRegion? SelectedTile
+    {
+        get => GetValue(SelectedTileProperty);
+        set => SetValue(SelectedTileProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         if (TileWidth <= 0 || TileHeight <= 0)
@@ -59,5 +69,11 @@ public class TileGridOverlay : Control
 
         for (var y = TileHeight; y < ImageHeight; y += TileHeight)
             context.DrawLine(pen, new Point(0, y), new Point(ImageWidth, y));
+
+        if (SelectedTile is { } selected)
+        {
+            var highlightPen = new Pen(Brushes.Yellow, 2);
+            context.DrawRectangle(highlightPen, new Rect(selected.X, selected.Y, selected.Width, selected.Height));
+        }
     }
 }
