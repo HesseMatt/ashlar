@@ -1,6 +1,7 @@
 # AI / planning material — not versioned
 .planning/
 .claude/settings.local.json
+CLAUDE.md
 
 ## .NET / Visual Studio / Rider standard ignores
 bin/

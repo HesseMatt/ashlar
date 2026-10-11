@@ -14,8 +14,7 @@ development — primarily for use with **MonoGame** / `MonoGame.Extended`.
   names.
 
 Planned for later phases: delete/move tiles including adjusting the
-image file, tile grouping, atlas compacting. See [CLAUDE.md](CLAUDE.md)
-for details.
+image file, tile grouping, atlas compacting.
 
 ## Tech stack
 
