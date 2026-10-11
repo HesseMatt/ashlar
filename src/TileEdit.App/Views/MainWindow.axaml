@@ -1,13 +1,15 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TileEdit.App.ViewModels"
+        xmlns:controls="using:TileEdit.App.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
         x:Class="TileEdit.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="TileEdit.App">
+        Title="TileEdit"
+        Width="900" Height="650">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -15,8 +17,24 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <TextBox Text="{Binding Greeting}"
-             HorizontalAlignment="Center"
-             VerticalAlignment="Center" />
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+            <Button Content="Open tileset..." Click="OnOpenTilesetClick" />
+            <TextBlock Text="Tile width:" VerticalAlignment="Center" />
+            <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" />
+            <TextBlock Text="Tile height:" VerticalAlignment="Center" />
+            <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="100" />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,12,0,0" />
+
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}">
+                <Image Source="{Binding PreviewBitmap}" Stretch="None" />
+                <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
+            </Panel>
+        </ScrollViewer>
+    </DockPanel>
 
 </Window>
