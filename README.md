@@ -3,7 +3,7 @@
 Lightweight, local desktop application for managing tilesets for game
 development — primarily for use with **MonoGame** / `MonoGame.Extended`.
 
-> **Status:** early development, no runnable code yet.
+> **Status:** v1 complete; tile editing (delete/move) in progress.
 
 ## Feature scope (v1)
 
@@ -13,8 +13,15 @@ development — primarily for use with **MonoGame** / `MonoGame.Extended`.
   (see [`example.xml`](example.xml)), including unique, stable tile
   names.
 
-Planned for later phases: delete/move tiles including adjusting the
-image file, tile grouping, atlas compacting.
+## Planned (in progress)
+
+- Delete and move individual tiles, including adjusting the underlying
+  image file.
+- A project file to resume editing a tileset later — and, for a
+  tileset that was only ever exported before this existed, resuming
+  straight from that existing export XML instead of starting over.
+
+Further out: tile grouping, atlas compacting.
 
 ## Tech stack
 
