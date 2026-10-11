@@ -31,4 +31,25 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
             viewModel.LoadTileset(path);
     }
+
+    private async void OnExportXmlClick(object? sender, RoutedEventArgs e)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export tileset XML",
+            SuggestedFileName = "tileset",
+            DefaultExtension = "xml",
+            FileTypeChoices = [new FilePickerFileType("XML file") { Patterns = ["*.xml"] }],
+        });
+
+        if (file is null)
+            return;
+
+        var path = file.TryGetLocalPath();
+        if (path is null)
+            return;
+
+        if (DataContext is MainViewModel viewModel)
+            viewModel.ExportXml(path);
+    }
 }

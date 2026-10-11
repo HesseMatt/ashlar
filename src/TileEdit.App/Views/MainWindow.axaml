@@ -20,10 +20,13 @@
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
             <Button Content="Open tileset..." Click="OnOpenTilesetClick" />
+            <Button Content="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" />
             <TextBlock Text="Tile width:" VerticalAlignment="Center" />
             <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" />
             <TextBlock Text="Tile height:" VerticalAlignment="Center" />
             <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="100" />
+            <TextBlock Text="Texture path:" VerticalAlignment="Center" />
+            <TextBox Text="{Binding TexturePath}" Width="160" />
         </StackPanel>
 
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,12,0,0" />

@@ -5,6 +5,8 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TileEdit.Core;
 using TileEdit.Core.Detection;
+using TileEdit.Core.Model;
+using TileEdit.Core.Serialization;
 
 namespace TileEdit.App.ViewModels;
 
@@ -27,7 +29,12 @@ public partial class MainViewModel : ViewModelBase
     private int _tileHeight = 16;
 
     [ObservableProperty]
+    private string _texturePath = string.Empty;
+
+    [ObservableProperty]
     private string _statusMessage = "Open a tileset image to get started.";
+
+    private string? _sourceFileName;
 
     public bool HasImage => PreviewBitmap is not null;
 
@@ -49,10 +56,32 @@ public partial class MainViewModel : ViewModelBase
         ImageWidth = image.Width;
         ImageHeight = image.Height;
 
+        _sourceFileName = Path.GetFileName(filePath);
+        TexturePath = Path.GetFileNameWithoutExtension(filePath);
+
         var suggestion = TileSizeDetector.DetectCandidates(image.Width, image.Height).First();
         TileWidth = suggestion.TileWidth;
         TileHeight = suggestion.TileHeight;
 
         StatusMessage = $"{Path.GetFileName(filePath)} ({image.Width}x{image.Height}) - suggested tile size {TileWidth}x{TileHeight}.";
+    }
+
+    public void ExportXml(string outputPath)
+    {
+        if (_sourceFileName is null)
+            return;
+
+        var tiles = TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight);
+        var tileset = new Tileset(TexturePath, TileWidth, TileHeight, tiles);
+
+        try
+        {
+            TextureAtlasXmlWriter.Write(tileset, outputPath);
+            StatusMessage = $"Exported {tiles.Count} tiles to {Path.GetFileName(outputPath)}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not export to '{Path.GetFileName(outputPath)}': {ex.Message}";
+        }
     }
 }
