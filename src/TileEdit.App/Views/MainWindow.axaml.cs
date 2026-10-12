@@ -184,9 +184,11 @@ public partial class MainWindow : Window
             return;
 
         var anchorPosition = e.GetPosition(TileCanvasScrollViewer);
-        var oldZoom = viewModel.ZoomLevel;
-        var newZoom = e.Delta.Y > 0 ? viewModel.ZoomIn() : viewModel.ZoomOut();
-        ApplyZoomAnchored(oldZoom, newZoom, anchorPosition);
+        var zoomIn = e.Delta.Y > 0;
+        AnchoredZoom(anchorPosition, () =>
+        {
+            if (zoomIn) viewModel.ZoomIn(); else viewModel.ZoomOut();
+        });
     }
 
     private void OnZoomInClick(object? sender, RoutedEventArgs e)
@@ -194,8 +196,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        var oldZoom = viewModel.ZoomLevel;
-        ApplyZoomAnchored(oldZoom, viewModel.ZoomIn(), ViewportCenter());
+        AnchoredZoom(ViewportCenter(), () => viewModel.ZoomIn());
     }
 
     private void OnZoomOutClick(object? sender, RoutedEventArgs e)
@@ -203,8 +204,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        var oldZoom = viewModel.ZoomLevel;
-        ApplyZoomAnchored(oldZoom, viewModel.ZoomOut(), ViewportCenter());
+        AnchoredZoom(ViewportCenter(), () => viewModel.ZoomOut());
     }
 
     private void OnResetZoomClick(object? sender, RoutedEventArgs e)
@@ -212,33 +212,35 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        var oldZoom = viewModel.ZoomLevel;
-        viewModel.ResetZoom();
-        ApplyZoomAnchored(oldZoom, viewModel.ZoomLevel, ViewportCenter());
+        AnchoredZoom(ViewportCenter(), () => viewModel.ResetZoom());
     }
 
     private Point ViewportCenter() =>
         new(TileCanvasScrollViewer.Viewport.Width / 2, TileCanvasScrollViewer.Viewport.Height / 2);
 
-    // The ScrollViewer's Extent only reflects the new zoom after a layout pass has run,
-    // which is why this forces one before reading it to compute the anchored offset.
-    private void ApplyZoomAnchored(double oldZoom, double newZoom, Point anchorViewportPosition)
+    // Keeps the image pixel under anchorViewportPosition at that same screen
+    // position across a zoom change. This goes through Avalonia's own
+    // coordinate-transform APIs (TranslatePoint) rather than reconstructing
+    // the Offset/RenderTransform math by hand, because the canvas is
+    // center-aligned by the ScrollViewer whenever it's smaller than the
+    // viewport (i.e. at low zoom) - a hand-rolled "offset + position" formula
+    // silently ignores that alignment and anchors to the wrong image pixel.
+    private void AnchoredZoom(Point anchorViewportPosition, Action applyZoomChange)
     {
-        if (newZoom == oldZoom)
-            return;
+        var imagePoint = TileCanvasScrollViewer.TranslatePoint(anchorViewportPosition, TileCanvasContent);
 
-        var oldOffset = TileCanvasScrollViewer.Offset;
-        var imagePoint = new Point(
-            (oldOffset.X + anchorViewportPosition.X) / oldZoom,
-            (oldOffset.Y + anchorViewportPosition.Y) / oldZoom);
-
+        applyZoomChange();
         TileCanvasScrollViewer.GetLayoutManager()?.ExecuteLayoutPass();
 
-        var newOffset = new Vector(
-            imagePoint.X * newZoom - anchorViewportPosition.X,
-            imagePoint.Y * newZoom - anchorViewportPosition.Y);
+        if (imagePoint is not { } anchorImagePoint)
+            return;
 
-        TileCanvasScrollViewer.Offset = ClampOffset(newOffset);
+        var renderedAt = TileCanvasContent.TranslatePoint(anchorImagePoint, TileCanvasScrollViewer);
+        if (renderedAt is not { } actualPosition)
+            return;
+
+        var drift = anchorViewportPosition - actualPosition;
+        TileCanvasScrollViewer.Offset = ClampOffset(TileCanvasScrollViewer.Offset - drift);
     }
 
     private Vector ClampOffset(Vector offset)
