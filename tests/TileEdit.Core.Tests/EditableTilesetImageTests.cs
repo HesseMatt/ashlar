@@ -1,13 +1,13 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 using TileEdit.Core.Model;
 
 namespace TileEdit.Core.Tests;
 
 public class EditableTilesetImageTests
 {
-    private static readonly Rgba32 Red = new(255, 0, 0, 255);
-    private static readonly Rgba32 Blue = new(0, 0, 255, 255);
+    private static readonly SKColor Red = new(255, 0, 0, 255);
+    private static readonly SKColor Blue = new(0, 0, 255, 255);
+    private static readonly SKColor Transparent = new(0, 0, 0, 0);
 
     [Fact]
     public void Load_ReadsDimensionsOfTheFile()
@@ -35,12 +35,12 @@ public class EditableTilesetImageTests
             using var image = EditableTilesetImage.Load(filePath);
             image.ClearRegion(new TileRegion("tile_0001", 0, 0, 2, 2));
 
-            using var result = Image.Load<Rgba32>(image.EncodeToPng());
+            using var result = DecodeRgba(image.EncodeToPng());
 
-            Assert.Equal(default(Rgba32), result[0, 0]);
-            Assert.Equal(default(Rgba32), result[1, 1]);
-            Assert.Equal(Red, result[2, 2]);
-            Assert.Equal(Red, result[3, 3]);
+            Assert.Equal(Transparent, result.GetPixel(0, 0));
+            Assert.Equal(Transparent, result.GetPixel(1, 1));
+            Assert.Equal(Red, result.GetPixel(2, 2));
+            Assert.Equal(Red, result.GetPixel(3, 3));
         }
         finally
         {
@@ -54,23 +54,23 @@ public class EditableTilesetImageTests
         var filePath = Path.GetTempFileName() + ".png";
         try
         {
-            using (var image = new Image<Rgba32>(4, 2))
+            using (var image = new SKBitmap(new SKImageInfo(4, 2, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
             {
                 for (var y = 0; y < 2; y++)
                     for (var x = 0; x < 2; x++)
-                        image[x, y] = Red;
-                image.SaveAsPng(filePath);
+                        image.SetPixel(x, y, Red);
+                SavePng(image, filePath);
             }
 
             using var editable = EditableTilesetImage.Load(filePath);
             editable.MoveRegion(new TileRegion("tile_0001", 0, 0, 2, 2), 2, 0);
 
-            using var result = Image.Load<Rgba32>(editable.EncodeToPng());
+            using var result = DecodeRgba(editable.EncodeToPng());
 
-            Assert.Equal(default(Rgba32), result[0, 0]);
-            Assert.Equal(default(Rgba32), result[1, 1]);
-            Assert.Equal(Red, result[2, 0]);
-            Assert.Equal(Red, result[3, 1]);
+            Assert.Equal(Transparent, result.GetPixel(0, 0));
+            Assert.Equal(Transparent, result.GetPixel(1, 1));
+            Assert.Equal(Red, result.GetPixel(2, 0));
+            Assert.Equal(Red, result.GetPixel(3, 1));
         }
         finally
         {
@@ -84,27 +84,27 @@ public class EditableTilesetImageTests
         var filePath = Path.GetTempFileName() + ".png";
         try
         {
-            using (var image = new Image<Rgba32>(4, 2))
+            using (var image = new SKBitmap(new SKImageInfo(4, 2, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
             {
                 for (var y = 0; y < 2; y++)
                 {
                     for (var x = 0; x < 2; x++)
-                        image[x, y] = Red;
+                        image.SetPixel(x, y, Red);
                     for (var x = 2; x < 4; x++)
-                        image[x, y] = Blue;
+                        image.SetPixel(x, y, Blue);
                 }
-                image.SaveAsPng(filePath);
+                SavePng(image, filePath);
             }
 
             using var editable = EditableTilesetImage.Load(filePath);
             editable.MoveRegion(new TileRegion("tile_0001", 0, 0, 2, 2), 2, 0);
 
-            using var result = Image.Load<Rgba32>(editable.EncodeToPng());
+            using var result = DecodeRgba(editable.EncodeToPng());
 
-            Assert.Equal(Blue, result[0, 0]);
-            Assert.Equal(Blue, result[1, 1]);
-            Assert.Equal(Red, result[2, 0]);
-            Assert.Equal(Red, result[3, 1]);
+            Assert.Equal(Blue, result.GetPixel(0, 0));
+            Assert.Equal(Blue, result.GetPixel(1, 1));
+            Assert.Equal(Red, result.GetPixel(2, 0));
+            Assert.Equal(Red, result.GetPixel(3, 1));
         }
         finally
         {
@@ -123,10 +123,10 @@ public class EditableTilesetImageTests
             image.ClearRegion(new TileRegion("tile_0001", 0, 0, 1, 1));
             image.SaveAsPng(outputPath);
 
-            using var result = Image.Load<Rgba32>(outputPath);
+            using var result = DecodeRgba(File.ReadAllBytes(outputPath));
 
-            Assert.Equal(default(Rgba32), result[0, 0]);
-            Assert.Equal(Blue, result[1, 1]);
+            Assert.Equal(Transparent, result.GetPixel(0, 0));
+            Assert.Equal(Blue, result.GetPixel(1, 1));
         }
         finally
         {
@@ -135,14 +135,28 @@ public class EditableTilesetImageTests
         }
     }
 
-    private static string CreateSampleImage(int width, int height, Rgba32 color)
+    private static string CreateSampleImage(int width, int height, SKColor color)
     {
         var filePath = Path.GetTempFileName() + ".png";
-        using var image = new Image<Rgba32>(width, height);
+        using var image = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
         for (var y = 0; y < height; y++)
             for (var x = 0; x < width; x++)
-                image[x, y] = color;
-        image.SaveAsPng(filePath);
+                image.SetPixel(x, y, color);
+        SavePng(image, filePath);
         return filePath;
+    }
+
+    private static void SavePng(SKBitmap image, string filePath)
+    {
+        using var stream = File.Create(filePath);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        data.SaveTo(stream);
+    }
+
+    private static SKBitmap DecodeRgba(byte[] encodedImageBytes)
+    {
+        var bounds = SKBitmap.DecodeBounds(encodedImageBytes);
+        var info = new SKImageInfo(bounds.Width, bounds.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        return SKBitmap.Decode(encodedImageBytes, info)!;
     }
 }

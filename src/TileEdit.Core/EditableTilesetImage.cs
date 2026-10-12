@@ -1,37 +1,47 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 using TileEdit.Core.Model;
 
 namespace TileEdit.Core;
 
 public sealed class EditableTilesetImage : IDisposable
 {
-    private readonly Image<Rgba32> _image;
+    private const int BytesPerPixel = 4;
 
-    private EditableTilesetImage(Image<Rgba32> image)
+    private readonly SKBitmap _bitmap;
+
+    private EditableTilesetImage(SKBitmap bitmap)
     {
-        _image = image;
+        _bitmap = bitmap;
     }
 
-    public int Width => _image.Width;
+    public int Width => _bitmap.Width;
 
-    public int Height => _image.Height;
+    public int Height => _bitmap.Height;
 
-    public static EditableTilesetImage Load(string filePath) => new(Image.Load<Rgba32>(filePath));
+    public static EditableTilesetImage Load(string filePath) => new(Decode(File.ReadAllBytes(filePath)));
 
-    public static EditableTilesetImage Load(byte[] encodedImageBytes) => new(Image.Load<Rgba32>(encodedImageBytes));
+    public static EditableTilesetImage Load(byte[] encodedImageBytes) => new(Decode(encodedImageBytes));
+
+    // Pixel edits below work on raw, unpremultiplied bytes, so the bitmap is
+    // decoded straight into that format rather than whatever the codec's
+    // default happens to be.
+    private static SKBitmap Decode(byte[] encodedImageBytes)
+    {
+        var bounds = SKBitmap.DecodeBounds(encodedImageBytes);
+        var info = new SKImageInfo(bounds.Width, bounds.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        return SKBitmap.Decode(encodedImageBytes, info) ?? throw new InvalidDataException("Could not decode image.");
+    }
 
     public void ClearRegion(TileRegion region)
     {
-        _image.ProcessPixelRows(accessor =>
+        var pixels = _bitmap.GetPixelSpan();
+        var rowBytes = _bitmap.RowBytes;
+
+        for (var y = region.Y; y < region.Y + region.Height; y++)
         {
-            for (var y = region.Y; y < region.Y + region.Height; y++)
-            {
-                var row = accessor.GetRowSpan(y);
-                for (var x = region.X; x < region.X + region.Width; x++)
-                    row[x] = default;
-            }
-        });
+            var row = pixels.Slice(y * rowBytes, rowBytes);
+            row.Slice(region.X * BytesPerPixel, region.Width * BytesPerPixel).Clear();
+        }
     }
 
     // Always swaps both blocks, never just overwrites: if the target cell is
@@ -41,39 +51,44 @@ public sealed class EditableTilesetImage : IDisposable
     {
         var width = from.Width;
         var height = from.Height;
-        var buffer = new Rgba32[width * height];
+        var rowByteWidth = width * BytesPerPixel;
+        var buffer = new byte[height * rowByteWidth];
 
-        _image.ProcessPixelRows(accessor =>
+        var pixels = _bitmap.GetPixelSpan();
+        var rowBytes = _bitmap.RowBytes;
+
+        for (var y = 0; y < height; y++)
         {
-            for (var y = 0; y < height; y++)
-            {
-                var sourceRow = accessor.GetRowSpan(from.Y + y).Slice(from.X, width);
-                sourceRow.CopyTo(buffer.AsSpan(y * width, width));
-            }
+            var sourceRow = pixels.Slice((from.Y + y) * rowBytes + from.X * BytesPerPixel, rowByteWidth);
+            sourceRow.CopyTo(buffer.AsSpan(y * rowByteWidth, rowByteWidth));
+        }
 
-            for (var y = 0; y < height; y++)
-            {
-                var sourceRow = accessor.GetRowSpan(from.Y + y).Slice(from.X, width);
-                var targetRow = accessor.GetRowSpan(targetY + y).Slice(targetX, width);
-                targetRow.CopyTo(sourceRow);
-            }
+        for (var y = 0; y < height; y++)
+        {
+            var sourceRow = pixels.Slice((from.Y + y) * rowBytes + from.X * BytesPerPixel, rowByteWidth);
+            var targetRow = pixels.Slice((targetY + y) * rowBytes + targetX * BytesPerPixel, rowByteWidth);
+            targetRow.CopyTo(sourceRow);
+        }
 
-            for (var y = 0; y < height; y++)
-            {
-                var targetRow = accessor.GetRowSpan(targetY + y).Slice(targetX, width);
-                buffer.AsSpan(y * width, width).CopyTo(targetRow);
-            }
-        });
+        for (var y = 0; y < height; y++)
+        {
+            var targetRow = pixels.Slice((targetY + y) * rowBytes + targetX * BytesPerPixel, rowByteWidth);
+            buffer.AsSpan(y * rowByteWidth, rowByteWidth).CopyTo(targetRow);
+        }
     }
 
     public byte[] EncodeToPng()
     {
-        using var stream = new MemoryStream();
-        _image.SaveAsPng(stream);
-        return stream.ToArray();
+        using var data = _bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
-    public void SaveAsPng(string filePath) => _image.SaveAsPng(filePath);
+    public void SaveAsPng(string filePath)
+    {
+        using var stream = File.Create(filePath);
+        using var data = _bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        data.SaveTo(stream);
+    }
 
-    public void Dispose() => _image.Dispose();
+    public void Dispose() => _bitmap.Dispose();
 }
