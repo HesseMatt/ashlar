@@ -43,6 +43,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedTiles))]
     [NotifyPropertyChangedFor(nameof(CanToggleMove))]
+    [NotifyPropertyChangedFor(nameof(SelectedTileId))]
     private IReadOnlyList<TileRegion> _selectedTiles = Array.Empty<TileRegion>();
 
     [ObservableProperty]
@@ -65,6 +66,13 @@ public partial class MainViewModel : ViewModelBase
     public bool HasSelectedTiles => SelectedTiles.Count > 0;
 
     public bool CanToggleMove => SelectedTiles.Count == 1 || IsMovePending;
+
+    public string SelectedTileId => SelectedTiles.Count switch
+    {
+        0 => "No tile selected",
+        1 => SelectedTiles[0].Name,
+        _ => $"{SelectedTiles.Count} tiles selected",
+    };
 
     private string DefaultGroupName =>
         _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));

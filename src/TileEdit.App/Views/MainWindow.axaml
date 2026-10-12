@@ -43,14 +43,26 @@
             <TextBox Text="{Binding TexturePath}" Width="160" />
         </StackPanel>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="12,0,12,12"
-                    IsVisible="{Binding HasSelectedTiles}">
-            <TextBlock Text="Group:" VerticalAlignment="Center" />
-            <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
-                      Width="200" KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
-        </StackPanel>
-
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="12,0,12,12" />
+
+        <Border DockPanel.Dock="Right" Width="220" Margin="0,0,12,12" Padding="12"
+                BorderBrush="Gray" BorderThickness="1">
+            <StackPanel Spacing="16">
+                <TextBlock Text="Inspector" FontWeight="Bold" />
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Tile ID" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SelectedTileId}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Group" FontWeight="SemiBold" />
+                    <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
+                              IsEnabled="{Binding HasSelectedTiles}" HorizontalAlignment="Stretch"
+                              KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
             <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}"
