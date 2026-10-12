@@ -20,10 +20,18 @@ public partial class MainViewModel : ViewModelBase
     private Bitmap? _previewBitmap;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScaledImageWidth))]
     private int _imageWidth;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScaledImageHeight))]
     private int _imageHeight;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScaledImageWidth))]
+    [NotifyPropertyChangedFor(nameof(ScaledImageHeight))]
+    [NotifyPropertyChangedFor(nameof(ZoomPercentageText))]
+    private double _zoomLevel = 1.0;
 
     [ObservableProperty]
     private int _tileWidth = 16;
@@ -57,11 +65,21 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _groupNameInput = string.Empty;
 
+    private const double ZoomStep = 0.1;
+    private const double MinZoom = 0.25;
+    private const double MaxZoom = 8.0;
+
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
     private bool _isConfirmingGroupNameInput;
 
     public bool HasImage => PreviewBitmap is not null;
+
+    public double ScaledImageWidth => ImageWidth * ZoomLevel;
+
+    public double ScaledImageHeight => ImageHeight * ZoomLevel;
+
+    public string ZoomPercentageText => $"{ZoomLevel:P0}";
 
     public bool HasSelectedTiles => SelectedTiles.Count > 0;
 
@@ -106,6 +124,7 @@ public partial class MainViewModel : ViewModelBase
         _sourceFileName = Path.GetFileName(filePath);
         SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
+        ZoomLevel = 1.0;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
 
         var suggestion = TileSizeDetector.DetectCandidates(image.Width, image.Height).First();
@@ -150,6 +169,7 @@ public partial class MainViewModel : ViewModelBase
         _sourceFileName = project.ImageFileName;
         SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
+        ZoomLevel = 1.0;
         TexturePath = project.TexturePath;
         TileWidth = project.TileWidth;
         TileHeight = project.TileHeight;
@@ -176,6 +196,12 @@ public partial class MainViewModel : ViewModelBase
             StatusMessage = $"Could not export to '{Path.GetFileName(outputPath)}': {ex.Message}";
         }
     }
+
+    public double ZoomIn() => ZoomLevel = Math.Clamp(ZoomLevel + ZoomStep, MinZoom, MaxZoom);
+
+    public double ZoomOut() => ZoomLevel = Math.Clamp(ZoomLevel - ZoomStep, MinZoom, MaxZoom);
+
+    public void ResetZoom() => ZoomLevel = 1.0;
 
     public void HandleCanvasClick(int pixelX, int pixelY, bool addToSelection)
     {

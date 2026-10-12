@@ -32,6 +32,11 @@
                 <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
                 <MenuItem Header="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
             </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemPlus" />
+                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemMinus" />
+                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+D0" />
+            </MenuItem>
         </Menu>
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="12">
@@ -43,7 +48,10 @@
             <TextBox Text="{Binding TexturePath}" Width="160" />
         </StackPanel>
 
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="12,0,12,12" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="12" Margin="12,0,12,12">
+            <TextBlock Text="{Binding StatusMessage}" />
+            <TextBlock Text="{Binding ZoomPercentageText}" IsVisible="{Binding HasImage}" />
+        </StackPanel>
 
         <Border DockPanel.Dock="Right" Width="220" Margin="0,0,12,12" Padding="12"
                 BorderBrush="Gray" BorderThickness="1">
@@ -64,13 +72,20 @@
             </StackPanel>
         </Border>
 
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
-            <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}"
-                   Focusable="True" PointerPressed="OnTileCanvasPointerPressed">
-                <Image Source="{Binding PreviewBitmap}" Stretch="None" />
-                <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
-                                           SelectedTiles="{Binding SelectedTiles}" />
+        <ScrollViewer x:Name="TileCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
+            <Panel Width="{Binding ScaledImageWidth}" Height="{Binding ScaledImageHeight}" IsVisible="{Binding HasImage}"
+                   Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
+                   PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
+                   PointerWheelChanged="OnTileCanvasPointerWheelChanged">
+                <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" RenderTransformOrigin="0,0">
+                    <Panel.RenderTransform>
+                        <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
+                    </Panel.RenderTransform>
+                    <Image Source="{Binding PreviewBitmap}" Stretch="None" />
+                    <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                                               TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
+                                               SelectedTiles="{Binding SelectedTiles}" />
+                </Panel>
             </Panel>
         </ScrollViewer>
     </DockPanel>
