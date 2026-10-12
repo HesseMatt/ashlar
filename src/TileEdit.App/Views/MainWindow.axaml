@@ -29,7 +29,7 @@
                 <MenuItem Header="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+Shift+S" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Delete" Click="OnDeleteSelectedTileClick" IsEnabled="{Binding HasSelectedTile}" InputGesture="Delete" />
+                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
                 <MenuItem Header="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
             </MenuItem>
         </Menu>
@@ -43,6 +43,13 @@
             <TextBox Text="{Binding TexturePath}" Width="160" />
         </StackPanel>
 
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="12,0,12,12"
+                    IsVisible="{Binding HasSelectedTiles}">
+            <TextBlock Text="Group:" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
+                      Width="200" KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
+        </StackPanel>
+
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="12,0,12,12" />
 
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
@@ -51,7 +58,7 @@
                 <Image Source="{Binding PreviewBitmap}" Stretch="None" />
                 <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
                                            TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
-                                           SelectedTile="{Binding SelectedTile}" />
+                                           SelectedTiles="{Binding SelectedTiles}" />
             </Panel>
         </ScrollViewer>
     </DockPanel>

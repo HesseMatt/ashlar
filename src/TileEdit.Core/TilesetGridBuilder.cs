@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using TileEdit.Core.Editing;
 using TileEdit.Core.Model;
 
 namespace TileEdit.Core;
@@ -18,7 +19,7 @@ public static class TilesetGridBuilder
         {
             for (var x = 0; x + tileWidth <= imageWidth; x += tileWidth)
             {
-                var name = $"{baseName}_{index:D4}";
+                var name = TileGroupAssigner.FormatName(baseName, index);
                 tiles.Add(new TileRegion(name, x, y, tileWidth, tileHeight));
                 index++;
             }
@@ -27,7 +28,7 @@ public static class TilesetGridBuilder
         return tiles;
     }
 
-    private static string SanitizeBaseName(string name)
+    public static string SanitizeBaseName(string name)
     {
         var withUnderscores = name.Replace(' ', '_');
         return InvalidNameCharacters.Replace(withUnderscores, string.Empty);
