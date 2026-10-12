@@ -9,7 +9,8 @@
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="TileEdit"
-        Width="900" Height="650">
+        Width="900" Height="650"
+        KeyDown="OnWindowKeyDown">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -17,15 +18,23 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
-            <Button Content="Open tileset..." Click="OnOpenTilesetClick" />
-            <Button Content="Open project..." Click="OnOpenProjectClick" />
-            <Button Content="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" />
-            <Button Content="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding HasImage}" />
-            <Button Content="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" />
-            <Button Content="Delete" Click="OnDeleteSelectedTileClick" IsEnabled="{Binding HasSelectedTile}" />
-            <Button Content="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="Open tileset..." Click="OnOpenTilesetClick" InputGesture="Ctrl+O" />
+                <MenuItem Header="Open project..." Click="OnOpenProjectClick" InputGesture="Ctrl+Shift+O" />
+                <Separator />
+                <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+E" />
+                <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+S" />
+                <MenuItem Header="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+Shift+S" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="Delete" Click="OnDeleteSelectedTileClick" IsEnabled="{Binding HasSelectedTile}" InputGesture="Delete" />
+                <MenuItem Header="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
+            </MenuItem>
+        </Menu>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="12">
             <TextBlock Text="Tile width:" VerticalAlignment="Center" />
             <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" />
             <TextBlock Text="Tile height:" VerticalAlignment="Center" />
@@ -34,9 +43,9 @@
             <TextBox Text="{Binding TexturePath}" Width="160" />
         </StackPanel>
 
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,12,0,0" />
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="12,0,12,12" />
 
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
             <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}"
                    PointerPressed="OnTileCanvasPointerPressed">
                 <Image Source="{Binding PreviewBitmap}" Stretch="None" />

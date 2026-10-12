@@ -74,6 +74,43 @@ public partial class MainWindow : Window
             viewModel.ExportXml(path);
     }
 
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+
+        switch (e.Key)
+        {
+            case Key.O when ctrl && shift:
+                e.Handled = true;
+                OnOpenProjectClick(this, new RoutedEventArgs());
+                break;
+            case Key.O when ctrl:
+                e.Handled = true;
+                OnOpenTilesetClick(this, new RoutedEventArgs());
+                break;
+            case Key.E when ctrl && viewModel.HasImage:
+                e.Handled = true;
+                OnExportXmlClick(this, new RoutedEventArgs());
+                break;
+            case Key.S when ctrl && shift && viewModel.HasImage:
+                e.Handled = true;
+                OnSaveProjectClick(this, new RoutedEventArgs());
+                break;
+            case Key.S when ctrl && viewModel.HasImage:
+                e.Handled = true;
+                OnSaveImageClick(this, new RoutedEventArgs());
+                break;
+            case Key.Delete when viewModel.HasSelectedTile:
+                e.Handled = true;
+                OnDeleteSelectedTileClick(this, new RoutedEventArgs());
+                break;
+        }
+    }
+
     private void OnTileCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control canvas)
