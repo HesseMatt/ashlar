@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -7,6 +8,9 @@ namespace TileEdit.App.Controls;
 
 public class TileGridOverlay : Control
 {
+    private static readonly Pen GridPen = new(Brushes.Red);
+    private static readonly Pen HighlightPen = new(Brushes.Yellow, 2);
+
     public static readonly StyledProperty<int> ImageWidthProperty =
         AvaloniaProperty.Register<TileGridOverlay, int>(nameof(ImageWidth));
 
@@ -19,12 +23,12 @@ public class TileGridOverlay : Control
     public static readonly StyledProperty<int> TileHeightProperty =
         AvaloniaProperty.Register<TileGridOverlay, int>(nameof(TileHeight));
 
-    public static readonly StyledProperty<TileRegion?> SelectedTileProperty =
-        AvaloniaProperty.Register<TileGridOverlay, TileRegion?>(nameof(SelectedTile));
+    public static readonly StyledProperty<IReadOnlyList<TileRegion>> SelectedTilesProperty =
+        AvaloniaProperty.Register<TileGridOverlay, IReadOnlyList<TileRegion>>(nameof(SelectedTiles), defaultValue: []);
 
     static TileGridOverlay()
     {
-        AffectsRender<TileGridOverlay>(ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTileProperty);
+        AffectsRender<TileGridOverlay>(ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTilesProperty);
     }
 
     public int ImageWidth
@@ -51,10 +55,10 @@ public class TileGridOverlay : Control
         set => SetValue(TileHeightProperty, value);
     }
 
-    public TileRegion? SelectedTile
+    public IReadOnlyList<TileRegion> SelectedTiles
     {
-        get => GetValue(SelectedTileProperty);
-        set => SetValue(SelectedTileProperty, value);
+        get => GetValue(SelectedTilesProperty);
+        set => SetValue(SelectedTilesProperty, value);
     }
 
     public override void Render(DrawingContext context)
@@ -62,18 +66,13 @@ public class TileGridOverlay : Control
         if (TileWidth <= 0 || TileHeight <= 0)
             return;
 
-        var pen = new Pen(Brushes.Red);
-
         for (var x = TileWidth; x < ImageWidth; x += TileWidth)
-            context.DrawLine(pen, new Point(x, 0), new Point(x, ImageHeight));
+            context.DrawLine(GridPen, new Point(x, 0), new Point(x, ImageHeight));
 
         for (var y = TileHeight; y < ImageHeight; y += TileHeight)
-            context.DrawLine(pen, new Point(0, y), new Point(ImageWidth, y));
+            context.DrawLine(GridPen, new Point(0, y), new Point(ImageWidth, y));
 
-        if (SelectedTile is { } selected)
-        {
-            var highlightPen = new Pen(Brushes.Yellow, 2);
-            context.DrawRectangle(highlightPen, new Rect(selected.X, selected.Y, selected.Width, selected.Height));
-        }
+        foreach (var selected in SelectedTiles)
+            context.DrawRectangle(HighlightPen, new Rect(selected.X, selected.Y, selected.Width, selected.Height));
     }
 }

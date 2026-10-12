@@ -104,9 +104,9 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnSaveImageClick(this, new RoutedEventArgs());
                 break;
-            case Key.Delete when viewModel.HasSelectedTile:
+            case Key.Delete when viewModel.HasSelectedTiles:
                 e.Handled = true;
-                OnDeleteSelectedTileClick(this, new RoutedEventArgs());
+                OnDeleteSelectedTilesClick(this, new RoutedEventArgs());
                 break;
         }
     }
@@ -122,19 +122,37 @@ public partial class MainWindow : Window
         canvas.Focus();
 
         var position = e.GetPosition(canvas);
-        viewModel.HandleCanvasClick((int)position.X, (int)position.Y);
+        var addToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        viewModel.HandleCanvasClick((int)position.X, (int)position.Y, addToSelection);
     }
 
-    private void OnDeleteSelectedTileClick(object? sender, RoutedEventArgs e)
+    private void OnDeleteSelectedTilesClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.DeleteSelectedTile();
+            viewModel.DeleteSelectedTiles();
     }
 
     private void OnToggleMoveClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
             viewModel.ToggleMove();
+    }
+
+    private void OnGroupNameInputKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+
+        e.Handled = true;
+
+        if (DataContext is MainViewModel viewModel)
+            viewModel.ConfirmGroupNameInput();
+    }
+
+    private void OnGroupNameSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.ConfirmGroupNameInput();
     }
 
     private async void OnSaveImageClick(object? sender, RoutedEventArgs e)

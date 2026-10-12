@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -6,6 +7,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TileEdit.Core;
 using TileEdit.Core.Detection;
+using TileEdit.Core.Editing;
 using TileEdit.Core.Model;
 using TileEdit.Core.Serialization;
 
@@ -39,23 +41,41 @@ public partial class MainViewModel : ViewModelBase
     private ObservableCollection<TileRegion> _tiles = new();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelectedTile))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTiles))]
     [NotifyPropertyChangedFor(nameof(CanToggleMove))]
-    private TileRegion? _selectedTile;
+    [NotifyPropertyChangedFor(nameof(SelectedTileId))]
+    private IReadOnlyList<TileRegion> _selectedTiles = Array.Empty<TileRegion>();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MoveButtonLabel))]
     [NotifyPropertyChangedFor(nameof(CanToggleMove))]
     private bool _isMovePending;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _groupNames = new();
+
+    [ObservableProperty]
+    private string _groupNameInput = string.Empty;
+
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
+    private bool _isConfirmingGroupNameInput;
 
     public bool HasImage => PreviewBitmap is not null;
 
-    public bool HasSelectedTile => SelectedTile is not null;
+    public bool HasSelectedTiles => SelectedTiles.Count > 0;
 
-    public bool CanToggleMove => HasSelectedTile || IsMovePending;
+    public bool CanToggleMove => SelectedTiles.Count == 1 || IsMovePending;
+
+    public string SelectedTileId => SelectedTiles.Count switch
+    {
+        0 => "No tile selected",
+        1 => SelectedTiles[0].Name,
+        _ => $"{SelectedTiles.Count} tiles selected",
+    };
+
+    private string DefaultGroupName =>
+        _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));
 
     public string MoveButtonLabel => IsMovePending ? "Cancel move" : "Start move";
 
@@ -84,7 +104,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = Path.GetFileName(filePath);
-        SelectedTile = null;
+        SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
 
@@ -128,12 +148,13 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = project.ImageFileName;
-        SelectedTile = null;
+        SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
         TexturePath = project.TexturePath;
         TileWidth = project.TileWidth;
         TileHeight = project.TileHeight;
         Tiles = new ObservableCollection<TileRegion>(project.Tiles);
+        RefreshGroupNames();
 
         StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
     }
@@ -156,26 +177,38 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public void HandleCanvasClick(int pixelX, int pixelY)
+    public void HandleCanvasClick(int pixelX, int pixelY, bool addToSelection)
     {
         if (IsMovePending)
+        {
             CompleteMove(pixelX, pixelY);
-        else
-            SelectTileAt(pixelX, pixelY);
+            return;
+        }
+
+        SelectTileAt(pixelX, pixelY, addToSelection);
     }
 
-    public void DeleteSelectedTile()
+    public void DeleteSelectedTiles()
     {
-        if (SelectedTile is not { } tile || _editableImage is null)
+        if (SelectedTiles.Count == 0 || _editableImage is null)
             return;
 
         IsMovePending = false;
-        _editableImage.ClearRegion(tile);
-        Tiles.Remove(tile);
-        SelectedTile = null;
-        RefreshPreviewBitmap();
 
-        StatusMessage = $"Deleted {tile.Name}. Use \"Save image...\" to write this change to disk.";
+        var deletedTiles = SelectedTiles;
+        foreach (var tile in deletedTiles)
+        {
+            _editableImage.ClearRegion(tile);
+            Tiles.Remove(tile);
+        }
+
+        SelectedTiles = Array.Empty<TileRegion>();
+        RefreshPreviewBitmap();
+        RefreshGroupNames();
+
+        StatusMessage = deletedTiles.Count == 1
+            ? $"Deleted {deletedTiles[0].Name}. Use \"Save image...\" to write this change to disk."
+            : $"Deleted {deletedTiles.Count} tiles. Use \"Save image...\" to write this change to disk.";
     }
 
     public void ToggleMove()
@@ -187,11 +220,42 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        if (SelectedTile is not { } tile)
+        if (SelectedTiles.Count != 1)
             return;
 
         IsMovePending = true;
-        StatusMessage = $"Click a destination cell to move {tile.Name}, or click \"Cancel move\" to abort.";
+        StatusMessage = $"Click a destination cell to move {SelectedTiles[0].Name}, or click \"Cancel move\" to abort.";
+    }
+
+    // Re-entrancy guard: replacing GroupNames below updates the group combo
+    // box's ItemsSource, which Avalonia can answer by re-raising its
+    // SelectionChanged event - without this guard that would call back into
+    // this same method while it's still running.
+    public void ConfirmGroupNameInput()
+    {
+        if (_isConfirmingGroupNameInput || SelectedTiles.Count == 0)
+            return;
+
+        _isConfirmingGroupNameInput = true;
+        try
+        {
+            var targetGroup = TileGroupAssigner.ResolveTargetGroupName(GroupNameInput, DefaultGroupName);
+            var selectedCount = SelectedTiles.Count;
+            var selectedPositions = SelectedTiles.Select(t => (t.X, t.Y)).ToHashSet();
+
+            Tiles = new ObservableCollection<TileRegion>(TileGroupAssigner.AssignGroup(Tiles, SelectedTiles, targetGroup));
+            SelectedTiles = Tiles.Where(t => selectedPositions.Contains((t.X, t.Y))).ToList();
+            RefreshGroupNames();
+
+            var noun = selectedCount == 1 ? "tile" : "tiles";
+            StatusMessage = targetGroup == DefaultGroupName
+                ? $"Reverted {selectedCount} {noun} to the default naming scheme."
+                : $"Assigned {selectedCount} {noun} to group \"{targetGroup}\".";
+        }
+        finally
+        {
+            _isConfirmingGroupNameInput = false;
+        }
     }
 
     public void SaveImage(string outputPath)
@@ -228,23 +292,39 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void SelectTileAt(int pixelX, int pixelY)
+    private void SelectTileAt(int pixelX, int pixelY, bool addToSelection)
     {
-        SelectedTile = Tiles.FirstOrDefault(tile =>
-            pixelX >= tile.X && pixelX < tile.X + tile.Width &&
-            pixelY >= tile.Y && pixelY < tile.Y + tile.Height);
+        var tile = Tiles.FirstOrDefault(t =>
+            pixelX >= t.X && pixelX < t.X + t.Width &&
+            pixelY >= t.Y && pixelY < t.Y + t.Height);
 
-        StatusMessage = SelectedTile is null
-            ? "No tile selected."
-            : $"Selected {SelectedTile.Name}.";
+        if (!addToSelection)
+        {
+            SelectedTiles = tile is null ? Array.Empty<TileRegion>() : [tile];
+        }
+        else if (tile is not null)
+        {
+            SelectedTiles = SelectedTiles.Contains(tile)
+                ? SelectedTiles.Where(t => t != tile).ToList()
+                : SelectedTiles.Append(tile).ToList();
+        }
+
+        StatusMessage = SelectedTiles.Count switch
+        {
+            0 => "No tile selected.",
+            1 => $"Selected {SelectedTiles[0].Name}.",
+            _ => $"Selected {SelectedTiles.Count} tiles.",
+        };
     }
 
     private void CompleteMove(int pixelX, int pixelY)
     {
         IsMovePending = false;
 
-        if (SelectedTile is not { } tile || _editableImage is null)
+        if (SelectedTiles.Count != 1 || _editableImage is null)
             return;
+
+        var tile = SelectedTiles[0];
 
         if (pixelX < 0 || pixelY < 0 || pixelX >= ImageWidth || pixelY >= ImageHeight)
         {
@@ -284,7 +364,7 @@ public partial class MainViewModel : ViewModelBase
             StatusMessage = $"Moved {movedTile.Name} to ({targetX}, {targetY}).";
         }
 
-        SelectedTile = movedTile;
+        SelectedTiles = [movedTile];
         RefreshPreviewBitmap();
     }
 
@@ -302,8 +382,26 @@ public partial class MainViewModel : ViewModelBase
 
         Tiles = new ObservableCollection<TileRegion>(
             TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
-        SelectedTile = null;
+        SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
+        RefreshGroupNames();
+    }
+
+    private void RefreshGroupNames()
+    {
+        GroupNames = new ObservableCollection<string>(TileGroupAssigner.GetGroupNames(Tiles, DefaultGroupName));
+    }
+
+    partial void OnSelectedTilesChanged(IReadOnlyList<TileRegion> value)
+    {
+        if (value.Count == 0)
+        {
+            GroupNameInput = string.Empty;
+            return;
+        }
+
+        var groupNames = value.Select(t => TileGroupAssigner.GetGroupName(t, DefaultGroupName)).Distinct().ToList();
+        GroupNameInput = groupNames.Count == 1 ? groupNames[0] ?? string.Empty : string.Empty;
     }
 
     private void RefreshPreviewBitmap()

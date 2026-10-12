@@ -29,7 +29,7 @@
                 <MenuItem Header="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+Shift+S" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Delete" Click="OnDeleteSelectedTileClick" IsEnabled="{Binding HasSelectedTile}" InputGesture="Delete" />
+                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
                 <MenuItem Header="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
             </MenuItem>
         </Menu>
@@ -45,13 +45,32 @@
 
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="12,0,12,12" />
 
+        <Border DockPanel.Dock="Right" Width="220" Margin="0,0,12,12" Padding="12"
+                BorderBrush="Gray" BorderThickness="1">
+            <StackPanel Spacing="16">
+                <TextBlock Text="Inspector" FontWeight="Bold" />
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Tile ID" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SelectedTileId}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Group" FontWeight="SemiBold" />
+                    <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
+                              IsEnabled="{Binding HasSelectedTiles}" HorizontalAlignment="Stretch"
+                              KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
             <Panel Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" IsVisible="{Binding HasImage}"
                    Focusable="True" PointerPressed="OnTileCanvasPointerPressed">
                 <Image Source="{Binding PreviewBitmap}" Stretch="None" />
                 <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
                                            TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
-                                           SelectedTile="{Binding SelectedTile}" />
+                                           SelectedTiles="{Binding SelectedTiles}" />
             </Panel>
         </ScrollViewer>
     </DockPanel>
