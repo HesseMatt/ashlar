@@ -119,6 +119,8 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
+        canvas.Focus();
+
         var position = e.GetPosition(canvas);
         viewModel.HandleCanvasClick((int)position.X, (int)position.Y);
     }
