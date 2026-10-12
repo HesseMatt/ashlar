@@ -4,12 +4,12 @@
         xmlns:controls="using:TileEdit.App.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
+        mc:Ignorable="d" d:DesignWidth="1150" d:DesignHeight="650"
         x:Class="TileEdit.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="TileEdit"
-        Width="900" Height="650"
+        Width="1150" Height="650"
         KeyDown="OnWindowKeyDown">
 
     <Design.DataContext>
