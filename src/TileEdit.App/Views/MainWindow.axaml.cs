@@ -1,13 +1,19 @@
+using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using TileEdit.App.ViewModels;
 
 namespace TileEdit.App.Views;
 
 public partial class MainWindow : Window
 {
+    private Point? _panStartViewportPosition;
+    private Vector _panStartOffset;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -108,6 +114,18 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnDeleteSelectedTilesClick(this, new RoutedEventArgs());
                 break;
+            case Key.OemPlus when ctrl && viewModel.HasImage:
+                e.Handled = true;
+                OnZoomInClick(this, new RoutedEventArgs());
+                break;
+            case Key.OemMinus when ctrl && viewModel.HasImage:
+                e.Handled = true;
+                OnZoomOutClick(this, new RoutedEventArgs());
+                break;
+            case Key.D0 when ctrl && viewModel.HasImage:
+                e.Handled = true;
+                OnResetZoomClick(this, new RoutedEventArgs());
+                break;
         }
     }
 
@@ -119,11 +137,117 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
+        if (e.GetCurrentPoint(canvas).Properties.IsRightButtonPressed)
+        {
+            _panStartViewportPosition = e.GetPosition(TileCanvasScrollViewer);
+            _panStartOffset = TileCanvasScrollViewer.Offset;
+            e.Pointer.Capture(canvas);
+            e.Handled = true;
+            return;
+        }
+
         canvas.Focus();
 
-        var position = e.GetPosition(canvas);
+        var position = e.GetPosition(TileCanvasContent);
         var addToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         viewModel.HandleCanvasClick((int)position.X, (int)position.Y, addToSelection);
+    }
+
+    private void OnTileCanvasPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_panStartViewportPosition is not { } startPosition)
+            return;
+
+        var currentPosition = e.GetPosition(TileCanvasScrollViewer);
+        TileCanvasScrollViewer.Offset = ClampOffset(_panStartOffset + (startPosition - currentPosition));
+    }
+
+    private void OnTileCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_panStartViewportPosition is null)
+            return;
+
+        _panStartViewportPosition = null;
+        e.Pointer.Capture(null);
+    }
+
+    private void OnTileCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _panStartViewportPosition = null;
+    }
+
+    private void OnTileCanvasPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        e.Handled = true;
+
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        var anchorPosition = e.GetPosition(TileCanvasScrollViewer);
+        var zoomIn = e.Delta.Y > 0;
+        AnchoredZoom(anchorPosition, () =>
+        {
+            if (zoomIn) viewModel.ZoomIn(); else viewModel.ZoomOut();
+        });
+    }
+
+    private void OnZoomInClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        AnchoredZoom(ViewportCenter(), () => viewModel.ZoomIn());
+    }
+
+    private void OnZoomOutClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        AnchoredZoom(ViewportCenter(), () => viewModel.ZoomOut());
+    }
+
+    private void OnResetZoomClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        AnchoredZoom(ViewportCenter(), () => viewModel.ResetZoom());
+    }
+
+    private Point ViewportCenter() =>
+        new(TileCanvasScrollViewer.Viewport.Width / 2, TileCanvasScrollViewer.Viewport.Height / 2);
+
+    // Keeps the image pixel under anchorViewportPosition at that same screen
+    // position across a zoom change. This goes through Avalonia's own
+    // coordinate-transform APIs (TranslatePoint) rather than reconstructing
+    // the Offset/RenderTransform math by hand, because the canvas is
+    // center-aligned by the ScrollViewer whenever it's smaller than the
+    // viewport (i.e. at low zoom) - a hand-rolled "offset + position" formula
+    // silently ignores that alignment and anchors to the wrong image pixel.
+    private void AnchoredZoom(Point anchorViewportPosition, Action applyZoomChange)
+    {
+        var imagePoint = TileCanvasScrollViewer.TranslatePoint(anchorViewportPosition, TileCanvasContent);
+
+        applyZoomChange();
+        TileCanvasScrollViewer.GetLayoutManager()?.ExecuteLayoutPass();
+
+        if (imagePoint is not { } anchorImagePoint)
+            return;
+
+        var renderedAt = TileCanvasContent.TranslatePoint(anchorImagePoint, TileCanvasScrollViewer);
+        if (renderedAt is not { } actualPosition)
+            return;
+
+        var drift = anchorViewportPosition - actualPosition;
+        TileCanvasScrollViewer.Offset = ClampOffset(TileCanvasScrollViewer.Offset - drift);
+    }
+
+    private Vector ClampOffset(Vector offset)
+    {
+        var maxX = Math.Max(0, TileCanvasScrollViewer.Extent.Width - TileCanvasScrollViewer.Viewport.Width);
+        var maxY = Math.Max(0, TileCanvasScrollViewer.Extent.Height - TileCanvasScrollViewer.Viewport.Height);
+        return new Vector(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
     }
 
     private void OnDeleteSelectedTilesClick(object? sender, RoutedEventArgs e)
