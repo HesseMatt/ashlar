@@ -41,9 +41,9 @@
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="12">
             <TextBlock Text="Tile width:" VerticalAlignment="Center" />
-            <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" />
+            <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" IsEnabled="{Binding CanEditTileSize}" />
             <TextBlock Text="Tile height:" VerticalAlignment="Center" />
-            <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="100" />
+            <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="100" IsEnabled="{Binding CanEditTileSize}" />
             <TextBlock Text="Texture path:" VerticalAlignment="Center" />
             <TextBox Text="{Binding TexturePath}" Width="160" />
         </StackPanel>

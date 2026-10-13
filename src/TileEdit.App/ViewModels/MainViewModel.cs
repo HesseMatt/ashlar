@@ -60,6 +60,10 @@ public partial class MainViewModel : ViewModelBase
     private bool _isMovePending;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEditTileSize))]
+    private bool _hasEdits;
+
+    [ObservableProperty]
     private ObservableCollection<string> _groupNames = new();
 
     [ObservableProperty]
@@ -80,6 +84,8 @@ public partial class MainViewModel : ViewModelBase
     public double ScaledImageHeight => ImageHeight * ZoomLevel;
 
     public string ZoomPercentageText => $"{ZoomLevel:P0}";
+
+    public bool CanEditTileSize => !HasEdits;
 
     public bool HasSelectedTiles => SelectedTiles.Count > 0;
 
@@ -122,6 +128,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = Path.GetFileName(filePath);
+        HasEdits = false;
         SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
         ZoomLevel = 1.0;
@@ -174,6 +181,8 @@ public partial class MainViewModel : ViewModelBase
         TileWidth = project.TileWidth;
         TileHeight = project.TileHeight;
         Tiles = new ObservableCollection<TileRegion>(project.Tiles);
+        HasEdits = !project.Tiles.SequenceEqual(
+            TilesetGridBuilder.Build(project.ImageFileName, image.Width, image.Height, project.TileWidth, project.TileHeight));
         RefreshGroupNames();
 
         StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
@@ -228,6 +237,7 @@ public partial class MainViewModel : ViewModelBase
             Tiles.Remove(tile);
         }
 
+        HasEdits = true;
         SelectedTiles = Array.Empty<TileRegion>();
         RefreshPreviewBitmap();
         RefreshGroupNames();
@@ -374,6 +384,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         _editableImage.MoveRegion(tile, targetX, targetY);
+        HasEdits = true;
 
         var occupant = Tiles.FirstOrDefault(t => t.X == targetX && t.Y == targetY);
         var movedTile = tile with { X = targetX, Y = targetY };
