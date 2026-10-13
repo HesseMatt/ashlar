@@ -41,6 +41,45 @@ public class TileSizeLockTests : IDisposable
     }
 
     [Fact]
+    public void CompactingLocksTheTileSizeEvenWithoutPriorEdits()
+    {
+        var viewModel = OpenImage();
+
+        viewModel.Compact();
+
+        Assert.False(viewModel.CanEditTileSize);
+    }
+
+    [Fact]
+    public void CompactingAfterADeleteShrinksTheCanvasAndKeepsTileNames()
+    {
+        var viewModel = OpenImage();
+        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.DeleteSelectedTiles();
+
+        viewModel.Compact();
+
+        Assert.Equal(15, viewModel.Tiles.Count);
+        Assert.Equal(64, viewModel.ImageWidth);
+        Assert.Equal(64, viewModel.ImageHeight);
+        Assert.Equal("tiles_0002", viewModel.Tiles[0].Name);
+        Assert.Equal((0, 0), (viewModel.Tiles[0].X, viewModel.Tiles[0].Y));
+    }
+
+    [Fact]
+    public void CompactingKeepsTheSelectedTileSelected()
+    {
+        var viewModel = OpenImage();
+        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.DeleteSelectedTiles();
+        viewModel.HandleCanvasClick(33, 1, addToSelection: false);
+
+        viewModel.Compact();
+
+        Assert.Equal("tiles_0003", viewModel.SelectedTiles.Single().Name);
+    }
+
+    [Fact]
     public void CancelledMoveDoesNotLockTheTileSize()
     {
         var viewModel = OpenImage();

@@ -247,6 +247,33 @@ public partial class MainViewModel : ViewModelBase
             : $"Deleted {deletedTiles.Count} tiles. Use \"Save image...\" to write this change to disk.";
     }
 
+    public void Compact()
+    {
+        if (_editableImage is null)
+            return;
+
+        IsMovePending = false;
+
+        if (Tiles.Count == 0)
+        {
+            StatusMessage = "Nothing to compact: there are no tiles.";
+            return;
+        }
+
+        var result = TilesetCompactor.Compact(Tiles, TileWidth, TileHeight, ImageWidth, DefaultGroupName);
+        _editableImage.Repack(result.Placements, result.Width, result.Height);
+
+        var selectedNames = SelectedTiles.Select(t => t.Name).ToHashSet();
+        Tiles = new ObservableCollection<TileRegion>(result.Placements.Select(p => p.Moved));
+        SelectedTiles = Tiles.Where(t => selectedNames.Contains(t.Name)).ToList();
+        ImageWidth = result.Width;
+        ImageHeight = result.Height;
+        HasEdits = true;
+        RefreshPreviewBitmap();
+
+        StatusMessage = $"Compacted {Tiles.Count} tiles to {ImageWidth}x{ImageHeight}. Use \"Save image...\" to write this change to disk.";
+    }
+
     public void ToggleMove()
     {
         if (IsMovePending)
