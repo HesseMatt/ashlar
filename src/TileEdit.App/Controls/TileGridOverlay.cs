@@ -9,7 +9,7 @@ namespace TileEdit.App.Controls;
 
 public class TileGridOverlay : Control
 {
-    private static readonly Pen GridPen = new(Brushes.Red);
+    private static readonly Pen GridPen = new(Brushes.Black, 0.5);
     private static readonly Pen HighlightPen = new(Brushes.Yellow, 2);
     private static readonly Pen SelectionPen = new(Brushes.DeepSkyBlue, 1, DashStyle.Dash);
     private static readonly Pen MovePen = new(Brushes.LimeGreen, 2);
