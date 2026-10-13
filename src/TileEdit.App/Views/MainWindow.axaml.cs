@@ -171,7 +171,7 @@ public partial class MainWindow : Window
                 break;
             case Key.M when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
                 e.Handled = true;
-                viewModel.IsMoveToolActive = true;
+                viewModel.IsMoveToolActive = !viewModel.IsMoveToolActive;
                 break;
             case Key.Escape when _rectangleDragOrigin is not null:
                 e.Handled = true;
