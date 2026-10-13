@@ -144,6 +144,8 @@
                         <Panel.RenderTransform>
                             <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
                         </Panel.RenderTransform>
+                        <controls:TransparencyCheckerboard ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
                         <Image Source="{Binding PreviewBitmap}" Stretch="None" />
                         <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
                                                    TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
