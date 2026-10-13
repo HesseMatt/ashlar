@@ -97,6 +97,8 @@ public partial class MainViewModel : ViewModelBase
 
     private record MoveDrag(int StartCellX, int StartCellY);
 
+    public event EventHandler? TilesetLoaded;
+
     public bool HasImage => PreviewBitmap is not null;
 
     public double ScaledImageWidth => ImageWidth * ZoomLevel;
@@ -172,6 +174,7 @@ public partial class MainViewModel : ViewModelBase
         RebuildGrid();
 
         StatusMessage = $"{_sourceFileName} ({image.Width}x{image.Height}) - suggested tile size {TileWidth}x{TileHeight}.";
+        TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
     public void OpenProject(string filePath)
@@ -220,6 +223,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshGroupNames();
 
         StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
+        TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
     public void ExportXml(string outputPath)
