@@ -33,9 +33,11 @@ public class TileSizeLockTests : IDisposable
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.ToggleMove();
+        viewModel.IsMoveToolActive = true;
 
-        viewModel.HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.BeginMoveDrag(1, 1);
+        viewModel.UpdateMoveDrag(17, 1);
+        viewModel.CommitMoveDrag();
 
         Assert.False(viewModel.CanEditTileSize);
     }
@@ -80,13 +82,16 @@ public class TileSizeLockTests : IDisposable
     }
 
     [Fact]
-    public void CancelledMoveDoesNotLockTheTileSize()
+    public void MoveWithoutNetOffsetDoesNotLockTheTileSize()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.ToggleMove();
+        viewModel.IsMoveToolActive = true;
 
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.BeginMoveDrag(1, 1);
+        viewModel.UpdateMoveDrag(17, 1);
+        viewModel.UpdateMoveDrag(5, 5);
+        viewModel.CommitMoveDrag();
 
         Assert.True(viewModel.CanEditTileSize);
     }

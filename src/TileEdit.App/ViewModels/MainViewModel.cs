@@ -51,14 +51,8 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedTiles))]
-    [NotifyPropertyChangedFor(nameof(CanToggleMove))]
     [NotifyPropertyChangedFor(nameof(SelectedTileId))]
     private IReadOnlyList<TileRegion> _selectedTiles = Array.Empty<TileRegion>();
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(MoveButtonLabel))]
-    [NotifyPropertyChangedFor(nameof(CanToggleMove))]
-    private bool _isMovePending;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanEditTileSize))]
@@ -71,10 +65,15 @@ public partial class MainViewModel : ViewModelBase
     private string _groupNameInput = string.Empty;
 
     [ObservableProperty]
-    private bool _isRectangleToolActive;
+    [NotifyPropertyChangedFor(nameof(IsRectangleToolActive))]
+    [NotifyPropertyChangedFor(nameof(IsMoveToolActive))]
+    private CanvasTool _activeTool;
 
     [ObservableProperty]
     private Rect? _selectionRectangle;
+
+    [ObservableProperty]
+    private Vector? _moveOffset;
 
     private const double ZoomStep = 0.1;
     private const double MinZoom = 0.25;
@@ -84,8 +83,11 @@ public partial class MainViewModel : ViewModelBase
     private EditableTilesetImage? _editableImage;
     private bool _isConfirmingGroupNameInput;
     private SelectionDrag? _selectionDrag;
+    private MoveDrag? _moveDrag;
 
     private record SelectionDrag(int StartX, int StartY, IReadOnlyList<TileRegion> SelectionBefore, bool AddToSelection);
+
+    private record MoveDrag(int StartCellX, int StartCellY);
 
     public bool HasImage => PreviewBitmap is not null;
 
@@ -99,7 +101,17 @@ public partial class MainViewModel : ViewModelBase
 
     public bool HasSelectedTiles => SelectedTiles.Count > 0;
 
-    public bool CanToggleMove => SelectedTiles.Count == 1 || IsMovePending;
+    public bool IsRectangleToolActive
+    {
+        get => ActiveTool == CanvasTool.Rectangle;
+        set => SetToolActive(CanvasTool.Rectangle, value);
+    }
+
+    public bool IsMoveToolActive
+    {
+        get => ActiveTool == CanvasTool.Move;
+        set => SetToolActive(CanvasTool.Move, value);
+    }
 
     public string SelectedTileId => SelectedTiles.Count switch
     {
@@ -110,8 +122,6 @@ public partial class MainViewModel : ViewModelBase
 
     private string DefaultGroupName =>
         _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));
-
-    public string MoveButtonLabel => IsMovePending ? "Cancel move" : "Start move";
 
     partial void OnTileWidthChanged(int value) => RebuildGrid();
 
@@ -140,9 +150,9 @@ public partial class MainViewModel : ViewModelBase
         _sourceFileName = Path.GetFileName(filePath);
         HasEdits = false;
         SelectedTiles = Array.Empty<TileRegion>();
-        IsMovePending = false;
         EndSelectionDrag();
-        IsRectangleToolActive = false;
+        EndMoveDrag();
+        ActiveTool = CanvasTool.Select;
         ZoomLevel = 1.0;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
 
@@ -187,9 +197,9 @@ public partial class MainViewModel : ViewModelBase
 
         _sourceFileName = project.ImageFileName;
         SelectedTiles = Array.Empty<TileRegion>();
-        IsMovePending = false;
         EndSelectionDrag();
-        IsRectangleToolActive = false;
+        EndMoveDrag();
+        ActiveTool = CanvasTool.Select;
         ZoomLevel = 1.0;
         TexturePath = project.TexturePath;
         TileWidth = project.TileWidth;
@@ -228,20 +238,11 @@ public partial class MainViewModel : ViewModelBase
 
     public void HandleCanvasClick(int pixelX, int pixelY, bool addToSelection)
     {
-        if (IsMovePending)
-        {
-            CompleteMove(pixelX, pixelY);
-            return;
-        }
-
         SelectTileAt(pixelX, pixelY, addToSelection);
     }
 
     public void BeginSelectionDrag(int pixelX, int pixelY, bool addToSelection)
     {
-        if (IsMovePending)
-            return;
-
         _selectionDrag = new SelectionDrag(pixelX, pixelY, SelectedTiles, addToSelection);
         UpdateSelectionDrag(pixelX, pixelY);
     }
@@ -292,8 +293,8 @@ public partial class MainViewModel : ViewModelBase
         if (SelectedTiles.Count == 0 || _editableImage is null)
             return;
 
-        IsMovePending = false;
         EndSelectionDrag();
+        EndMoveDrag();
 
         var deletedTiles = SelectedTiles;
         foreach (var tile in deletedTiles)
@@ -317,8 +318,8 @@ public partial class MainViewModel : ViewModelBase
         if (_editableImage is null)
             return;
 
-        IsMovePending = false;
         EndSelectionDrag();
+        EndMoveDrag();
 
         if (Tiles.Count == 0)
         {
@@ -340,20 +341,63 @@ public partial class MainViewModel : ViewModelBase
         StatusMessage = $"Compacted {Tiles.Count} tiles to {ImageWidth}x{ImageHeight}. Use \"Save image...\" to write this change to disk.";
     }
 
-    public void ToggleMove()
+    // Only a press on an already selected tile starts a move; anywhere else the
+    // press is ignored so the selection stays as it is.
+    public bool BeginMoveDrag(int pixelX, int pixelY)
     {
-        if (IsMovePending)
+        if (!IsMoveToolActive || !SelectedTiles.Any(t => Contains(t, pixelX, pixelY)))
+            return false;
+
+        _moveDrag = new MoveDrag(FloorDiv(pixelX, TileWidth), FloorDiv(pixelY, TileHeight));
+        return true;
+    }
+
+    // The offset is computed from cell indices in image-pixel space, so the
+    // tiles snap to the grid at every zoom level.
+    public void UpdateMoveDrag(int pixelX, int pixelY)
+    {
+        if (_moveDrag is not { } drag)
+            return;
+
+        var offsetX = (FloorDiv(pixelX, TileWidth) - drag.StartCellX) * TileWidth;
+        var offsetY = (FloorDiv(pixelY, TileHeight) - drag.StartCellY) * TileHeight;
+        MoveOffset = offsetX == 0 && offsetY == 0 ? null : new Vector(offsetX, offsetY);
+    }
+
+    public void CommitMoveDrag()
+    {
+        var offset = MoveOffset;
+        EndMoveDrag();
+
+        if (offset is not { } moveOffset || _editableImage is null)
+            return;
+
+        var offsetX = (int)moveOffset.X;
+        var offsetY = (int)moveOffset.Y;
+        var movingCount = SelectedTiles.Count;
+        var result = TileMover.Move(Tiles, SelectedTiles, offsetX, offsetY, ImageWidth, ImageHeight);
+
+        _editableImage.MoveRegions(SelectedTiles, offsetX, offsetY);
+        Tiles = new ObservableCollection<TileRegion>(result.Tiles);
+        SelectedTiles = result.Moved;
+        HasEdits = true;
+        RefreshPreviewBitmap();
+        RefreshGroupNames();
+
+        var deletedOutside = movingCount - result.Moved.Count;
+        StatusMessage = (result.Moved.Count, deletedOutside) switch
         {
-            IsMovePending = false;
-            StatusMessage = "Move cancelled.";
-            return;
-        }
+            (0, _) => $"Moved {movingCount} {(movingCount == 1 ? "tile" : "tiles")} outside the tileset and deleted them.",
+            (1, 0) => $"Moved {result.Moved[0].Name}.",
+            (_, 0) => $"Moved {result.Moved.Count} tiles.",
+            _ => $"Moved {result.Moved.Count} {(result.Moved.Count == 1 ? "tile" : "tiles")}; {deletedOutside} moved outside the tileset and {(deletedOutside == 1 ? "was" : "were")} deleted.",
+        };
+    }
 
-        if (SelectedTiles.Count != 1)
-            return;
-
-        IsMovePending = true;
-        StatusMessage = $"Click a destination cell to move {SelectedTiles[0].Name}, or click \"Cancel move\" to abort.";
+    public void EndMoveDrag()
+    {
+        _moveDrag = null;
+        MoveOffset = null;
     }
 
     // Re-entrancy guard: replacing GroupNames below updates the group combo
@@ -423,9 +467,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void SelectTileAt(int pixelX, int pixelY, bool addToSelection)
     {
-        var tile = Tiles.FirstOrDefault(t =>
-            pixelX >= t.X && pixelX < t.X + t.Width &&
-            pixelY >= t.Y && pixelY < t.Y + t.Height);
+        var tile = Tiles.FirstOrDefault(t => Contains(t, pixelX, pixelY));
 
         if (!addToSelection)
         {
@@ -451,64 +493,20 @@ public partial class MainViewModel : ViewModelBase
         };
     }
 
-    private void CompleteMove(int pixelX, int pixelY)
+    private void SetToolActive(CanvasTool tool, bool active)
     {
-        IsMovePending = false;
-
-        if (SelectedTiles.Count != 1 || _editableImage is null)
-            return;
-
-        var tile = SelectedTiles[0];
-
-        if (pixelX < 0 || pixelY < 0 || pixelX >= ImageWidth || pixelY >= ImageHeight)
-        {
-            StatusMessage = "Move cancelled: destination is outside the image.";
-            return;
-        }
-
-        var targetX = pixelX / TileWidth * TileWidth;
-        var targetY = pixelY / TileHeight * TileHeight;
-
-        if (targetX + TileWidth > ImageWidth || targetY + TileHeight > ImageHeight)
-        {
-            StatusMessage = "Move cancelled: destination is outside the tile grid.";
-            return;
-        }
-
-        if (targetX == tile.X && targetY == tile.Y)
-        {
-            StatusMessage = "Move cancelled: that's the tile's current cell.";
-            return;
-        }
-
-        _editableImage.MoveRegion(tile, targetX, targetY);
-        HasEdits = true;
-
-        var occupant = Tiles.FirstOrDefault(t => t.X == targetX && t.Y == targetY);
-        var movedTile = tile with { X = targetX, Y = targetY };
-        ReplaceTile(tile, movedTile);
-
-        if (occupant is { } occupiedTile)
-        {
-            var displacedTile = occupiedTile with { X = tile.X, Y = tile.Y };
-            ReplaceTile(occupiedTile, displacedTile);
-            StatusMessage = $"Swapped {movedTile.Name} and {displacedTile.Name}.";
-        }
-        else
-        {
-            StatusMessage = $"Moved {movedTile.Name} to ({targetX}, {targetY}).";
-        }
-
-        SelectedTiles = [movedTile];
-        RefreshPreviewBitmap();
+        if (active)
+            ActiveTool = tool;
+        else if (ActiveTool == tool)
+            ActiveTool = CanvasTool.Select;
     }
 
-    private void ReplaceTile(TileRegion oldTile, TileRegion newTile)
-    {
-        var index = Tiles.IndexOf(oldTile);
-        if (index >= 0)
-            Tiles[index] = newTile;
-    }
+    private static bool Contains(TileRegion tile, int pixelX, int pixelY) =>
+        pixelX >= tile.X && pixelX < tile.X + tile.Width && pixelY >= tile.Y && pixelY < tile.Y + tile.Height;
+
+    // Pixel coordinates can be slightly negative (the canvas is padded), where
+    // plain integer division would round toward zero instead of down.
+    private static int FloorDiv(int value, int divisor) => (int)Math.Floor((double)value / divisor);
 
     private void RebuildGrid()
     {
@@ -518,8 +516,8 @@ public partial class MainViewModel : ViewModelBase
         Tiles = new ObservableCollection<TileRegion>(
             TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
         SelectedTiles = Array.Empty<TileRegion>();
-        IsMovePending = false;
         EndSelectionDrag();
+        EndMoveDrag();
         RefreshGroupNames();
     }
 

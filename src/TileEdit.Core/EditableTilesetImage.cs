@@ -45,36 +45,42 @@ public sealed class EditableTilesetImage : IDisposable
         }
     }
 
-    // Always swaps both blocks, never just overwrites: if the target cell is
-    // empty, its pixels are already transparent (from an earlier delete), so
-    // swapping them into the source cell has the same effect as clearing it.
-    public void MoveRegion(TileRegion from, int targetX, int targetY)
+    // Snapshots every block before touching the image, then clears all sources
+    // and pastes the copies, so overlapping sources and destinations behave as
+    // one simultaneous move. Blocks landing outside the image are dropped.
+    public void MoveRegions(IReadOnlyList<TileRegion> regions, int offsetX, int offsetY)
     {
-        var width = from.Width;
-        var height = from.Height;
-        var rowByteWidth = width * BytesPerPixel;
-        var buffer = new byte[height * rowByteWidth];
-
         var pixels = _bitmap.GetPixelSpan();
         var rowBytes = _bitmap.RowBytes;
 
-        for (var y = 0; y < height; y++)
+        var snapshots = new List<byte[]>(regions.Count);
+        foreach (var region in regions)
         {
-            var sourceRow = pixels.Slice((from.Y + y) * rowBytes + from.X * BytesPerPixel, rowByteWidth);
-            sourceRow.CopyTo(buffer.AsSpan(y * rowByteWidth, rowByteWidth));
+            var rowByteWidth = region.Width * BytesPerPixel;
+            var snapshot = new byte[region.Height * rowByteWidth];
+            for (var y = 0; y < region.Height; y++)
+            {
+                var sourceRow = pixels.Slice((region.Y + y) * rowBytes + region.X * BytesPerPixel, rowByteWidth);
+                sourceRow.CopyTo(snapshot.AsSpan(y * rowByteWidth, rowByteWidth));
+            }
+            snapshots.Add(snapshot);
         }
 
-        for (var y = 0; y < height; y++)
-        {
-            var sourceRow = pixels.Slice((from.Y + y) * rowBytes + from.X * BytesPerPixel, rowByteWidth);
-            var targetRow = pixels.Slice((targetY + y) * rowBytes + targetX * BytesPerPixel, rowByteWidth);
-            targetRow.CopyTo(sourceRow);
-        }
+        foreach (var region in regions)
+            ClearRegion(region);
 
-        for (var y = 0; y < height; y++)
+        for (var i = 0; i < regions.Count; i++)
         {
-            var targetRow = pixels.Slice((targetY + y) * rowBytes + targetX * BytesPerPixel, rowByteWidth);
-            buffer.AsSpan(y * rowByteWidth, rowByteWidth).CopyTo(targetRow);
+            var destination = regions[i] with { X = regions[i].X + offsetX, Y = regions[i].Y + offsetY };
+            if (!TileMover.IsInside(destination, Width, Height))
+                continue;
+
+            var rowByteWidth = destination.Width * BytesPerPixel;
+            for (var y = 0; y < destination.Height; y++)
+            {
+                var targetRow = pixels.Slice((destination.Y + y) * rowBytes + destination.X * BytesPerPixel, rowByteWidth);
+                snapshots[i].AsSpan(y * rowByteWidth, rowByteWidth).CopyTo(targetRow);
+            }
         }
     }
 
