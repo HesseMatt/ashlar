@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -17,7 +18,50 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        TileCanvasScrollViewer.PropertyChanged += OnScrollViewerPropertyChanged;
+        DataContextChanged += OnDataContextChanged;
     }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MainViewModel.ZoomLevel) or nameof(MainViewModel.TileWidth)
+            or nameof(MainViewModel.TileHeight) or nameof(MainViewModel.ImageWidth)
+            or nameof(MainViewModel.ImageHeight) or nameof(MainViewModel.HasImage))
+        {
+            UpdateOverscrollPadding();
+        }
+    }
+
+    private void OnScrollViewerPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == ScrollViewer.ViewportProperty)
+            UpdateOverscrollPadding();
+    }
+
+    // Lets the view be panned past the tileset's edges, but never so far that the
+    // tileset leaves the viewport: at maximum pan, exactly one tile row/column
+    // stays visible at the opposite edge. Only applies on an axis where the
+    // zoomed tileset overflows the viewport; otherwise it stays centered.
+    private void UpdateOverscrollPadding()
+    {
+        if (DataContext is not MainViewModel viewModel || !viewModel.HasImage)
+            return;
+
+        var viewport = TileCanvasScrollViewer.Viewport;
+        var horizontal = OverscrollPadding(viewport.Width, viewModel.ScaledImageWidth, viewModel.TileWidth * viewModel.ZoomLevel);
+        var vertical = OverscrollPadding(viewport.Height, viewModel.ScaledImageHeight, viewModel.TileHeight * viewModel.ZoomLevel);
+        TileCanvasPadding.Padding = new Thickness(horizontal, vertical);
+    }
+
+    private static double OverscrollPadding(double viewportSize, double scaledImageSize, double scaledTileSize) =>
+        scaledImageSize > viewportSize ? Math.Max(0, viewportSize - scaledTileSize) : 0;
 
     private async void OnOpenTilesetClick(object? sender, RoutedEventArgs e)
     {
@@ -150,7 +194,8 @@ public partial class MainWindow : Window
 
         var position = e.GetPosition(TileCanvasContent);
         var addToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        viewModel.HandleCanvasClick((int)position.X, (int)position.Y, addToSelection);
+        // Floor, not truncate: the padding makes coordinates in (-1, 0) reachable.
+        viewModel.HandleCanvasClick((int)Math.Floor(position.X), (int)Math.Floor(position.Y), addToSelection);
     }
 
     private void OnTileCanvasPointerMoved(object? sender, PointerEventArgs e)

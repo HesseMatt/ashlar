@@ -36,6 +36,41 @@ public class TileCanvasZoomTests
         Assert.True(farCorner.Y >= ImageHeight, $"the lowest reachable image pixel is y={farCorner.Y}, expected at least {ImageHeight}");
     }
 
+    [AvaloniaTheory]
+    [InlineData(2.0)]
+    [InlineData(3.0)]
+    [InlineData(5.0)]
+    public void PanningAsFarAsPossibleLeavesOneTileRowAndColumnVisible(double zoomLevel)
+    {
+        const int tileSize = 30;
+        using var canvas = TileCanvas.Open(ImageWidth, ImageHeight);
+        canvas.SetTileSize(tileSize);
+        canvas.SetZoom(zoomLevel);
+        Assert.True(canvas.OverflowsViewport, $"the canvas does not overflow the viewport at {zoomLevel:P0} zoom");
+        var scaledTile = tileSize * zoomLevel;
+
+        canvas.ScrollAsFarAsPossible();
+        var farBounds = canvas.ImageBoundsInViewport();
+        Assert.True(Math.Abs(farBounds.Right - scaledTile) <= 1, $"{farBounds.Right}px of the image's right edge remain, expected {scaledTile}");
+        Assert.True(Math.Abs(farBounds.Bottom - scaledTile) <= 1, $"{farBounds.Bottom}px of the image's bottom edge remain, expected {scaledTile}");
+
+        canvas.ScrollToStart();
+        var nearBounds = canvas.ImageBoundsInViewport();
+        Assert.True(Math.Abs(canvas.Viewport.Width - nearBounds.X - scaledTile) <= 1, $"image starts at x={nearBounds.X}, expected one {scaledTile}px column visible");
+        Assert.True(Math.Abs(canvas.Viewport.Height - nearBounds.Y - scaledTile) <= 1, $"image starts at y={nearBounds.Y}, expected one {scaledTile}px row visible");
+    }
+
+    [AvaloniaFact]
+    public void ImageFittingTheViewportHasNoScrollRange()
+    {
+        using var canvas = TileCanvas.Open(ImageWidth, ImageHeight);
+        canvas.SetTileSize(30);
+        canvas.SetZoom(0.5);
+
+        Assert.True(canvas.Extent.Width <= canvas.Viewport.Width, "unexpected horizontal scroll range");
+        Assert.True(canvas.Extent.Height <= canvas.Viewport.Height, "unexpected vertical scroll range");
+    }
+
     [AvaloniaFact]
     public void ImageNarrowerThanTheViewportStaysHorizontallyCentered()
     {
@@ -73,6 +108,8 @@ public class TileCanvasZoomTests
 
         public Size Viewport => _scrollViewer.Viewport;
 
+        public Size Extent => _scrollViewer.Extent;
+
         public bool OverflowsViewport =>
             _scrollViewer.Extent.Width > _scrollViewer.Viewport.Width &&
             _scrollViewer.Extent.Height > _scrollViewer.Viewport.Height;
@@ -102,6 +139,19 @@ public class TileCanvasZoomTests
             Layout();
         }
 
+        public void SetTileSize(int size)
+        {
+            _viewModel.TileWidth = size;
+            _viewModel.TileHeight = size;
+            Layout();
+        }
+
+        public void ScrollToStart()
+        {
+            _scrollViewer.Offset = default;
+            Layout();
+        }
+
         // The ScrollViewer clamps the offset to its own scroll range, so an
         // oversized value lands exactly at "panned as far as it goes".
         public void ScrollAsFarAsPossible()
@@ -113,6 +163,9 @@ public class TileCanvasZoomTests
         // The image pixel rendered in the viewport's bottom-right corner.
         public Point ViewportCornerInImagePixels() =>
             _scrollViewer.TranslatePoint(new Point(Viewport.Width, Viewport.Height), _content)!.Value;
+
+        public Rect ImageBoundsInViewport() =>
+            new(ImageOriginInViewport(), new Size(_content.Bounds.Width * _viewModel.ZoomLevel, _content.Bounds.Height * _viewModel.ZoomLevel));
 
         // Where the image's top-left pixel ends up within the viewport.
         public Point ImageOriginInViewport() =>
