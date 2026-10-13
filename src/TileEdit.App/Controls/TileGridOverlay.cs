@@ -10,6 +10,8 @@ public class TileGridOverlay : Control
 {
     private static readonly Pen GridPen = new(Brushes.Red);
     private static readonly Pen HighlightPen = new(Brushes.Yellow, 2);
+    private static readonly Pen SelectionPen = new(Brushes.DeepSkyBlue, 1, DashStyle.Dash);
+    private static readonly IBrush SelectionFill = new SolidColorBrush(Colors.DeepSkyBlue, 0.2);
 
     public static readonly StyledProperty<int> ImageWidthProperty =
         AvaloniaProperty.Register<TileGridOverlay, int>(nameof(ImageWidth));
@@ -26,9 +28,14 @@ public class TileGridOverlay : Control
     public static readonly StyledProperty<IReadOnlyList<TileRegion>> SelectedTilesProperty =
         AvaloniaProperty.Register<TileGridOverlay, IReadOnlyList<TileRegion>>(nameof(SelectedTiles), defaultValue: []);
 
+    public static readonly StyledProperty<Rect?> SelectionRectangleProperty =
+        AvaloniaProperty.Register<TileGridOverlay, Rect?>(nameof(SelectionRectangle));
+
     static TileGridOverlay()
     {
-        AffectsRender<TileGridOverlay>(ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTilesProperty);
+        AffectsRender<TileGridOverlay>(
+            ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTilesProperty,
+            SelectionRectangleProperty);
     }
 
     public int ImageWidth
@@ -61,6 +68,12 @@ public class TileGridOverlay : Control
         set => SetValue(SelectedTilesProperty, value);
     }
 
+    public Rect? SelectionRectangle
+    {
+        get => GetValue(SelectionRectangleProperty);
+        set => SetValue(SelectionRectangleProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         if (TileWidth <= 0 || TileHeight <= 0)
@@ -74,5 +87,8 @@ public class TileGridOverlay : Control
 
         foreach (var selected in SelectedTiles)
             context.DrawRectangle(HighlightPen, new Rect(selected.X, selected.Y, selected.Width, selected.Height));
+
+        if (SelectionRectangle is { } rectangle)
+            context.DrawRectangle(SelectionFill, SelectionPen, rectangle);
     }
 }
