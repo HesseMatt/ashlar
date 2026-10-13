@@ -73,27 +73,32 @@
         </Border>
 
         <ScrollViewer x:Name="TileCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
-            <Panel Width="{Binding ScaledImageWidth}" Height="{Binding ScaledImageHeight}" IsVisible="{Binding HasImage}"
-                   Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
-                   PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
-                   PointerWheelChanged="OnTileCanvasPointerWheelChanged">
-                <!-- Left/Top alignment is load-bearing: a Panel centers a child that has an
-                     explicit Width/Height, which would place this panel's unscaled layout slot
-                     in the middle of the zoomed wrapper above. The ScaleTransform then scales
-                     out from there instead of from the wrapper's origin, pushing the right and
-                     bottom of the image outside the scrollable extent, where it can't be
-                     reached by panning. -->
-                <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
-                       HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
-                    <Panel.RenderTransform>
-                        <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
-                    </Panel.RenderTransform>
-                    <Image Source="{Binding PreviewBitmap}" Stretch="None" />
-                    <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                               TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
-                                               SelectedTiles="{Binding SelectedTiles}" />
+            <!-- The padding is the overscroll margin around the zoomed tileset (set from code,
+                 since it depends on the viewport size). The transparent background makes the
+                 padding hit-testable, so panning can start there too. -->
+            <Border x:Name="TileCanvasPadding" Background="Transparent" IsVisible="{Binding HasImage}"
+                    Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
+                    PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
+                    PointerWheelChanged="OnTileCanvasPointerWheelChanged">
+                <Panel Width="{Binding ScaledImageWidth}" Height="{Binding ScaledImageHeight}">
+                    <!-- Left/Top alignment is load-bearing: a Panel centers a child that has an
+                         explicit Width/Height, which would place this panel's unscaled layout slot
+                         in the middle of the zoomed wrapper above. The ScaleTransform then scales
+                         out from there instead of from the wrapper's origin, pushing the right and
+                         bottom of the image outside the scrollable extent, where it can't be
+                         reached by panning. -->
+                    <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
+                           HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
+                        <Panel.RenderTransform>
+                            <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
+                        </Panel.RenderTransform>
+                        <Image Source="{Binding PreviewBitmap}" Stretch="None" />
+                        <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                                                   TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
+                                                   SelectedTiles="{Binding SelectedTiles}" />
+                    </Panel>
                 </Panel>
-            </Panel>
+            </Border>
         </ScrollViewer>
     </DockPanel>
 
