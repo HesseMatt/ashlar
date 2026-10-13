@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.VisualTree;
 using SkiaSharp;
 using TileEdit.App.ViewModels;
@@ -84,6 +86,69 @@ public class TileCanvasZoomTests
         Assert.True(Math.Abs(leftGap - rightGap) <= 1, $"image is off-center: {leftGap}px of empty space to its left, {rightGap}px to its right");
     }
 
+    [AvaloniaFact]
+    public void OverflowingTilesetStartsWithItsTopLeftCornerAtTheViewportsTopLeftCorner()
+    {
+        using var canvas = TileCanvas.Open(1200, 900);
+
+        Assert.True(canvas.OverflowsViewport, "the canvas does not overflow the viewport");
+        AssertImageOrigin(canvas, 0, 0);
+    }
+
+    [AvaloniaFact]
+    public void FittingTilesetStartsCenteredWithoutScrolling()
+    {
+        using var canvas = TileCanvas.Open(200, 100);
+
+        Assert.Equal(default, canvas.Offset);
+        AssertCenteredHorizontally(canvas, 200);
+        AssertCenteredVertically(canvas, 100);
+    }
+
+    [AvaloniaFact]
+    public void TilesetOverflowingOnlyVerticallyIsAlignedToTheTopAndCenteredHorizontally()
+    {
+        using var canvas = TileCanvas.Open(ImageWidth, ImageHeight);
+
+        Assert.True(canvas.Extent.Width <= canvas.Viewport.Width, "unexpected horizontal scroll range");
+        Assert.True(canvas.Extent.Height > canvas.Viewport.Height, "the canvas does not overflow vertically");
+
+        AssertCenteredHorizontally(canvas, ImageWidth);
+        Assert.Equal(0, canvas.ImageOriginInViewport().Y, 1);
+    }
+
+    [AvaloniaFact]
+    public void ResetZoomPositionsTheTilesetAtTheTopLeftCorner()
+    {
+        using var canvas = TileCanvas.Open(1200, 900);
+        canvas.SetZoom(3.0);
+        canvas.ScrollAsFarAsPossible();
+
+        canvas.ResetZoomWithShortcut();
+
+        AssertImageOrigin(canvas, 0, 0);
+    }
+
+    private static void AssertCenteredHorizontally(TileCanvas canvas, double imageWidth)
+    {
+        var leftGap = canvas.ImageOriginInViewport().X;
+        var rightGap = canvas.Viewport.Width - (leftGap + imageWidth);
+        Assert.True(Math.Abs(leftGap - rightGap) <= 1, $"image is off-center horizontally: {leftGap}px left, {rightGap}px right");
+    }
+
+    private static void AssertCenteredVertically(TileCanvas canvas, double imageHeight)
+    {
+        var topGap = canvas.ImageOriginInViewport().Y;
+        var bottomGap = canvas.Viewport.Height - (topGap + imageHeight);
+        Assert.True(Math.Abs(topGap - bottomGap) <= 1, $"image is off-center vertically: {topGap}px top, {bottomGap}px bottom");
+    }
+
+    private static void AssertImageOrigin(TileCanvas canvas, double x, double y)
+    {
+        var origin = canvas.ImageOriginInViewport();
+        Assert.True(Math.Abs(origin.X - x) <= 1 && Math.Abs(origin.Y - y) <= 1, $"image starts at ({origin.X}, {origin.Y}), expected ({x}, {y})");
+    }
+
     private sealed class TileCanvas : IDisposable
     {
         // Fixed instead of inherited from the window's own default size, so the
@@ -107,6 +172,8 @@ public class TileCanvasZoomTests
         }
 
         public Size Viewport => _scrollViewer.Viewport;
+
+        public Vector Offset => _scrollViewer.Offset;
 
         public Size Extent => _scrollViewer.Extent;
 
@@ -136,6 +203,12 @@ public class TileCanvasZoomTests
         public void SetZoom(double zoomLevel)
         {
             _viewModel.ZoomLevel = zoomLevel;
+            Layout();
+        }
+
+        public void ResetZoomWithShortcut()
+        {
+            _window.KeyPressQwerty(PhysicalKey.Digit0, RawInputModifiers.Control);
             Layout();
         }
 

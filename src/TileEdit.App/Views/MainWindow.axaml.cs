@@ -40,8 +40,11 @@ public partial class MainWindow : Window
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (DataContext is MainViewModel viewModel)
-            viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        viewModel.TilesetLoaded += (_, _) => ScrollToTilesetStart();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -73,6 +76,18 @@ public partial class MainWindow : Window
         var horizontal = OverscrollPadding(viewport.Width, viewModel.ScaledImageWidth, viewModel.TileWidth * viewModel.ZoomLevel);
         var vertical = OverscrollPadding(viewport.Height, viewModel.ScaledImageHeight, viewModel.TileHeight * viewModel.ZoomLevel);
         TileCanvasPadding.Padding = new Thickness(horizontal, vertical);
+    }
+
+    // Scrolls so the tileset's top-left corner sits at the viewport's top-left
+    // corner, which is where the overscroll padding ends. An axis that fits into
+    // the viewport has no padding and no scroll range, so it stays centered.
+    private void ScrollToTilesetStart()
+    {
+        UpdateOverscrollPadding();
+        TileCanvasScrollViewer.GetLayoutManager()?.ExecuteLayoutPass();
+
+        var padding = TileCanvasPadding.Padding;
+        TileCanvasScrollViewer.Offset = ClampOffset(new Vector(padding.Left, padding.Top));
     }
 
     private static double OverscrollPadding(double viewportSize, double scaledImageSize, double scaledTileSize) =>
@@ -407,7 +422,8 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        AnchoredZoom(ViewportCenter(), () => viewModel.ResetZoom());
+        viewModel.ResetZoom();
+        ScrollToTilesetStart();
     }
 
     private Point ViewportCenter() =>
