@@ -77,7 +77,14 @@
                    Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
                    PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
                    PointerWheelChanged="OnTileCanvasPointerWheelChanged">
-                <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}" RenderTransformOrigin="0,0">
+                <!-- Left/Top alignment is load-bearing: a Panel centers a child that has an
+                     explicit Width/Height, which would place this panel's unscaled layout slot
+                     in the middle of the zoomed wrapper above. The ScaleTransform then scales
+                     out from there instead of from the wrapper's origin, pushing the right and
+                     bottom of the image outside the scrollable extent, where it can't be
+                     reached by panning. -->
+                <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
+                       HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
                     <Panel.RenderTransform>
                         <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
                     </Panel.RenderTransform>
