@@ -301,6 +301,12 @@ public partial class MainWindow : Window
             viewModel.DeleteSelectedTiles();
     }
 
+    private void OnCompactClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.Compact();
+    }
+
     private void OnToggleMoveClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)

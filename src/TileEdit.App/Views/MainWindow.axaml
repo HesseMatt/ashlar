@@ -31,6 +31,8 @@
             <MenuItem Header="_Edit">
                 <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
                 <MenuItem Header="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
+                <Separator />
+                <MenuItem Header="Compact" Click="OnCompactClick" IsEnabled="{Binding HasImage}" />
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemPlus" />
