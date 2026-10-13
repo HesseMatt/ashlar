@@ -14,6 +14,15 @@ public partial class MainWindow : Window
 {
     private Point? _panStartViewportPosition;
     private Vector _panStartOffset;
+    private Point? _rectangleDragOrigin;
+    private (int X, int Y) _rectangleDragStartPixel;
+    private bool _rectangleDragAddsToSelection;
+    private bool _isRectangleDragging;
+    private IPointer? _rectangleDragPointer;
+
+    // Screen distance the pointer has to travel before a press counts as a drag
+    // rather than a click.
+    private const double DragThreshold = 4;
 
     public MainWindow()
     {
@@ -154,6 +163,15 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnSaveImageClick(this, new RoutedEventArgs());
                 break;
+            case Key.R when ctrl && !shift && viewModel.HasImage:
+                e.Handled = true;
+                viewModel.IsRectangleToolActive = !viewModel.IsRectangleToolActive;
+                break;
+            case Key.Escape when _rectangleDragOrigin is not null:
+                e.Handled = true;
+                viewModel.CancelSelectionDrag();
+                ResetRectangleDrag();
+                break;
             case Key.Delete when viewModel.HasSelectedTiles:
                 e.Handled = true;
                 OnDeleteSelectedTilesClick(this, new RoutedEventArgs());
@@ -181,6 +199,9 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
+        if (_rectangleDragOrigin is not null)
+            return;
+
         if (e.GetCurrentPoint(canvas).Properties.IsRightButtonPressed)
         {
             _panStartViewportPosition = e.GetPosition(TileCanvasScrollViewer);
@@ -192,14 +213,58 @@ public partial class MainWindow : Window
 
         canvas.Focus();
 
+        if (viewModel.IsRectangleToolActive && !viewModel.IsMovePending
+            && e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
+        {
+            // Whether this becomes a click or a drag is only known once the pointer
+            // has moved (or has been released), so selection is deferred until then.
+            _rectangleDragOrigin = e.GetPosition(canvas);
+            _rectangleDragStartPixel = ImagePixelAt(e);
+            _rectangleDragAddsToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+            _rectangleDragPointer = e.Pointer;
+            e.Pointer.Capture(canvas);
+            return;
+        }
+
+        var (pixelX, pixelY) = ImagePixelAt(e);
+        viewModel.HandleCanvasClick(pixelX, pixelY, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+    }
+
+    // Floor, not truncate: the padding makes coordinates in (-1, 0) reachable.
+    private (int X, int Y) ImagePixelAt(PointerEventArgs e)
+    {
         var position = e.GetPosition(TileCanvasContent);
-        var addToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        // Floor, not truncate: the padding makes coordinates in (-1, 0) reachable.
-        viewModel.HandleCanvasClick((int)Math.Floor(position.X), (int)Math.Floor(position.Y), addToSelection);
+        return ((int)Math.Floor(position.X), (int)Math.Floor(position.Y));
+    }
+
+    private void ResetRectangleDrag()
+    {
+        var pointer = _rectangleDragPointer;
+        _rectangleDragOrigin = null;
+        _isRectangleDragging = false;
+        _rectangleDragPointer = null;
+        pointer?.Capture(null);
     }
 
     private void OnTileCanvasPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (_rectangleDragOrigin is { } dragOrigin && sender is Control canvas && DataContext is MainViewModel viewModel)
+        {
+            if (!_isRectangleDragging)
+            {
+                var travelled = e.GetPosition(canvas) - dragOrigin;
+                if (Math.Abs(travelled.X) < DragThreshold && Math.Abs(travelled.Y) < DragThreshold)
+                    return;
+
+                _isRectangleDragging = true;
+                viewModel.BeginSelectionDrag(_rectangleDragStartPixel.X, _rectangleDragStartPixel.Y, _rectangleDragAddsToSelection);
+            }
+
+            var (pixelX, pixelY) = ImagePixelAt(e);
+            viewModel.UpdateSelectionDrag(pixelX, pixelY);
+            return;
+        }
+
         if (_panStartViewportPosition is not { } startPosition)
             return;
 
@@ -209,6 +274,18 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (_rectangleDragOrigin is not null && e.InitialPressMouseButton == MouseButton.Left
+            && DataContext is MainViewModel viewModel)
+        {
+            if (_isRectangleDragging)
+                viewModel.EndSelectionDrag();
+            else
+                viewModel.HandleCanvasClick(_rectangleDragStartPixel.X, _rectangleDragStartPixel.Y, _rectangleDragAddsToSelection);
+
+            ResetRectangleDrag();
+            return;
+        }
+
         if (_panStartViewportPosition is null)
             return;
 
@@ -218,6 +295,12 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
+        if (_isRectangleDragging && DataContext is MainViewModel viewModel)
+            viewModel.EndSelectionDrag();
+
+        _rectangleDragOrigin = null;
+        _isRectangleDragging = false;
+        _rectangleDragPointer = null;
         _panStartViewportPosition = null;
     }
 

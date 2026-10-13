@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TileEdit.Core;
@@ -69,6 +70,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _groupNameInput = string.Empty;
 
+    [ObservableProperty]
+    private bool _isRectangleToolActive;
+
+    [ObservableProperty]
+    private Rect? _selectionRectangle;
+
     private const double ZoomStep = 0.1;
     private const double MinZoom = 0.25;
     private const double MaxZoom = 8.0;
@@ -76,6 +83,9 @@ public partial class MainViewModel : ViewModelBase
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
     private bool _isConfirmingGroupNameInput;
+    private SelectionDrag? _selectionDrag;
+
+    private record SelectionDrag(int StartX, int StartY, IReadOnlyList<TileRegion> SelectionBefore, bool AddToSelection);
 
     public bool HasImage => PreviewBitmap is not null;
 
@@ -131,6 +141,8 @@ public partial class MainViewModel : ViewModelBase
         HasEdits = false;
         SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
+        EndSelectionDrag();
+        IsRectangleToolActive = false;
         ZoomLevel = 1.0;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
 
@@ -176,6 +188,8 @@ public partial class MainViewModel : ViewModelBase
         _sourceFileName = project.ImageFileName;
         SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
+        EndSelectionDrag();
+        IsRectangleToolActive = false;
         ZoomLevel = 1.0;
         TexturePath = project.TexturePath;
         TileWidth = project.TileWidth;
@@ -223,12 +237,63 @@ public partial class MainViewModel : ViewModelBase
         SelectTileAt(pixelX, pixelY, addToSelection);
     }
 
+    public void BeginSelectionDrag(int pixelX, int pixelY, bool addToSelection)
+    {
+        if (IsMovePending)
+            return;
+
+        _selectionDrag = new SelectionDrag(pixelX, pixelY, SelectedTiles, addToSelection);
+        UpdateSelectionDrag(pixelX, pixelY);
+    }
+
+    public void UpdateSelectionDrag(int pixelX, int pixelY)
+    {
+        if (_selectionDrag is not { } drag)
+            return;
+
+        var rectangle = new Rect(
+            Math.Min(drag.StartX, pixelX), Math.Min(drag.StartY, pixelY),
+            Math.Abs(pixelX - drag.StartX) + 1, Math.Abs(pixelY - drag.StartY) + 1);
+        var visibleRectangle = rectangle.Intersect(new Rect(0, 0, ImageWidth, ImageHeight));
+        if (SelectionRectangle == visibleRectangle)
+            return;
+
+        SelectionRectangle = visibleRectangle;
+
+        var touched = TileRectangleSelector.TilesTouching(Tiles, drag.StartX, drag.StartY, pixelX, pixelY);
+        var selection = drag.AddToSelection
+            ? drag.SelectionBefore.Concat(touched.Except(drag.SelectionBefore)).ToList()
+            : touched;
+        if (selection.SequenceEqual(SelectedTiles))
+            return;
+
+        SelectedTiles = selection;
+        UpdateSelectionStatus();
+    }
+
+    public void EndSelectionDrag()
+    {
+        _selectionDrag = null;
+        SelectionRectangle = null;
+    }
+
+    public void CancelSelectionDrag()
+    {
+        if (_selectionDrag is not { } drag)
+            return;
+
+        SelectedTiles = drag.SelectionBefore;
+        EndSelectionDrag();
+        UpdateSelectionStatus();
+    }
+
     public void DeleteSelectedTiles()
     {
         if (SelectedTiles.Count == 0 || _editableImage is null)
             return;
 
         IsMovePending = false;
+        EndSelectionDrag();
 
         var deletedTiles = SelectedTiles;
         foreach (var tile in deletedTiles)
@@ -253,6 +318,7 @@ public partial class MainViewModel : ViewModelBase
             return;
 
         IsMovePending = false;
+        EndSelectionDrag();
 
         if (Tiles.Count == 0)
         {
@@ -372,6 +438,11 @@ public partial class MainViewModel : ViewModelBase
                 : SelectedTiles.Append(tile).ToList();
         }
 
+        UpdateSelectionStatus();
+    }
+
+    private void UpdateSelectionStatus()
+    {
         StatusMessage = SelectedTiles.Count switch
         {
             0 => "No tile selected.",
@@ -448,6 +519,7 @@ public partial class MainViewModel : ViewModelBase
             TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
         SelectedTiles = Array.Empty<TileRegion>();
         IsMovePending = false;
+        EndSelectionDrag();
         RefreshGroupNames();
     }
 
