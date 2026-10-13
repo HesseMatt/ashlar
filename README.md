@@ -40,3 +40,5 @@ dotnet run --project src/TileEdit.App
 modify, and distribute for any noncommercial purpose, as long as the
 required copyright notice stays attached — **no commercial use or
 resale**. There's no warranty of any kind.
+
+Third-party notices (bundled icon assets): see [NOTICE](NOTICE).
