@@ -22,6 +22,10 @@ public partial class MainWindow : Window
     private bool _isMoveDragging;
     private IPointer? _moveDragPointer;
 
+    // A rectangle press is pending before the drag threshold is crossed, which
+    // the view model does not know about yet.
+    private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging;
+
     // Screen distance the pointer has to travel before a press counts as a drag
     // rather than a click.
     private const double DragThreshold = 4;
@@ -172,6 +176,15 @@ public partial class MainWindow : Window
             case Key.M when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
                 e.Handled = true;
                 viewModel.IsMoveToolActive = !viewModel.IsMoveToolActive;
+                break;
+            case Key.Z when ctrl && shift && e.Source is not TextBox && !IsPointerDragPending:
+            case Key.Y when ctrl && e.Source is not TextBox && !IsPointerDragPending:
+                e.Handled = true;
+                viewModel.Redo();
+                break;
+            case Key.Z when ctrl && e.Source is not TextBox && !IsPointerDragPending:
+                e.Handled = true;
+                viewModel.Undo();
                 break;
             case Key.Escape when _rectangleDragOrigin is not null:
                 e.Handled = true;
@@ -430,6 +443,18 @@ public partial class MainWindow : Window
         var maxX = Math.Max(0, TileCanvasScrollViewer.Extent.Width - TileCanvasScrollViewer.Viewport.Width);
         var maxY = Math.Max(0, TileCanvasScrollViewer.Extent.Height - TileCanvasScrollViewer.Viewport.Height);
         return new Vector(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
+    }
+
+    private void OnUndoClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.Undo();
+    }
+
+    private void OnRedoClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.Redo();
     }
 
     private void OnDeleteSelectedTilesClick(object? sender, RoutedEventArgs e)

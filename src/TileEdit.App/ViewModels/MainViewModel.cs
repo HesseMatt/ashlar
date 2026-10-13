@@ -59,6 +59,12 @@ public partial class MainViewModel : ViewModelBase
     private bool _hasEdits;
 
     [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
+
+    [ObservableProperty]
     private ObservableCollection<string> _groupNames = new();
 
     [ObservableProperty]
@@ -84,6 +90,8 @@ public partial class MainViewModel : ViewModelBase
     private bool _isConfirmingGroupNameInput;
     private SelectionDrag? _selectionDrag;
     private MoveDrag? _moveDrag;
+    private readonly EditHistory _history = new();
+    private bool _startedWithEdits;
 
     private record SelectionDrag(int StartX, int StartY, IReadOnlyList<TileRegion> SelectionBefore, bool AddToSelection);
 
@@ -120,6 +128,8 @@ public partial class MainViewModel : ViewModelBase
         _ => $"{SelectedTiles.Count} tiles selected",
     };
 
+    private bool IsDragInProgress => _selectionDrag is not null || _moveDrag is not null;
+
     private string DefaultGroupName =>
         _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));
 
@@ -148,7 +158,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = Path.GetFileName(filePath);
-        HasEdits = false;
+        ResetHistory(startedWithEdits: false);
         SelectedTiles = Array.Empty<TileRegion>();
         EndSelectionDrag();
         EndMoveDrag();
@@ -205,8 +215,8 @@ public partial class MainViewModel : ViewModelBase
         TileWidth = project.TileWidth;
         TileHeight = project.TileHeight;
         Tiles = new ObservableCollection<TileRegion>(project.Tiles);
-        HasEdits = !project.Tiles.SequenceEqual(
-            TilesetGridBuilder.Build(project.ImageFileName, image.Width, image.Height, project.TileWidth, project.TileHeight));
+        ResetHistory(startedWithEdits: !project.Tiles.SequenceEqual(
+            TilesetGridBuilder.Build(project.ImageFileName, image.Width, image.Height, project.TileWidth, project.TileHeight)));
         RefreshGroupNames();
 
         StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
@@ -296,6 +306,8 @@ public partial class MainViewModel : ViewModelBase
         EndSelectionDrag();
         EndMoveDrag();
 
+        var before = CaptureState();
+        var selectionBefore = SelectedNames();
         var deletedTiles = SelectedTiles;
         foreach (var tile in deletedTiles)
         {
@@ -303,10 +315,10 @@ public partial class MainViewModel : ViewModelBase
             Tiles.Remove(tile);
         }
 
-        HasEdits = true;
         SelectedTiles = Array.Empty<TileRegion>();
         RefreshPreviewBitmap();
         RefreshGroupNames();
+        RecordEdit($"Delete {deletedTiles.Count} {(deletedTiles.Count == 1 ? "tile" : "tiles")}", before, selectionBefore);
 
         StatusMessage = deletedTiles.Count == 1
             ? $"Deleted {deletedTiles[0].Name}. Use \"Save image...\" to write this change to disk."
@@ -327,6 +339,8 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
+        var before = CaptureState();
+        var selectionBefore = SelectedNames();
         var result = TilesetCompactor.Compact(Tiles, TileWidth, TileHeight, ImageWidth, DefaultGroupName);
         _editableImage.Repack(result.Placements, result.Width, result.Height);
 
@@ -335,8 +349,8 @@ public partial class MainViewModel : ViewModelBase
         SelectedTiles = Tiles.Where(t => selectedNames.Contains(t.Name)).ToList();
         ImageWidth = result.Width;
         ImageHeight = result.Height;
-        HasEdits = true;
         RefreshPreviewBitmap();
+        RecordEdit("Compact", before, selectionBefore);
 
         StatusMessage = $"Compacted {Tiles.Count} tiles to {ImageWidth}x{ImageHeight}. Use \"Save image...\" to write this change to disk.";
     }
@@ -375,14 +389,16 @@ public partial class MainViewModel : ViewModelBase
         var offsetX = (int)moveOffset.X;
         var offsetY = (int)moveOffset.Y;
         var movingCount = SelectedTiles.Count;
+        var before = CaptureState();
+        var selectionBefore = SelectedNames();
         var result = TileMover.Move(Tiles, SelectedTiles, offsetX, offsetY, ImageWidth, ImageHeight);
 
         _editableImage.MoveRegions(SelectedTiles, offsetX, offsetY);
         Tiles = new ObservableCollection<TileRegion>(result.Tiles);
         SelectedTiles = result.Moved;
-        HasEdits = true;
         RefreshPreviewBitmap();
         RefreshGroupNames();
+        RecordEdit($"Move {movingCount} {(movingCount == 1 ? "tile" : "tiles")}", before, selectionBefore);
 
         var deletedOutside = movingCount - result.Moved.Count;
         StatusMessage = (result.Moved.Count, deletedOutside) switch
@@ -415,12 +431,23 @@ public partial class MainViewModel : ViewModelBase
             var targetGroup = TileGroupAssigner.ResolveTargetGroupName(GroupNameInput, DefaultGroupName);
             var selectedCount = SelectedTiles.Count;
             var selectedPositions = SelectedTiles.Select(t => (t.X, t.Y)).ToHashSet();
+            var assigned = TileGroupAssigner.AssignGroup(Tiles, SelectedTiles, targetGroup);
+            var changed = !assigned.SequenceEqual(Tiles);
+            var before = changed ? CaptureState() : null;
+            var selectionBefore = SelectedNames();
 
-            Tiles = new ObservableCollection<TileRegion>(TileGroupAssigner.AssignGroup(Tiles, SelectedTiles, targetGroup));
+            Tiles = new ObservableCollection<TileRegion>(assigned);
             SelectedTiles = Tiles.Where(t => selectedPositions.Contains((t.X, t.Y))).ToList();
             RefreshGroupNames();
 
             var noun = selectedCount == 1 ? "tile" : "tiles";
+            if (before is not null)
+            {
+                RecordEdit(
+                    targetGroup == DefaultGroupName ? "Revert to default naming" : $"Assign to group \"{targetGroup}\"",
+                    before, selectionBefore);
+            }
+
             StatusMessage = targetGroup == DefaultGroupName
                 ? $"Reverted {selectedCount} {noun} to the default naming scheme."
                 : $"Assigned {selectedCount} {noun} to group \"{targetGroup}\".";
@@ -429,6 +456,30 @@ public partial class MainViewModel : ViewModelBase
         {
             _isConfirmingGroupNameInput = false;
         }
+    }
+
+    // Ignored mid-drag: the drag's own state (selection before, move origin)
+    // would be stale after the document changed underneath it.
+    public void Undo()
+    {
+        if (!_history.CanUndo || IsDragInProgress)
+            return;
+
+        var step = _history.Undo();
+        Restore(step.Before, step.SelectionBefore);
+        UpdateHistoryState();
+        StatusMessage = $"Undid: {step.Description}.";
+    }
+
+    public void Redo()
+    {
+        if (!_history.CanRedo || IsDragInProgress)
+            return;
+
+        var step = _history.Redo();
+        Restore(step.After, step.SelectionAfter);
+        UpdateHistoryState();
+        StatusMessage = $"Redid: {step.Description}.";
     }
 
     public void SaveImage(string outputPath)
@@ -462,6 +513,56 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             StatusMessage = $"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}";
+        }
+    }
+
+    private TilesetState CaptureState() => new(_editableImage!.EncodeToPng(), Tiles.ToList());
+
+    private IReadOnlyList<string> SelectedNames() => SelectedTiles.Select(t => t.Name).ToList();
+
+    private void RecordEdit(string description, TilesetState before, IReadOnlyList<string> selectionBefore)
+    {
+        _history.Record(new EditStep(description, before, CaptureState(), selectionBefore, SelectedNames()));
+        UpdateHistoryState();
+    }
+
+    private void ResetHistory(bool startedWithEdits)
+    {
+        _startedWithEdits = startedWithEdits;
+        _history.Clear();
+        UpdateHistoryState();
+    }
+
+    // A tileset opened with edits stays locked even with every recorded step
+    // undone, because its initial state is itself an edited one.
+    private void UpdateHistoryState()
+    {
+        CanUndo = _history.CanUndo;
+        CanRedo = _history.CanRedo;
+        HasEdits = _startedWithEdits || _history.CanUndo;
+    }
+
+    private void Restore(TilesetState state, IReadOnlyList<string> selectedNames)
+    {
+        var image = EditableTilesetImage.Load(state.ImagePng);
+        _editableImage?.Dispose();
+        _editableImage = image;
+        ImageWidth = image.Width;
+        ImageHeight = image.Height;
+        RefreshPreviewBitmap();
+
+        // Same guard as in ConfirmGroupNameInput: restoring the selection and
+        // group names must not be mistaken for the user picking a group.
+        _isConfirmingGroupNameInput = true;
+        try
+        {
+            Tiles = new ObservableCollection<TileRegion>(state.Tiles);
+            SelectedTiles = Tiles.Where(t => selectedNames.Contains(t.Name)).ToList();
+            RefreshGroupNames();
+        }
+        finally
+        {
+            _isConfirmingGroupNameInput = false;
         }
     }
 
@@ -519,6 +620,8 @@ public partial class MainViewModel : ViewModelBase
         EndSelectionDrag();
         EndMoveDrag();
         RefreshGroupNames();
+        _history.Clear();
+        UpdateHistoryState();
     }
 
     private void RefreshGroupNames()

@@ -29,6 +29,9 @@
                 <MenuItem Header="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+Shift+S" />
             </MenuItem>
             <MenuItem Header="_Edit">
+                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding CanUndo}" InputGesture="Ctrl+Z" />
+                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding CanRedo}" InputGesture="Ctrl+Y" />
+                <Separator />
                 <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
                 <Separator />
                 <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding IsRectangleToolActive}"
