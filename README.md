@@ -16,7 +16,7 @@ development — primarily for use with **MonoGame** / `MonoGame.Extended`.
 ## Editing
 
 - Select, delete, and move individual tiles, including the underlying
-  image pixels (moving onto an occupied cell swaps the two tiles).
+  image pixels (moving onto an occupied cell overwrites it).
 - Save the current image and tile metadata back to disk.
 - Save/reopen a tileset as a self-contained project file
   (`*.tileproj.json`, embeds the image) to resume editing later.

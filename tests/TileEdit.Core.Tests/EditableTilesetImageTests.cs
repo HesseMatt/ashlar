@@ -83,25 +83,39 @@ public class EditableTilesetImageTests
         }
     }
 
+    // A 6x2 strip of 2x2 tiles: red, blue, green.
+    private static EditableTilesetImage LoadStrip(string filePath)
+    {
+        var green = new SKColor(0, 255, 0, 255);
+        using (var image = new SKBitmap(new SKImageInfo(6, 2, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
+        {
+            for (var y = 0; y < 2; y++)
+            {
+                for (var x = 0; x < 2; x++)
+                    image.SetPixel(x, y, Red);
+                for (var x = 2; x < 4; x++)
+                    image.SetPixel(x, y, Blue);
+                for (var x = 4; x < 6; x++)
+                    image.SetPixel(x, y, green);
+            }
+            SavePng(image, filePath);
+        }
+
+        return EditableTilesetImage.Load(filePath);
+    }
+
     [Fact]
-    public void MoveRegion_OntoAnEmptyCell_RelocatesThePixelsAndClearsTheSource()
+    public void MoveRegions_OntoAnEmptyCell_RelocatesThePixelsAndClearsTheSource()
     {
         var filePath = Path.GetTempFileName() + ".png";
         try
         {
-            using (var image = new SKBitmap(new SKImageInfo(4, 2, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
-            {
-                for (var y = 0; y < 2; y++)
-                    for (var x = 0; x < 2; x++)
-                        image.SetPixel(x, y, Red);
-                SavePng(image, filePath);
-            }
+            using var editable = LoadStrip(filePath);
+            editable.ClearRegion(new TileRegion("blue", 2, 0, 2, 2));
 
-            using var editable = EditableTilesetImage.Load(filePath);
-            editable.MoveRegion(new TileRegion("tile_0001", 0, 0, 2, 2), 2, 0);
+            editable.MoveRegions([new TileRegion("red", 0, 0, 2, 2)], 2, 0);
 
             using var result = DecodeRgba(editable.EncodeToPng());
-
             Assert.Equal(Transparent, result.GetPixel(0, 0));
             Assert.Equal(Transparent, result.GetPixel(1, 1));
             Assert.Equal(Red, result.GetPixel(2, 0));
@@ -114,32 +128,66 @@ public class EditableTilesetImageTests
     }
 
     [Fact]
-    public void MoveRegion_OntoAnOccupiedCell_SwapsBothTilesPixels()
+    public void MoveRegions_OntoAnOccupiedCell_OverwritesItWithoutSwapping()
     {
         var filePath = Path.GetTempFileName() + ".png";
         try
         {
-            using (var image = new SKBitmap(new SKImageInfo(4, 2, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
-            {
-                for (var y = 0; y < 2; y++)
-                {
-                    for (var x = 0; x < 2; x++)
-                        image.SetPixel(x, y, Red);
-                    for (var x = 2; x < 4; x++)
-                        image.SetPixel(x, y, Blue);
-                }
-                SavePng(image, filePath);
-            }
+            using var editable = LoadStrip(filePath);
 
-            using var editable = EditableTilesetImage.Load(filePath);
-            editable.MoveRegion(new TileRegion("tile_0001", 0, 0, 2, 2), 2, 0);
+            editable.MoveRegions([new TileRegion("red", 0, 0, 2, 2)], 2, 0);
 
             using var result = DecodeRgba(editable.EncodeToPng());
-
-            Assert.Equal(Blue, result.GetPixel(0, 0));
-            Assert.Equal(Blue, result.GetPixel(1, 1));
+            Assert.Equal(Transparent, result.GetPixel(0, 0));
+            Assert.Equal(Transparent, result.GetPixel(1, 1));
             Assert.Equal(Red, result.GetPixel(2, 0));
             Assert.Equal(Red, result.GetPixel(3, 1));
+            Assert.Equal(new SKColor(0, 255, 0, 255), result.GetPixel(4, 0));
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void MoveRegions_OverlappingSourcesAndDestinations_ShiftsTheBlockAsOne()
+    {
+        var filePath = Path.GetTempFileName() + ".png";
+        try
+        {
+            using var editable = LoadStrip(filePath);
+
+            editable.MoveRegions([new TileRegion("red", 0, 0, 2, 2), new TileRegion("blue", 2, 0, 2, 2)], 2, 0);
+
+            using var result = DecodeRgba(editable.EncodeToPng());
+            Assert.Equal(Transparent, result.GetPixel(0, 0));
+            Assert.Equal(Transparent, result.GetPixel(1, 1));
+            Assert.Equal(Red, result.GetPixel(2, 0));
+            Assert.Equal(Blue, result.GetPixel(4, 0));
+            Assert.Equal(Blue, result.GetPixel(5, 1));
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void MoveRegions_DestinationOutsideTheImage_ClearsTheSourceAndWritesNothing()
+    {
+        var filePath = Path.GetTempFileName() + ".png";
+        try
+        {
+            using var editable = LoadStrip(filePath);
+
+            editable.MoveRegions([new TileRegion("green", 4, 0, 2, 2)], 2, 0);
+
+            using var result = DecodeRgba(editable.EncodeToPng());
+            Assert.Equal(6, editable.Width);
+            Assert.Equal(Transparent, result.GetPixel(4, 0));
+            Assert.Equal(Transparent, result.GetPixel(5, 1));
+            Assert.Equal(Blue, result.GetPixel(3, 0));
         }
         finally
         {

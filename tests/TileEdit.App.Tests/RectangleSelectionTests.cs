@@ -98,20 +98,6 @@ public class RectangleSelectionTests : IDisposable
     }
 
     [Fact]
-    public void DraggingWhileAMoveIsPendingDoesNotChangeTheSelection()
-    {
-        var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.ToggleMove();
-
-        viewModel.BeginSelectionDrag(1, 1, addToSelection: false);
-        viewModel.UpdateSelectionDrag(40, 40);
-
-        Assert.Equal(["tiles_0001"], SelectedNames(viewModel));
-        Assert.Null(viewModel.SelectionRectangle);
-    }
-
-    [Fact]
     public void DeleteRemovesAllTilesSelectedByRectangle()
     {
         var viewModel = OpenImage();
@@ -137,17 +123,6 @@ public class RectangleSelectionTests : IDisposable
 
         Assert.Empty(viewModel.SelectedTiles);
         Assert.Null(viewModel.SelectionRectangle);
-    }
-
-    [Fact]
-    public void StartingAMoveIsDisabledWhenTheRectangleSelectsSeveralTiles()
-    {
-        var viewModel = OpenImage();
-        viewModel.BeginSelectionDrag(1, 1, addToSelection: false);
-        viewModel.UpdateSelectionDrag(20, 1);
-        viewModel.EndSelectionDrag();
-
-        Assert.False(viewModel.CanToggleMove);
     }
 
     [Fact]

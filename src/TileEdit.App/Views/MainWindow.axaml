@@ -30,10 +30,11 @@
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
-                <MenuItem Header="{Binding MoveButtonLabel}" Click="OnToggleMoveClick" IsEnabled="{Binding CanToggleMove}" />
                 <Separator />
                 <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding IsRectangleToolActive}"
                           IsEnabled="{Binding HasImage}" InputGesture="Ctrl+R" />
+                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding IsMoveToolActive}"
+                          IsEnabled="{Binding HasImage}" InputGesture="M" />
                 <Separator />
                 <MenuItem Header="Compact" Click="OnCompactClick" IsEnabled="{Binding HasImage}" />
             </MenuItem>
@@ -101,7 +102,8 @@
                         <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
                                                    TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
                                                    SelectedTiles="{Binding SelectedTiles}"
-                                                   SelectionRectangle="{Binding SelectionRectangle}" />
+                                                   SelectionRectangle="{Binding SelectionRectangle}"
+                                                   MoveOffset="{Binding MoveOffset}" Image="{Binding PreviewBitmap}" />
                     </Panel>
                 </Panel>
             </Border>
