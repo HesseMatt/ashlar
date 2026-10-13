@@ -245,7 +245,10 @@ public class UndoRedoTests : IDisposable
     {
         var edited = OpenImage();
         edited.HandleCanvasClick(1, 1, addToSelection: false);
-        edited.DeleteSelectedTiles();
+        edited.IsMoveToolActive = true;
+        edited.BeginMoveDrag(1, 1);
+        edited.UpdateMoveDrag(1 + edited.TileWidth, 1);
+        edited.CommitMoveDrag();
         var viewModel = new MainViewModel();
         viewModel.OpenProject(SaveProject(edited));
         viewModel.HandleCanvasClick(17, 1, addToSelection: false);

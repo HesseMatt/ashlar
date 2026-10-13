@@ -33,6 +33,24 @@ public sealed class EditableTilesetImage : IDisposable
         return SKBitmap.Decode(encodedImageBytes, info) ?? throw new InvalidDataException("Could not decode image.");
     }
 
+    // Pixels are RGBA, so every fourth byte (starting at offset 3) is an alpha value.
+    public bool IsRegionEmpty(int x, int y, int width, int height)
+    {
+        var pixels = _bitmap.GetPixelSpan();
+
+        for (var row = y; row < y + height; row++)
+        {
+            var rowStart = row * _bitmap.RowBytes + x * BytesPerPixel;
+            for (var offset = 3; offset < width * BytesPerPixel; offset += BytesPerPixel)
+            {
+                if (pixels[rowStart + offset] != 0)
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
     public void ClearRegion(TileRegion region)
     {
         var pixels = _bitmap.GetPixelSpan();

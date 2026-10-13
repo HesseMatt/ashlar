@@ -135,6 +135,7 @@ public class ToolPaletteTests : IDisposable
     {
         var filePath = Path.GetTempFileName() + ".png";
         using var bitmap = new SKBitmap(new SKImageInfo(128, 128, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+        bitmap.Erase(SKColors.Red);
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
         using var stream = File.Create(filePath);

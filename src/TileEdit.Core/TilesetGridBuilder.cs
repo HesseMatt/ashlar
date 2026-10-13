@@ -8,19 +8,24 @@ public static class TilesetGridBuilder
 {
     private static readonly Regex InvalidNameCharacters = new(@"[^a-zA-Z0-9_]");
 
-    public static IReadOnlyList<TileRegion> Build(string textureFileName, int imageWidth, int imageHeight, int tileWidth, int tileHeight)
+    public static IReadOnlyList<TileRegion> Build(string textureFileName, EditableTilesetImage image, int tileWidth, int tileHeight)
     {
         var baseName = SanitizeBaseName(Path.GetFileNameWithoutExtension(textureFileName));
 
         var tiles = new List<TileRegion>();
         var index = 1;
 
-        for (var y = 0; y + tileHeight <= imageHeight; y += tileHeight)
+        for (var y = 0; y + tileHeight <= image.Height; y += tileHeight)
         {
-            for (var x = 0; x + tileWidth <= imageWidth; x += tileWidth)
+            for (var x = 0; x + tileWidth <= image.Width; x += tileWidth)
             {
-                var name = TileGroupAssigner.FormatName(baseName, index);
-                tiles.Add(new TileRegion(name, x, y, tileWidth, tileHeight));
+                // The index counts every cell, so skipped cells leave gaps in the numbering.
+                if (!image.IsRegionEmpty(x, y, tileWidth, tileHeight))
+                {
+                    var name = TileGroupAssigner.FormatName(baseName, index);
+                    tiles.Add(new TileRegion(name, x, y, tileWidth, tileHeight));
+                }
+
                 index++;
             }
         }

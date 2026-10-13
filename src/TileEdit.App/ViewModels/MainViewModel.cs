@@ -219,7 +219,7 @@ public partial class MainViewModel : ViewModelBase
         TileHeight = project.TileHeight;
         Tiles = new ObservableCollection<TileRegion>(project.Tiles);
         ResetHistory(startedWithEdits: !project.Tiles.SequenceEqual(
-            TilesetGridBuilder.Build(project.ImageFileName, image.Width, image.Height, project.TileWidth, project.TileHeight)));
+            TilesetGridBuilder.Build(project.ImageFileName, image, project.TileWidth, project.TileHeight)));
         RefreshGroupNames();
 
         StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
@@ -615,11 +615,11 @@ public partial class MainViewModel : ViewModelBase
 
     private void RebuildGrid()
     {
-        if (_sourceFileName is null)
+        if (_sourceFileName is null || _editableImage is null)
             return;
 
         Tiles = new ObservableCollection<TileRegion>(
-            TilesetGridBuilder.Build(_sourceFileName, ImageWidth, ImageHeight, TileWidth, TileHeight));
+            TilesetGridBuilder.Build(_sourceFileName, _editableImage, TileWidth, TileHeight));
         SelectedTiles = Array.Empty<TileRegion>();
         EndSelectionDrag();
         EndMoveDrag();

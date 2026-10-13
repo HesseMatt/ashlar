@@ -133,11 +133,31 @@ public class TileSizeLockTests : IDisposable
     }
 
     [Fact]
+    public void UneditedProjectWithEmptyCellsOpensWithEditableTileSize()
+    {
+        var path = Path.Combine(_directory, "sparse.png");
+        using (var bitmap = new SKBitmap(new SKImageInfo(64, 64, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
+        {
+            bitmap.Erase(SKColors.Transparent);
+            bitmap.SetPixel(0, 0, SKColors.Red);
+            using var data = SKImage.FromBitmap(bitmap).Encode(SKEncodedImageFormat.Png, 100);
+            File.WriteAllBytes(path, data.ToArray());
+        }
+
+        var viewModel = new MainViewModel();
+        viewModel.LoadTileset(path);
+        var reopened = new MainViewModel();
+        reopened.OpenProject(SaveProject(viewModel));
+
+        Assert.Single(reopened.Tiles);
+        Assert.True(reopened.CanEditTileSize);
+    }
+
+    [Fact]
     public void ProjectWithEditsOpensWithLockedTileSize()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        MoveFirstTileOneCellRight(viewModel);
         var projectPath = SaveProject(viewModel);
 
         var reopened = new MainViewModel();
@@ -166,6 +186,17 @@ public class TileSizeLockTests : IDisposable
         viewModel.TileWidth = 16;
         viewModel.TileHeight = 16;
         return viewModel;
+    }
+
+    // A moved tile keeps its name, so unlike a deletion (which just leaves an
+    // empty cell) the result differs from a grid freshly built from the image.
+    private static void MoveFirstTileOneCellRight(MainViewModel viewModel)
+    {
+        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.IsMoveToolActive = true;
+        viewModel.BeginMoveDrag(1, 1);
+        viewModel.UpdateMoveDrag(1 + viewModel.TileWidth, 1);
+        viewModel.CommitMoveDrag();
     }
 
     private string SaveProject(MainViewModel viewModel)
