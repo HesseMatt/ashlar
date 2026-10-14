@@ -3,25 +3,37 @@
 Lightweight, local desktop application for managing tilesets for game
 development — primarily for use with **MonoGame** / `MonoGame.Extended`.
 
-> **Status:** v1 and tile editing complete.
+## Features
 
-## Feature scope (v1)
+### Import and export
 
-- Open a tileset image, auto-detect tile size (with confirmation),
-  display tiles visually as a grid.
-- Generate metadata XML in the `MonoGame.Extended` `TextureAtlas` format
-  (see [`example.xml`](example.xml)), including unique, stable tile
-  names.
+- Import a tileset image and auto-detect the tile size, with confirmation
+  or override before the grid is finalized.
+- Tiles are shown as a grid on a transparency checkerboard; fully
+  transparent cells are skipped on import.
+- Every tile gets a unique, stable name that doesn't change when the tile
+  is moved.
+- Export the edited image together with metadata XML in the
+  `MonoGame.Extended` `TextureAtlas` format (see
+  [`example.xml`](example.xml)).
 
-## Editing
+### Editing
 
-- Select, delete, and move individual tiles, including the underlying
-  image pixels (moving onto an occupied cell overwrites it).
-- Save the current image and tile metadata back to disk.
-- Save/reopen a tileset as a self-contained project file
+- Tool palette with Select, Rectangle select, and Move tools.
+- Delete and move tiles, including the underlying image pixels (moving
+  onto an occupied cell overwrites it).
+- Assign tiles to named groups; their names are renamed to use the group
+  as prefix.
+- Compact the atlas to remove gaps and shrink the canvas.
+- Undo and redo.
+- Zoom the canvas.
+
+### Project files
+
+- Save and reopen a tileset as a self-contained project file
   (`*.tileproj.json`, embeds the image) to resume editing later.
-
-Further out: tile grouping, atlas compacting.
+- Images are only ever imported to start a new tileset; the export XML is
+  an output and cannot be reopened.
 
 ## Tech stack
 
