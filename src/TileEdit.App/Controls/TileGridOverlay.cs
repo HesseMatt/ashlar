@@ -9,13 +9,14 @@ namespace TileEdit.App.Controls;
 
 public class TileGridOverlay : Control
 {
-    private static readonly Pen GridPen = new(Brushes.Black, 0.5);
-    private static readonly Pen HighlightPen = new(Brushes.Yellow, 2);
-    private static readonly Pen SelectionPen = new(Brushes.DeepSkyBlue, 1, DashStyle.Dash);
-    private static readonly Pen MovePen = new(Brushes.LimeGreen, 2);
-    private static readonly Pen MoveOutsidePen = new(Brushes.Red, 2);
-    private static readonly IBrush MoveOutsideFill = new SolidColorBrush(Colors.Red, 0.35);
-    private static readonly IBrush SelectionFill = new SolidColorBrush(Colors.DeepSkyBlue, 0.2);
+    public static readonly StyledProperty<IBrush?> GridBrushProperty =
+        AvaloniaProperty.Register<TileGridOverlay, IBrush?>(nameof(GridBrush));
+
+    public static readonly StyledProperty<IBrush?> AccentBrushProperty =
+        AvaloniaProperty.Register<TileGridOverlay, IBrush?>(nameof(AccentBrush));
+
+    public static readonly StyledProperty<IBrush?> AccentFillBrushProperty =
+        AvaloniaProperty.Register<TileGridOverlay, IBrush?>(nameof(AccentFillBrush));
 
     public static readonly StyledProperty<int> ImageWidthProperty =
         AvaloniaProperty.Register<TileGridOverlay, int>(nameof(ImageWidth));
@@ -45,7 +46,8 @@ public class TileGridOverlay : Control
     {
         AffectsRender<TileGridOverlay>(
             ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTilesProperty,
-            SelectionRectangleProperty, MoveOffsetProperty, ImageProperty);
+            SelectionRectangleProperty, MoveOffsetProperty, ImageProperty,
+            GridBrushProperty, AccentBrushProperty, AccentFillBrushProperty);
     }
 
     public int ImageWidth
@@ -96,29 +98,54 @@ public class TileGridOverlay : Control
         set => SetValue(ImageProperty, value);
     }
 
+    public IBrush? GridBrush
+    {
+        get => GetValue(GridBrushProperty);
+        set => SetValue(GridBrushProperty, value);
+    }
+
+    public IBrush? AccentBrush
+    {
+        get => GetValue(AccentBrushProperty);
+        set => SetValue(AccentBrushProperty, value);
+    }
+
+    public IBrush? AccentFillBrush
+    {
+        get => GetValue(AccentFillBrushProperty);
+        set => SetValue(AccentFillBrushProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         if (TileWidth <= 0 || TileHeight <= 0)
             return;
 
+        var gridPen = new Pen(GridBrush, 0.5);
+        var highlightPen = new Pen(AccentBrush, 2);
+
         for (var x = TileWidth; x < ImageWidth; x += TileWidth)
-            context.DrawLine(GridPen, new Point(x, 0), new Point(x, ImageHeight));
+            context.DrawLine(gridPen, new Point(x, 0), new Point(x, ImageHeight));
 
         for (var y = TileHeight; y < ImageHeight; y += TileHeight)
-            context.DrawLine(GridPen, new Point(0, y), new Point(ImageWidth, y));
+            context.DrawLine(gridPen, new Point(0, y), new Point(ImageWidth, y));
 
         foreach (var selected in SelectedTiles)
-            context.DrawRectangle(HighlightPen, new Rect(selected.X, selected.Y, selected.Width, selected.Height));
+            context.DrawRectangle(highlightPen, new Rect(selected.X, selected.Y, selected.Width, selected.Height));
 
         if (MoveOffset is { } offset)
             RenderMovePreview(context, offset);
 
         if (SelectionRectangle is { } rectangle)
-            context.DrawRectangle(SelectionFill, SelectionPen, rectangle);
+            context.DrawRectangle(AccentFillBrush, new Pen(AccentBrush, 1, DashStyle.Dash), rectangle);
     }
 
     private void RenderMovePreview(DrawingContext context, Vector offset)
     {
+        var movePen = new Pen(AccentBrush, 2);
+        // Dashed outline plus a cross keeps "deleted" distinct from a normal move without another hue.
+        var outsidePen = new Pen(AccentBrush, 2, DashStyle.Dash);
+
         foreach (var tile in SelectedTiles)
         {
             var source = new Rect(tile.X, tile.Y, tile.Width, tile.Height);
@@ -133,11 +160,15 @@ public class TileGridOverlay : Control
                         context.DrawImage(image, source, destination);
                 }
 
-                context.DrawRectangle(MovePen, destination);
+                context.DrawRectangle(movePen, destination);
             }
             else
             {
-                context.DrawRectangle(MoveOutsideFill, MoveOutsidePen, destination);
+                using (context.PushOpacity(0.5))
+                    context.DrawRectangle(AccentFillBrush, outsidePen, destination);
+
+                context.DrawLine(outsidePen, destination.TopLeft, destination.BottomRight);
+                context.DrawLine(outsidePen, destination.TopRight, destination.BottomLeft);
             }
         }
     }

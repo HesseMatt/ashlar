@@ -7,8 +7,11 @@ namespace TileEdit.App.Controls;
 
 public class TransparencyCheckerboard : Control
 {
-    private static readonly IBrush LightBrush = new SolidColorBrush(Color.Parse("#FFFFFF"));
-    private static readonly IBrush DarkBrush = new SolidColorBrush(Color.Parse("#CCCCCC"));
+    public static readonly StyledProperty<IBrush?> LightBrushProperty =
+        AvaloniaProperty.Register<TransparencyCheckerboard, IBrush?>(nameof(LightBrush));
+
+    public static readonly StyledProperty<IBrush?> DarkBrushProperty =
+        AvaloniaProperty.Register<TransparencyCheckerboard, IBrush?>(nameof(DarkBrush));
 
     public static readonly StyledProperty<int> ImageWidthProperty =
         AvaloniaProperty.Register<TransparencyCheckerboard, int>(nameof(ImageWidth));
@@ -25,7 +28,8 @@ public class TransparencyCheckerboard : Control
     static TransparencyCheckerboard()
     {
         AffectsRender<TransparencyCheckerboard>(
-            ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty);
+            ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty,
+            LightBrushProperty, DarkBrushProperty);
     }
 
     public int ImageWidth
@@ -52,12 +56,24 @@ public class TransparencyCheckerboard : Control
         set => SetValue(TileHeightProperty, value);
     }
 
+    public IBrush? LightBrush
+    {
+        get => GetValue(LightBrushProperty);
+        set => SetValue(LightBrushProperty, value);
+    }
+
+    public IBrush? DarkBrush
+    {
+        get => GetValue(DarkBrushProperty);
+        set => SetValue(DarkBrushProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
         if (TileWidth <= 0 || TileHeight <= 0)
             return;
 
-        context.FillRectangle(LightBrush, new Rect(0, 0, ImageWidth, ImageHeight));
+        context.DrawRectangle(LightBrush, null, new Rect(0, 0, ImageWidth, ImageHeight));
 
         for (var row = 0; row * TileHeight < ImageHeight; row++)
         {
@@ -70,7 +86,7 @@ public class TransparencyCheckerboard : Control
                 var y = row * TileHeight;
                 var width = Math.Min(TileWidth, ImageWidth - x);
                 var height = Math.Min(TileHeight, ImageHeight - y);
-                context.FillRectangle(DarkBrush, new Rect(x, y, width, height));
+                context.DrawRectangle(DarkBrush, null, new Rect(x, y, width, height));
             }
         }
     }
