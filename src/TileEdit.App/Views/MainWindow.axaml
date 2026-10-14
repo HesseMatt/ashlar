@@ -26,14 +26,7 @@
     </Window.Resources>
 
     <Window.Styles>
-        <Style Selector="StackPanel.toolPalette > :is(Button)">
-            <Setter Property="Width" Value="36" />
-            <Setter Property="Height" Value="36" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
-        <Style Selector="StackPanel.toolPalette Path">
+        <Style Selector="Border.panel Path">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
             <Setter Property="Stretch" Value="Uniform" />
@@ -73,89 +66,99 @@
             </MenuItem>
         </Menu>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="12">
-            <TextBlock Text="Tile width:" VerticalAlignment="Center" />
-            <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" IsEnabled="{Binding CanEditTileSize}" />
-            <TextBlock Text="Tile height:" VerticalAlignment="Center" />
-            <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="100" IsEnabled="{Binding CanEditTileSize}" />
-            <TextBlock Text="Texture path:" VerticalAlignment="Center" />
-            <TextBox Text="{Binding TexturePath}" Width="160" />
-        </StackPanel>
-
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="12" Margin="12,0,12,12">
-            <TextBlock Text="{Binding StatusMessage}" />
-            <TextBlock Text="{Binding ZoomPercentageText}" IsVisible="{Binding HasImage}" />
-        </StackPanel>
-
-        <Border DockPanel.Dock="Right" Width="220" Margin="0,0,12,12" Padding="12"
-                BorderBrush="Gray" BorderThickness="1">
-            <StackPanel Spacing="16">
-                <TextBlock Text="Inspector" FontWeight="Bold" />
-
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Tile ID" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding SelectedTileId}" TextWrapping="Wrap" />
-                </StackPanel>
-
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Group" FontWeight="SemiBold" />
-                    <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
-                              IsEnabled="{Binding HasSelectedTiles}" HorizontalAlignment="Stretch"
-                              KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
-                </StackPanel>
+        <Border Classes="panel" DockPanel.Dock="Top" Margin="6,6,6,0" Padding="12,6">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="Tile width:" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="130" IsEnabled="{Binding CanEditTileSize}" />
+                <TextBlock Text="Tile height:" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="130" IsEnabled="{Binding CanEditTileSize}" />
+                <TextBlock Text="Texture path:" VerticalAlignment="Center" />
+                <TextBox Text="{Binding TexturePath}" Width="160" />
             </StackPanel>
         </Border>
 
-        <StackPanel Classes="toolPalette" DockPanel.Dock="Left" Spacing="4" Margin="12,0,0,12">
-            <ToggleButton x:Name="RectangleSelectButton" IsChecked="{Binding IsRectangleToolActive}" IsEnabled="{Binding HasImage}"
-                          ToolTip.Tip="Rectangle select (Ctrl+R)">
-                <Path Data="{StaticResource RectangleSelectIcon}"
-                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
-            </ToggleButton>
-            <ToggleButton x:Name="MoveButton" IsChecked="{Binding IsMoveToolActive}" IsEnabled="{Binding HasImage}"
-                          ToolTip.Tip="Move (M)">
-                <Path Data="{StaticResource MoveIcon}"
-                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
-            </ToggleButton>
-            <Button x:Name="DeleteButton" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}"
-                    ToolTip.Tip="Delete (Del)">
-                <Path Data="{StaticResource DeleteIcon}"
-                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
-            </Button>
-        </StackPanel>
+        <Border Classes="panelHeader" DockPanel.Dock="Bottom" Margin="0" BorderThickness="0,1,0,0" Padding="12,4">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Classes="secondary" Text="{Binding StatusMessage}" />
+                <TextBlock Classes="secondary" Text="{Binding ZoomPercentageText}" IsVisible="{Binding HasImage}" />
+            </StackPanel>
+        </Border>
 
-        <ScrollViewer x:Name="TileCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
-            <!-- The padding is the overscroll margin around the zoomed tileset (set from code,
-                 since it depends on the viewport size). The transparent background makes the
-                 padding hit-testable, so panning can start there too. -->
-            <Border x:Name="TileCanvasPadding" Background="Transparent" IsVisible="{Binding HasImage}"
-                    Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
-                    PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
-                    PointerWheelChanged="OnTileCanvasPointerWheelChanged">
-                <Panel Width="{Binding ScaledImageWidth}" Height="{Binding ScaledImageHeight}">
-                    <!-- Left/Top alignment is load-bearing: a Panel centers a child that has an
-                         explicit Width/Height, which would place this panel's unscaled layout slot
-                         in the middle of the zoomed wrapper above. The ScaleTransform then scales
-                         out from there instead of from the wrapper's origin, pushing the right and
-                         bottom of the image outside the scrollable extent, where it can't be
-                         reached by panning. -->
-                    <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
-                           HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
-                        <Panel.RenderTransform>
-                            <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
-                        </Panel.RenderTransform>
-                        <controls:TransparencyCheckerboard ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
-                        <Image Source="{Binding PreviewBitmap}" Stretch="None" />
-                        <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                                   TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
-                                                   SelectedTiles="{Binding SelectedTiles}"
-                                                   SelectionRectangle="{Binding SelectionRectangle}"
-                                                   MoveOffset="{Binding MoveOffset}" Image="{Binding PreviewBitmap}" />
+        <Border Classes="panel" DockPanel.Dock="Right" Width="220" Margin="0,6,6,6" ClipToBounds="True">
+            <DockPanel>
+                <Border Classes="panelHeader" DockPanel.Dock="Top">
+                    <TextBlock Classes="panelHeaderText" Text="INSPECTOR" />
+                </Border>
+                <StackPanel Spacing="16" Margin="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="secondary" Text="Tile ID" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding SelectedTileId}" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="secondary" Text="Group" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
+                                  IsEnabled="{Binding HasSelectedTiles}" HorizontalAlignment="Stretch"
+                                  KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Border Classes="panel" DockPanel.Dock="Left" Margin="6,6,0,6" Padding="4" VerticalAlignment="Top">
+            <StackPanel Spacing="4">
+                <ToggleButton Classes="tool" x:Name="RectangleSelectButton" IsChecked="{Binding IsRectangleToolActive}" IsEnabled="{Binding HasImage}"
+                              ToolTip.Tip="Rectangle select (Ctrl+R)">
+                    <Path Data="{StaticResource RectangleSelectIcon}"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
+                </ToggleButton>
+                <ToggleButton Classes="tool" x:Name="MoveButton" IsChecked="{Binding IsMoveToolActive}" IsEnabled="{Binding HasImage}"
+                              ToolTip.Tip="Move (M)">
+                    <Path Data="{StaticResource MoveIcon}"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
+                </ToggleButton>
+                <Button Classes="tool" x:Name="DeleteButton" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}"
+                        ToolTip.Tip="Delete (Del)">
+                    <Path Data="{StaticResource DeleteIcon}"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="canvas" Margin="6">
+            <ScrollViewer x:Name="TileCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <!-- The padding is the overscroll margin around the zoomed tileset (set from code,
+                     since it depends on the viewport size). The transparent background makes the
+                     padding hit-testable, so panning can start there too. -->
+                <Border x:Name="TileCanvasPadding" Background="Transparent" IsVisible="{Binding HasImage}"
+                        Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
+                        PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
+                        PointerWheelChanged="OnTileCanvasPointerWheelChanged">
+                    <Panel Width="{Binding ScaledImageWidth}" Height="{Binding ScaledImageHeight}">
+                        <!-- Left/Top alignment is load-bearing: a Panel centers a child that has an
+                             explicit Width/Height, which would place this panel's unscaled layout slot
+                             in the middle of the zoomed wrapper above. The ScaleTransform then scales
+                             out from there instead of from the wrapper's origin, pushing the right and
+                             bottom of the image outside the scrollable extent, where it can't be
+                             reached by panning. -->
+                        <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
+                               HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
+                            <Panel.RenderTransform>
+                                <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
+                            </Panel.RenderTransform>
+                            <controls:TransparencyCheckerboard ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                                                               TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
+                            <Image Source="{Binding PreviewBitmap}" Stretch="None" />
+                            <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                                                       TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
+                                                       SelectedTiles="{Binding SelectedTiles}"
+                                                       SelectionRectangle="{Binding SelectionRectangle}"
+                                                       MoveOffset="{Binding MoveOffset}" Image="{Binding PreviewBitmap}" />
+                        </Panel>
                     </Panel>
-                </Panel>
-            </Border>
-        </ScrollViewer>
+                </Border>
+            </ScrollViewer>
+        </Border>
     </DockPanel>
 
 </Window>

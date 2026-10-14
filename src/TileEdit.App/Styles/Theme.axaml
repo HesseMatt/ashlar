@@ -1,0 +1,142 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:TileEdit.App.Controls">
+
+    <!-- Only the accent resources are meant to differ between apps that share this theme. -->
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#1B1B1B" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#232323" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#2D2D2D" />
+                    <SolidColorBrush x:Key="PanelHeaderBrush" Color="#262626" />
+                    <SolidColorBrush x:Key="FieldBrush" Color="#1F1F1F" />
+                    <SolidColorBrush x:Key="BorderBrush" Color="#3D3D3D" />
+                    <SolidColorBrush x:Key="TextBrush" Color="#D4D4D4" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#8F8F8F" />
+                    <SolidColorBrush x:Key="GridLineBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="CheckerLightBrush" Color="#3A3A3A" />
+                    <SolidColorBrush x:Key="CheckerDarkBrush" Color="#2E2E2E" />
+
+                    <!-- Accent -->
+                    <SolidColorBrush x:Key="AccentBrush" Color="#EE9A9A" />
+                    <SolidColorBrush x:Key="AccentFillBrush" Color="#EE9A9A" Opacity="0.25" />
+                    <Color x:Key="SystemAccentColor">#EE9A9A</Color>
+                    <Color x:Key="SystemAccentColorLight1">#F2B0B0</Color>
+                    <Color x:Key="SystemAccentColorLight2">#F5C4C4</Color>
+                    <Color x:Key="SystemAccentColorLight3">#F8D6D6</Color>
+                    <Color x:Key="SystemAccentColorDark1">#E48080</Color>
+                    <Color x:Key="SystemAccentColorDark2">#D06A6A</Color>
+                    <Color x:Key="SystemAccentColorDark3">#B85757</Color>
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#E2E2E2" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#EFEFEF" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#FAFAFA" />
+                    <SolidColorBrush x:Key="PanelHeaderBrush" Color="#EDEDED" />
+                    <SolidColorBrush x:Key="FieldBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="BorderBrush" Color="#C4C4C4" />
+                    <SolidColorBrush x:Key="TextBrush" Color="#222222" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#666666" />
+                    <SolidColorBrush x:Key="GridLineBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="CheckerLightBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CheckerDarkBrush" Color="#D8D8D8" />
+
+                    <!-- Accent -->
+                    <SolidColorBrush x:Key="AccentBrush" Color="#D96464" />
+                    <SolidColorBrush x:Key="AccentFillBrush" Color="#D96464" Opacity="0.25" />
+                    <Color x:Key="SystemAccentColor">#D96464</Color>
+                    <Color x:Key="SystemAccentColorLight1">#E07C7C</Color>
+                    <Color x:Key="SystemAccentColorLight2">#E79494</Color>
+                    <Color x:Key="SystemAccentColorLight3">#EEACAC</Color>
+                    <Color x:Key="SystemAccentColorDark1">#C85050</Color>
+                    <Color x:Key="SystemAccentColorDark2">#B03E3E</Color>
+                    <Color x:Key="SystemAccentColorDark3">#982E2E</Color>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <Style Selector="Window">
+        <Setter Property="Background" Value="{DynamicResource WorkspaceBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+    </Style>
+
+    <Style Selector="Border.panel">
+        <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
+    <Style Selector="Border.canvas">
+        <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+
+    <Style Selector="Border.panelHeader">
+        <Setter Property="Background" Value="{DynamicResource PanelHeaderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="12,8" />
+    </Style>
+
+    <Style Selector="TextBlock.panelHeaderText">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.secondary">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <Style Selector="Menu">
+        <Setter Property="Background" Value="{DynamicResource PanelHeaderBrush}" />
+    </Style>
+
+    <Style Selector="TextBox, NumericUpDown, ComboBox">
+        <Setter Property="Background" Value="{DynamicResource FieldBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+
+    <Style Selector=":is(Button).tool">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector=":is(Button).tool /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector=":is(Button).tool:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource PanelHeaderBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.tool:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.tool:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
+    </Style>
+
+    <Style Selector="controls|TileGridOverlay">
+        <Setter Property="GridBrush" Value="{DynamicResource GridLineBrush}" />
+        <Setter Property="AccentBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="AccentFillBrush" Value="{DynamicResource AccentFillBrush}" />
+    </Style>
+
+    <Style Selector="controls|TransparencyCheckerboard">
+        <Setter Property="LightBrush" Value="{DynamicResource CheckerLightBrush}" />
+        <Setter Property="DarkBrush" Value="{DynamicResource CheckerDarkBrush}" />
+    </Style>
+</Styles>
