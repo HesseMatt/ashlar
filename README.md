@@ -1,7 +1,7 @@
 # tileedit
 
 Lightweight, local desktop application for managing tilesets for game
-development — primarily for use with **MonoGame** / `MonoGame.Extended`.
+development.
 
 ## Features
 
@@ -13,9 +13,20 @@ development — primarily for use with **MonoGame** / `MonoGame.Extended`.
   transparent cells are skipped on import.
 - Every tile gets a unique, stable name that doesn't change when the tile
   is moved.
-- Export the edited image together with metadata XML in the
-  `MonoGame.Extended` `TextureAtlas` format (see
-  [`example.xml`](example.xml)).
+- Export the edited image together with a metadata XML file in the
+  `TextureAtlas` format (see [`example.xml`](example.xml)):
+
+  ```xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <TextureAtlas>
+      <Texture>dungeon</Texture>
+      <Regions>
+          <Region name="dungeon_0001" x="0" y="0" width="16" height="16" />
+          <Region name="dungeon_0002" x="16" y="0" width="16" height="16" />
+          <Region name="dungeon_0003" x="32" y="0" width="16" height="16" />
+      </Regions>
+  </TextureAtlas>
+  ```
 
 ### Editing
 
