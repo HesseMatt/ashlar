@@ -7,37 +7,29 @@ development.
 
 ### Import and export
 
-- Import a tileset image and auto-detect the tile size, with confirmation
-  or override before the grid is finalized.
-- Tiles are shown as a grid on a transparency checkerboard; fully
-  transparent cells are skipped on import.
-- Every tile gets a unique, stable name that doesn't change when the tile
-  is moved.
-- Export the edited image together with a metadata XML file in the
-  `TextureAtlas` format (see [`example.xml`](example.xml)):
+Import a tileset image and export the edited image together with an XML
+file describing every tile by name and position:
 
-  ```xml
-  <?xml version="1.0" encoding="utf-8"?>
-  <TextureAtlas>
-      <Texture>dungeon</Texture>
-      <Regions>
-          <Region name="dungeon_0001" x="0" y="0" width="16" height="16" />
-          <Region name="dungeon_0002" x="16" y="0" width="16" height="16" />
-          <Region name="dungeon_0003" x="32" y="0" width="16" height="16" />
-      </Regions>
-  </TextureAtlas>
-  ```
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas>
+    <Texture>dungeon</Texture>
+    <Regions>
+        <Region name="dungeon_0001" x="0" y="0" width="16" height="16" />
+        <Region name="dungeon_0002" x="16" y="0" width="16" height="16" />
+        <Region name="dungeon_0003" x="32" y="0" width="16" height="16" />
+    </Regions>
+</TextureAtlas>
+```
 
 ### Editing
 
-- Tool palette with Select, Rectangle select, and Move tools.
-- Delete and move tiles, including the underlying image pixels (moving
-  onto an occupied cell overwrites it).
-- Assign tiles to named groups; their names are renamed to use the group
-  as prefix.
-- Compact the atlas to remove gaps and shrink the canvas.
-- Undo and redo.
-- Zoom the canvas.
+- Select, rectangle select, and move tools
+- Delete tiles
+- Tile groups
+- Compact
+- Undo and redo
+- Zoom
 
 ### Project files
 
