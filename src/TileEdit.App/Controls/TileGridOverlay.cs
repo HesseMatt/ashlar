@@ -122,7 +122,7 @@ public class TileGridOverlay : Control
             return;
 
         var gridPen = new Pen(GridBrush, 0.5);
-        var highlightPen = new Pen(AccentBrush, 2);
+        var highlightPen = new Pen(AccentBrush, 1);
 
         for (var x = TileWidth; x < ImageWidth; x += TileWidth)
             context.DrawLine(gridPen, new Point(x, 0), new Point(x, ImageHeight));

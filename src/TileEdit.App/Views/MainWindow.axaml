@@ -69,9 +69,9 @@
         <Border Classes="panel" DockPanel.Dock="Top" Margin="6,6,6,0" Padding="12,6">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="Tile width:" VerticalAlignment="Center" />
-                <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="100" IsEnabled="{Binding CanEditTileSize}" />
+                <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="130" IsEnabled="{Binding CanEditTileSize}" />
                 <TextBlock Text="Tile height:" VerticalAlignment="Center" />
-                <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="100" IsEnabled="{Binding CanEditTileSize}" />
+                <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="130" IsEnabled="{Binding CanEditTileSize}" />
                 <TextBlock Text="Texture path:" VerticalAlignment="Center" />
                 <TextBox Text="{Binding TexturePath}" Width="160" />
             </StackPanel>
