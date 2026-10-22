@@ -86,28 +86,6 @@ public class UndoRedoTests : IDisposable
     }
 
     [Fact]
-    public void UndoingCompactRestoresCanvasSizeAndLayout()
-    {
-        var viewModel = OpenImage();
-        SelectRow(viewModel, 2);
-        SelectRow(viewModel, 3);
-        viewModel.DeleteSelectedTiles();
-        var tilesBeforeCompact = viewModel.Tiles.ToList();
-        viewModel.Compact();
-        Assert.Equal(32, viewModel.ImageHeight);
-
-        viewModel.Undo();
-
-        Assert.Equal(64, viewModel.ImageWidth);
-        Assert.Equal(64, viewModel.ImageHeight);
-        Assert.Equal(tilesBeforeCompact, viewModel.Tiles);
-
-        viewModel.Redo();
-
-        Assert.Equal(32, viewModel.ImageHeight);
-    }
-
-    [Fact]
     public void UndoingAGroupAssignmentRestoresNamesAndSelection()
     {
         var viewModel = OpenImage();

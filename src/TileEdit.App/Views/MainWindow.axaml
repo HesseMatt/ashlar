@@ -56,8 +56,6 @@
                           IsEnabled="{Binding HasImage}" InputGesture="Ctrl+R" />
                 <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding IsMoveToolActive}"
                           IsEnabled="{Binding HasImage}" InputGesture="M" />
-                <Separator />
-                <MenuItem Header="Compact" Click="OnCompactClick" IsEnabled="{Binding HasImage}" />
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemPlus" />

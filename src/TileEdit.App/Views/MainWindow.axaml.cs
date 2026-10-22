@@ -509,12 +509,6 @@ public partial class MainWindow : Window
             viewModel.DeleteSelectedTiles();
     }
 
-    private void OnCompactClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-            viewModel.Compact();
-    }
-
     private void OnGroupNameInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter)

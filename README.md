@@ -27,7 +27,6 @@ file describing every tile by name and position:
 - Select, rectangle select, and move tools
 - Delete tiles
 - Tile groups
-- Compact
 - Undo and redo
 - Zoom
 
