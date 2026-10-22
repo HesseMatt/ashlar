@@ -6,4 +6,5 @@ public enum CanvasTool
     Rectangle,
     Move,
     Draw,
+    Pipette,
 }

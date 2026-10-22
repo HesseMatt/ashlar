@@ -78,6 +78,7 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsRectangleToolActive))]
     [NotifyPropertyChangedFor(nameof(IsMoveToolActive))]
     [NotifyPropertyChangedFor(nameof(IsDrawToolActive))]
+    [NotifyPropertyChangedFor(nameof(IsPipetteToolActive))]
     private CanvasTool _activeTool;
 
     [ObservableProperty]
@@ -166,6 +167,12 @@ public partial class MainViewModel : ViewModelBase
     {
         get => ActiveTool == CanvasTool.Draw;
         set => SetToolActive(CanvasTool.Draw, value);
+    }
+
+    public bool IsPipetteToolActive
+    {
+        get => ActiveTool == CanvasTool.Pipette;
+        set => SetToolActive(CanvasTool.Pipette, value);
     }
 
     public string SelectedTileId => SelectedTiles.Count switch
@@ -491,6 +498,15 @@ public partial class MainViewModel : ViewModelBase
 
         _drawStroke = null;
         Restore(stroke.Before, stroke.SelectionBefore);
+    }
+
+    public bool PickColor(int pixelX, int pixelY)
+    {
+        if (!IsPipetteToolActive || _editableImage is null || !_editableImage.TryGetPixel(pixelX, pixelY, out var picked))
+            return false;
+
+        DrawColor = Color.FromArgb(picked.A, picked.R, picked.G, picked.B);
+        return true;
     }
 
     // Re-entrancy guard: replacing GroupNames below updates the group combo

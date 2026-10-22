@@ -72,6 +72,20 @@ public sealed class EditableTilesetImage : IDisposable
         return true;
     }
 
+    public bool TryGetPixel(int x, int y, out PixelColor color)
+    {
+        if (x < 0 || y < 0 || x >= Width || y >= Height)
+        {
+            color = default!;
+            return false;
+        }
+
+        var offset = y * _bitmap.RowBytes + x * BytesPerPixel;
+        var pixels = _bitmap.GetPixelSpan();
+        color = new PixelColor(pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3]);
+        return true;
+    }
+
     public void ClearRegion(TileRegion region)
     {
         var pixels = _bitmap.GetPixelSpan();
