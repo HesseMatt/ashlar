@@ -77,7 +77,11 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRectangleToolActive))]
     [NotifyPropertyChangedFor(nameof(IsMoveToolActive))]
+    [NotifyPropertyChangedFor(nameof(IsDrawToolActive))]
     private CanvasTool _activeTool;
+
+    [ObservableProperty]
+    private Color _drawColor = Colors.Black;
 
     [ObservableProperty]
     private Rect? _selectionRectangle;
@@ -102,12 +106,26 @@ public partial class MainViewModel : ViewModelBase
     private bool _isConfirmingGroupNameInput;
     private SelectionDrag? _selectionDrag;
     private MoveDrag? _moveDrag;
+    private DrawStroke? _drawStroke;
     private readonly EditHistory _history = new();
     private bool _startedWithEdits;
 
     private record SelectionDrag(int StartX, int StartY, IReadOnlyList<TileRegion> SelectionBefore, bool AddToSelection);
 
     private record MoveDrag(int StartCellX, int StartCellY);
+
+    // Cells already checked for a missing tile are remembered so a stroke
+    // doesn't search the tile list again for every pixel.
+    private class DrawStroke(TilesetState before, IReadOnlyList<string> selectionBefore, int lastX, int lastY)
+    {
+        public TilesetState Before { get; } = before;
+        public IReadOnlyList<string> SelectionBefore { get; } = selectionBefore;
+        public int LastX { get; set; } = lastX;
+        public int LastY { get; set; } = lastY;
+        public bool PaintedAnything { get; set; }
+        public HashSet<(int, int)> CheckedCells { get; } = new();
+        public int CreatedTiles { get; set; }
+    }
 
     public event EventHandler? TilesetLoaded;
 
@@ -144,6 +162,12 @@ public partial class MainViewModel : ViewModelBase
         set => SetToolActive(CanvasTool.Move, value);
     }
 
+    public bool IsDrawToolActive
+    {
+        get => ActiveTool == CanvasTool.Draw;
+        set => SetToolActive(CanvasTool.Draw, value);
+    }
+
     public string SelectedTileId => SelectedTiles.Count switch
     {
         0 => "No tile selected",
@@ -151,7 +175,7 @@ public partial class MainViewModel : ViewModelBase
         _ => $"{SelectedTiles.Count} tiles selected",
     };
 
-    private bool IsDragInProgress => _selectionDrag is not null || _moveDrag is not null;
+    private bool IsDragInProgress => _selectionDrag is not null || _moveDrag is not null || _drawStroke is not null;
 
     private string DefaultGroupName =>
         _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));
@@ -185,6 +209,7 @@ public partial class MainViewModel : ViewModelBase
         SelectedTiles = Array.Empty<TileRegion>();
         EndSelectionDrag();
         EndMoveDrag();
+        _drawStroke = null;
         ActiveTool = CanvasTool.Select;
         ZoomLevel = 1.0;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
@@ -233,9 +258,12 @@ public partial class MainViewModel : ViewModelBase
         SelectedTiles = Array.Empty<TileRegion>();
         EndSelectionDrag();
         EndMoveDrag();
+        _drawStroke = null;
         ActiveTool = CanvasTool.Select;
         ZoomLevel = 1.0;
         TexturePath = project.TexturePath;
+        var projectColor = project.DrawColor ?? PixelColor.Black;
+        DrawColor = Color.FromArgb(projectColor.A, projectColor.R, projectColor.G, projectColor.B);
         TileWidth = project.TileWidth;
         TileHeight = project.TileHeight;
         Tiles = new ObservableCollection<TileRegion>(project.Tiles);
@@ -331,7 +359,7 @@ public partial class MainViewModel : ViewModelBase
 
     public void DeleteSelectedTiles()
     {
-        if (SelectedTiles.Count == 0 || _editableImage is null)
+        if (SelectedTiles.Count == 0 || _editableImage is null || _drawStroke is not null)
             return;
 
         EndSelectionDrag();
@@ -415,6 +443,54 @@ public partial class MainViewModel : ViewModelBase
     {
         _moveDrag = null;
         MoveOffset = null;
+    }
+
+    public bool BeginStroke(int pixelX, int pixelY)
+    {
+        if (!IsDrawToolActive || _editableImage is null)
+            return false;
+
+        _drawStroke = new DrawStroke(CaptureState(), SelectedNames(), pixelX, pixelY);
+        PaintPoints([(pixelX, pixelY)]);
+        return true;
+    }
+
+    public void ContinueStroke(int pixelX, int pixelY)
+    {
+        if (_drawStroke is not { } stroke)
+            return;
+
+        // The first point is where the previous update stopped, already painted.
+        PaintPoints(LineRasterizer.Line(stroke.LastX, stroke.LastY, pixelX, pixelY).Skip(1));
+        stroke.LastX = pixelX;
+        stroke.LastY = pixelY;
+    }
+
+    public void CommitStroke()
+    {
+        if (_drawStroke is not { } stroke)
+            return;
+
+        _drawStroke = null;
+        if (!stroke.PaintedAnything)
+            return;
+
+        RecordEdit("Draw", stroke.Before, stroke.SelectionBefore);
+        StatusMessage = stroke.CreatedTiles switch
+        {
+            0 => "Drew on the image. Use \"Save image...\" to write this change to disk.",
+            1 => "Drew on the image and created 1 tile.",
+            _ => $"Drew on the image and created {stroke.CreatedTiles} tiles.",
+        };
+    }
+
+    public void CancelStroke()
+    {
+        if (_drawStroke is not { } stroke)
+            return;
+
+        _drawStroke = null;
+        Restore(stroke.Before, stroke.SelectionBefore);
     }
 
     // Re-entrancy guard: replacing GroupNames below updates the group combo
@@ -504,7 +580,8 @@ public partial class MainViewModel : ViewModelBase
         if (_sourceFileName is null || _editableImage is null)
             return;
 
-        var project = new TilesetProject(_sourceFileName, _editableImage.EncodeToPng(), TexturePath, TileWidth, TileHeight, Tiles);
+        var project = new TilesetProject(_sourceFileName, _editableImage.EncodeToPng(), TexturePath, TileWidth, TileHeight, Tiles,
+            new PixelColor(DrawColor.R, DrawColor.G, DrawColor.B, DrawColor.A));
 
         try
         {
@@ -515,6 +592,44 @@ public partial class MainViewModel : ViewModelBase
         {
             StatusMessage = $"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}";
         }
+    }
+
+    // Writes into the image and straight into the preview bitmap, so a stroke
+    // never has to re-encode or re-copy the whole image.
+    private unsafe void PaintPoints(IEnumerable<(int X, int Y)> points)
+    {
+        if (_drawStroke is not { } stroke || _editableImage is null || PreviewBitmap is null)
+            return;
+
+        var color = new PixelColor(DrawColor.R, DrawColor.G, DrawColor.B, DrawColor.A);
+        using (var framebuffer = PreviewBitmap.Lock())
+        {
+            foreach (var (x, y) in points)
+            {
+                if (!_editableImage.SetPixel(x, y, color))
+                    continue;
+
+                stroke.PaintedAnything = true;
+                CopyPixels(framebuffer, x, y, 1, 1);
+                if (color.A > 0)
+                    CreateTileAt(stroke, x, y);
+            }
+        }
+
+        PreviewPixelsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void CreateTileAt(DrawStroke stroke, int pixelX, int pixelY)
+    {
+        if (!stroke.CheckedCells.Add((FloorDiv(pixelX, TileWidth), FloorDiv(pixelY, TileHeight))))
+            return;
+
+        var tile = DrawnTileCreator.CreateTile(Tiles, pixelX, pixelY, TileWidth, TileHeight, ImageWidth, ImageHeight, DefaultGroupName);
+        if (tile is null)
+            return;
+
+        Tiles.Add(tile);
+        stroke.CreatedTiles++;
     }
 
     private TilesetState CaptureState() => new(_editableImage!.EncodeToPng(), Tiles.ToList());
