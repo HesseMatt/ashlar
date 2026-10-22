@@ -29,14 +29,30 @@ public static class TextureAtlasXmlWriter
         BuildDocument(tileset).Save(writer);
     }
 
-    private static XDocument BuildDocument(Tileset tileset)
+    // With a limit, only the first regions are rendered and a comment tells how many were
+    // left out. That comment is for previews only; Write never produces it.
+    public static string ToXmlString(Tileset tileset, int? maxRegions = null)
     {
-        var regions = tileset.Tiles.Select(tile => new XElement("Region",
+        using var stream = new MemoryStream();
+        using (var writer = XmlWriter.Create(stream, Settings))
+            BuildDocument(tileset, maxRegions).Save(writer);
+
+        return Settings.Encoding.GetString(stream.ToArray());
+    }
+
+    private static XDocument BuildDocument(Tileset tileset, int? maxRegions = null)
+    {
+        var shownTiles = maxRegions is { } limit ? tileset.Tiles.Take(limit) : tileset.Tiles;
+        var regions = shownTiles.Select(tile => (XNode)new XElement("Region",
             new XAttribute("name", tile.Name),
             new XAttribute("x", tile.X),
             new XAttribute("y", tile.Y),
             new XAttribute("width", tile.Width),
-            new XAttribute("height", tile.Height)));
+            new XAttribute("height", tile.Height))).ToList();
+
+        var omitted = tileset.Tiles.Count - regions.Count;
+        if (omitted > 0)
+            regions.Add(new XComment($" … {omitted} more regions "));
 
         return new XDocument(
             new XDeclaration("1.0", "utf-8", null),

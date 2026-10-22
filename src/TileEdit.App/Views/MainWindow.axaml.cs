@@ -165,6 +165,15 @@ public partial class MainWindow : Window
 
     private async void OnExportXmlClick(object? sender, RoutedEventArgs e)
     {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        var texturePath = await new ExportDialog(viewModel.CreateExportDialogViewModel()).ShowDialog<string?>(this);
+        if (texturePath is null)
+            return;
+
+        viewModel.TexturePath = texturePath;
+
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export tileset XML",
@@ -180,8 +189,7 @@ public partial class MainWindow : Window
         if (path is null)
             return;
 
-        if (DataContext is MainViewModel viewModel)
-            viewModel.ExportXml(path);
+        viewModel.ExportXml(path);
     }
 
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
