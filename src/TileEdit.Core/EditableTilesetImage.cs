@@ -8,7 +8,7 @@ public sealed class EditableTilesetImage : IDisposable
 {
     private const int BytesPerPixel = 4;
 
-    private SKBitmap _bitmap;
+    private readonly SKBitmap _bitmap;
 
     private EditableTilesetImage(SKBitmap bitmap)
     {
@@ -21,8 +21,7 @@ public sealed class EditableTilesetImage : IDisposable
 
     public int RowBytes => _bitmap.RowBytes;
 
-    // Unpremultiplied RGBA bytes, RowBytes apart. Only valid until the next edit
-    // that changes the image size (Repack) or disposes it.
+    // Unpremultiplied RGBA bytes, RowBytes apart. Only valid until the image is disposed.
     public ReadOnlySpan<byte> GetPixels() => _bitmap.GetPixelSpan();
 
     public static EditableTilesetImage Load(string filePath) => new(Decode(File.ReadAllBytes(filePath)));
@@ -106,31 +105,6 @@ public sealed class EditableTilesetImage : IDisposable
                 snapshots[i].AsSpan(y * rowByteWidth, rowByteWidth).CopyTo(targetRow);
             }
         }
-    }
-
-    // Builds a fresh canvas instead of moving blocks in place: the new size
-    // differs, and source and target cells may overlap in the old layout.
-    public void Repack(IReadOnlyList<TilePlacement> placements, int width, int height)
-    {
-        var repacked = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
-        repacked.Erase(SKColors.Transparent);
-
-        var source = _bitmap.GetPixelSpan();
-        var target = repacked.GetPixelSpan();
-
-        foreach (var (original, moved) in placements)
-        {
-            var rowByteWidth = original.Width * BytesPerPixel;
-            for (var y = 0; y < original.Height; y++)
-            {
-                var sourceRow = source.Slice((original.Y + y) * _bitmap.RowBytes + original.X * BytesPerPixel, rowByteWidth);
-                var targetRow = target.Slice((moved.Y + y) * repacked.RowBytes + moved.X * BytesPerPixel, rowByteWidth);
-                sourceRow.CopyTo(targetRow);
-            }
-        }
-
-        _bitmap.Dispose();
-        _bitmap = repacked;
     }
 
     public byte[] EncodeToPng()

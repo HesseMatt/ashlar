@@ -89,40 +89,6 @@ public class EditableTilesetImageTests
         }
     }
 
-    [Fact]
-    public void Repack_CopiesTilesToTheirNewPositionsOnACroppedTransparentCanvas()
-    {
-        var filePath = Path.GetTempFileName() + ".png";
-        try
-        {
-            using (var bitmap = new SKBitmap(new SKImageInfo(4, 2, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
-            {
-                bitmap.Erase(Transparent);
-                bitmap.SetPixel(2, 0, Blue);
-                bitmap.SetPixel(3, 1, Blue);
-                using var data = SKImage.FromBitmap(bitmap).Encode(SKEncodedImageFormat.Png, 100);
-                File.WriteAllBytes(filePath, data.ToArray());
-            }
-
-            using var image = EditableTilesetImage.Load(filePath);
-            var original = new TileRegion("tile_0001", 2, 0, 2, 2);
-            var moved = original with { X = 0, Y = 0 };
-
-            image.Repack([new TilePlacement(original, moved)], 2, 2);
-            using var result = DecodeRgba(image.EncodeToPng());
-
-            Assert.Equal(2, image.Width);
-            Assert.Equal(2, image.Height);
-            Assert.Equal(Blue, result.GetPixel(0, 0));
-            Assert.Equal(Blue, result.GetPixel(1, 1));
-            Assert.Equal(Transparent, result.GetPixel(1, 0));
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
     // A 6x2 strip of 2x2 tiles: red, blue, green.
     private static EditableTilesetImage LoadStrip(string filePath)
     {
