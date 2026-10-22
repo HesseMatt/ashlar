@@ -247,6 +247,9 @@ public partial class MainViewModel : ViewModelBase
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
+    public ExportDialogViewModel CreateExportDialogViewModel() =>
+        new(TexturePath, TileWidth, TileHeight, Tiles);
+
     public void ExportXml(string outputPath)
     {
         if (_sourceFileName is null)
