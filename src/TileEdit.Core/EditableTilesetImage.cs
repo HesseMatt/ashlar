@@ -56,6 +56,22 @@ public sealed class EditableTilesetImage : IDisposable
         return true;
     }
 
+    // Replaces the pixel rather than blending, so a color with alpha 0 erases
+    // it. Returns false for a position outside the image, which is skipped.
+    public bool SetPixel(int x, int y, PixelColor color)
+    {
+        if (x < 0 || y < 0 || x >= Width || y >= Height)
+            return false;
+
+        var offset = y * _bitmap.RowBytes + x * BytesPerPixel;
+        var pixels = _bitmap.GetPixelSpan();
+        pixels[offset] = color.R;
+        pixels[offset + 1] = color.G;
+        pixels[offset + 2] = color.B;
+        pixels[offset + 3] = color.A;
+        return true;
+    }
+
     public void ClearRegion(TileRegion region)
     {
         var pixels = _bitmap.GetPixelSpan();

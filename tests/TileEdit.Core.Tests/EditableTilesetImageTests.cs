@@ -224,6 +224,52 @@ public class EditableTilesetImageTests
         }
     }
 
+    [Fact]
+    public void SetPixel_ReplacesTheValueWithoutBlending()
+    {
+        var filePath = CreateSampleImage(3, 3, Red);
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+
+            var painted = image.SetPixel(1, 2, new PixelColor(10, 20, 30, 0));
+
+            Assert.True(painted);
+            var pixels = image.GetPixels();
+            Assert.Equal([10, 20, 30, 0], pixels.Slice(2 * image.RowBytes + 4, 4).ToArray());
+            Assert.Equal([255, 0, 0, 255], pixels.Slice(2 * image.RowBytes, 4).ToArray());
+            Assert.Equal([255, 0, 0, 255], pixels.Slice(2 * image.RowBytes + 8, 4).ToArray());
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    [InlineData(3, 0)]
+    [InlineData(0, 3)]
+    public void SetPixel_ClipsPositionsOutsideTheImage(int x, int y)
+    {
+        var filePath = CreateSampleImage(3, 3, Red);
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+            var before = image.GetPixels().ToArray();
+
+            var painted = image.SetPixel(x, y, PixelColor.Black);
+
+            Assert.False(painted);
+            Assert.Equal(before, image.GetPixels().ToArray());
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
     private static string CreateSampleImage(int width, int height, SKColor color)
     {
         var filePath = Path.GetTempFileName() + ".png";

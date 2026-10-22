@@ -72,6 +72,9 @@ public static class TileGroupAssigner
         return result;
     }
 
+    public static int HighestNumber(IReadOnlyList<TileRegion> tiles, string prefix) =>
+        HighestNumber(tiles, new HashSet<TileRegion>(), prefix);
+
     private static int HighestNumber(IReadOnlyList<TileRegion> tiles, IReadOnlySet<TileRegion> excluded, string prefix)
     {
         var highest = 0;

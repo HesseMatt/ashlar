@@ -26,6 +26,7 @@ file describing every tile by name and position:
 
 - Select, rectangle select, and move tools
 - Delete tiles
+- Draw tool for painting single pixels with an RGBA color
 - Tile groups
 - Undo and redo
 - Zoom

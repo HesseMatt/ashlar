@@ -22,10 +22,12 @@ public partial class MainWindow : Window
     private IPointer? _rectangleDragPointer;
     private bool _isMoveDragging;
     private IPointer? _moveDragPointer;
+    private bool _isDrawing;
+    private IPointer? _drawPointer;
 
     // A rectangle press is pending before the drag threshold is crossed, which
     // the view model does not know about yet.
-    private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging;
+    private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging || _isDrawing;
 
     // Screen distance the pointer has to travel before a press counts as a drag
     // rather than a click.
@@ -230,6 +232,10 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 viewModel.IsMoveToolActive = !viewModel.IsMoveToolActive;
                 break;
+            case Key.B when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+                e.Handled = true;
+                viewModel.IsDrawToolActive = !viewModel.IsDrawToolActive;
+                break;
             case Key.Z when ctrl && shift && e.Source is not TextBox && !IsPointerDragPending:
             case Key.Y when ctrl && e.Source is not TextBox && !IsPointerDragPending:
                 e.Handled = true;
@@ -248,6 +254,11 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 viewModel.EndMoveDrag();
                 ResetMoveDrag();
+                break;
+            case Key.Escape when _isDrawing:
+                e.Handled = true;
+                viewModel.CancelStroke();
+                ResetDraw();
                 break;
             case Key.Delete when viewModel.HasSelectedTiles:
                 e.Handled = true;
@@ -276,7 +287,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        if (_rectangleDragOrigin is not null || _isMoveDragging)
+        if (IsPointerDragPending)
             return;
 
         if (e.GetCurrentPoint(canvas).Properties.IsRightButtonPressed)
@@ -299,6 +310,22 @@ public partial class MainWindow : Window
                 {
                     _isMoveDragging = true;
                     _moveDragPointer = e.Pointer;
+                    e.Pointer.Capture(canvas);
+                }
+            }
+
+            return;
+        }
+
+        if (viewModel.IsDrawToolActive)
+        {
+            if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
+            {
+                var (startX, startY) = ImagePixelAt(e);
+                if (viewModel.BeginStroke(startX, startY))
+                {
+                    _isDrawing = true;
+                    _drawPointer = e.Pointer;
                     e.Pointer.Capture(canvas);
                 }
             }
@@ -338,6 +365,14 @@ public partial class MainWindow : Window
         pointer?.Capture(null);
     }
 
+    private void ResetDraw()
+    {
+        var pointer = _drawPointer;
+        _isDrawing = false;
+        _drawPointer = null;
+        pointer?.Capture(null);
+    }
+
     private void ResetMoveDrag()
     {
         var pointer = _moveDragPointer;
@@ -348,6 +383,13 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (_isDrawing && DataContext is MainViewModel drawViewModel)
+        {
+            var (drawPixelX, drawPixelY) = ImagePixelAt(e);
+            drawViewModel.ContinueStroke(drawPixelX, drawPixelY);
+            return;
+        }
+
         if (_isMoveDragging && DataContext is MainViewModel moveViewModel)
         {
             var (movePixelX, movePixelY) = ImagePixelAt(e);
@@ -381,6 +423,13 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (_isDrawing && e.InitialPressMouseButton == MouseButton.Left && DataContext is MainViewModel drawViewModel)
+        {
+            drawViewModel.CommitStroke();
+            ResetDraw();
+            return;
+        }
+
         if (_isMoveDragging && e.InitialPressMouseButton == MouseButton.Left && DataContext is MainViewModel moveViewModel)
         {
             moveViewModel.CommitMoveDrag();
@@ -409,6 +458,12 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
+        if (_isDrawing && DataContext is MainViewModel drawViewModel)
+            drawViewModel.CommitStroke();
+
+        _isDrawing = false;
+        _drawPointer = null;
+
         if (_isRectangleDragging && DataContext is MainViewModel viewModel)
             viewModel.EndSelectionDrag();
 

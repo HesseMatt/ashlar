@@ -5,4 +5,5 @@ public enum CanvasTool
     Select,
     Rectangle,
     Move,
+    Draw,
 }

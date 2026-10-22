@@ -3,6 +3,7 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using SkiaSharp;
 using TileEdit.App.ViewModels;
@@ -32,6 +33,8 @@ public class ToolPaletteTests : IDisposable
 
     private ToggleButton MoveButton => _window.FindControl<ToggleButton>("MoveButton")!;
 
+    private ToggleButton DrawButton => _window.FindControl<ToggleButton>("DrawButton")!;
+
     private Button DeleteButton => _window.FindControl<Button>("DeleteButton")!;
 
     [AvaloniaFact]
@@ -39,6 +42,7 @@ public class ToolPaletteTests : IDisposable
     {
         Assert.False(RectangleSelectButton.IsEnabled);
         Assert.False(MoveButton.IsEnabled);
+        Assert.False(DrawButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
     }
 
@@ -49,6 +53,7 @@ public class ToolPaletteTests : IDisposable
 
         Assert.True(RectangleSelectButton.IsEnabled);
         Assert.True(MoveButton.IsEnabled);
+        Assert.True(DrawButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
 
         _viewModel.HandleCanvasClick(1, 1, addToSelection: false);
@@ -92,12 +97,44 @@ public class ToolPaletteTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void DrawToggleActivatesTheDrawTool()
+    {
+        _viewModel.LoadTileset(_imagePath);
+
+        DrawButton.IsChecked = true;
+        Assert.Equal(CanvasTool.Draw, _viewModel.ActiveTool);
+
+        _viewModel.IsMoveToolActive = true;
+        Assert.False(DrawButton.IsChecked);
+
+        _viewModel.IsDrawToolActive = true;
+        _viewModel.IsDrawToolActive = false;
+        Assert.Equal(CanvasTool.Select, _viewModel.ActiveTool);
+    }
+
+    [AvaloniaFact]
+    public void DrawColorPickerIsRenderedAndFollowsTheDrawColor()
+    {
+        _viewModel.LoadTileset(_imagePath);
+        _window.GetLayoutManager()?.ExecuteLayoutPass();
+
+        var picker = _window.FindControl<ColorPicker>("DrawColorPicker")!;
+        Assert.True(picker.Bounds.Width > 0 && picker.Bounds.Height > 0);
+        Assert.NotEmpty(picker.GetVisualDescendants());
+        Assert.Equal(Colors.Black, picker.Color);
+
+        _viewModel.DrawColor = Color.FromArgb(128, 1, 2, 3);
+        Assert.Equal(Color.FromArgb(128, 1, 2, 3), picker.Color);
+    }
+
+    [AvaloniaFact]
     public void AllButtonsHaveTheSameSize()
     {
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
         Assert.Equal(DeleteButton.Bounds.Size, RectangleSelectButton.Bounds.Size);
         Assert.Equal(DeleteButton.Bounds.Size, MoveButton.Bounds.Size);
+        Assert.Equal(DeleteButton.Bounds.Size, DrawButton.Bounds.Size);
     }
 
     [AvaloniaFact]

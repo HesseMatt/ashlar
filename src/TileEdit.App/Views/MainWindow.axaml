@@ -22,6 +22,7 @@
         <!-- Icon paths are from Lucide (https://lucide.dev), 24x24 viewBox, stroked. See NOTICE. -->
         <StreamGeometry x:Key="RectangleSelectIcon">M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z M5 3a2 2 0 0 0-2 2 M19 3a2 2 0 0 1 2 2 M5 21a2 2 0 0 1-2-2 M9 3h1 M9 21h2 M14 3h1 M3 9v1 M21 9v2 M3 14v1</StreamGeometry>
         <StreamGeometry x:Key="MoveIcon">M12 2v20 m15 19-3 3-3-3 m19 9 3 3-3 3 M2 12h20 m5 9-3 3 3 3 m9 5 3-3 3 3</StreamGeometry>
+        <StreamGeometry x:Key="DrawIcon">M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z m15 5 4 4</StreamGeometry>
         <StreamGeometry x:Key="DeleteIcon">M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2 M10 11v6 M14 11v6</StreamGeometry>
     </Window.Resources>
 
@@ -56,6 +57,8 @@
                           IsEnabled="{Binding HasImage}" InputGesture="Ctrl+R" />
                 <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding IsMoveToolActive}"
                           IsEnabled="{Binding HasImage}" InputGesture="M" />
+                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding IsDrawToolActive}"
+                          IsEnabled="{Binding HasImage}" InputGesture="B" />
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemPlus" />
@@ -70,6 +73,8 @@
                 <NumericUpDown Value="{Binding TileWidth}" Minimum="1" Width="130" IsEnabled="{Binding CanEditTileSize}" />
                 <TextBlock Text="Tile height:" VerticalAlignment="Center" />
                 <NumericUpDown Value="{Binding TileHeight}" Minimum="1" Width="130" IsEnabled="{Binding CanEditTileSize}" />
+                <TextBlock Text="Draw color:" VerticalAlignment="Center" />
+                <ColorPicker x:Name="DrawColorPicker" Color="{Binding DrawColor}" IsAlphaEnabled="True" IsEnabled="{Binding HasImage}" />
             </StackPanel>
         </Border>
 
@@ -111,6 +116,11 @@
                 <ToggleButton Classes="tool" x:Name="MoveButton" IsChecked="{Binding IsMoveToolActive}" IsEnabled="{Binding HasImage}"
                               ToolTip.Tip="Move (M)">
                     <Path Data="{StaticResource MoveIcon}"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
+                </ToggleButton>
+                <ToggleButton Classes="tool" x:Name="DrawButton" IsChecked="{Binding IsDrawToolActive}" IsEnabled="{Binding HasImage}"
+                              ToolTip.Tip="Draw (B)">
+                    <Path Data="{StaticResource DrawIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </ToggleButton>
                 <Button Classes="tool" x:Name="DeleteButton" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}"
