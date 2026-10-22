@@ -8,5 +8,7 @@ namespace TileEdit.App.Tests;
 public static class TestAppBuilder
 {
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<TileEdit.App.App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        AppBuilder.Configure<TileEdit.App.App>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 }

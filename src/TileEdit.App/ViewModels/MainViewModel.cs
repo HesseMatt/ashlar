@@ -4,7 +4,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TileEdit.Core;
 using TileEdit.Core.Detection;
@@ -18,7 +20,7 @@ public partial class MainViewModel : ViewModelBase
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImage))]
-    private Bitmap? _previewBitmap;
+    private WriteableBitmap? _previewBitmap;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ScaledImageWidth))]
@@ -32,6 +34,8 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ScaledImageWidth))]
     [NotifyPropertyChangedFor(nameof(ScaledImageHeight))]
     [NotifyPropertyChangedFor(nameof(ZoomPercentageText))]
+    [NotifyPropertyChangedFor(nameof(PreviewInterpolation))]
+    [NotifyPropertyChangedFor(nameof(ShowPixelGrid))]
     private double _zoomLevel = 1.0;
 
     [ObservableProperty]
@@ -81,9 +85,17 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private Vector? _moveOffset;
 
+    public const double MinZoom = 0.25;
+    public const double MaxZoom = 32.0;
+
+    // From this zoom level on, source pixels are drawn as sharp squares; below
+    // it the image is downscaled, where a smooth filter avoids aliasing.
+    public const double CrispPixelsZoom = 1.0;
+
+    public const double PixelGridZoom = 8.0;
+
     private const double ZoomStep = 0.1;
-    private const double MinZoom = 0.25;
-    private const double MaxZoom = 8.0;
+    private const int BytesPerPixel = 4;
 
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
@@ -99,11 +111,20 @@ public partial class MainViewModel : ViewModelBase
 
     public event EventHandler? TilesetLoaded;
 
+    // The preview bitmap is updated in place, so its property doesn't change
+    // and the views have to be told to draw it again.
+    public event EventHandler? PreviewPixelsChanged;
+
     public bool HasImage => PreviewBitmap is not null;
 
     public double ScaledImageWidth => ImageWidth * ZoomLevel;
 
     public double ScaledImageHeight => ImageHeight * ZoomLevel;
+
+    public BitmapInterpolationMode PreviewInterpolation =>
+        ZoomLevel >= CrispPixelsZoom ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality;
+
+    public bool ShowPixelGrid => ZoomLevel >= PixelGridZoom;
 
     public string ZoomPercentageText => $"{ZoomLevel:P0}";
 
@@ -244,9 +265,12 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public double ZoomIn() => ZoomLevel = Math.Clamp(ZoomLevel + ZoomStep, MinZoom, MaxZoom);
+    public double ZoomIn() => ZoomLevel = Math.Clamp(ZoomLevel + CurrentZoomStep(), MinZoom, MaxZoom);
 
-    public double ZoomOut() => ZoomLevel = Math.Clamp(ZoomLevel - ZoomStep, MinZoom, MaxZoom);
+    public double ZoomOut() => ZoomLevel = Math.Clamp(ZoomLevel - CurrentZoomStep(), MinZoom, MaxZoom);
+
+    // A fixed step would take dozens of clicks to get from 100% to 3200%.
+    private double CurrentZoomStep() => ZoomStep * Math.Max(1.0, ZoomLevel);
 
     public void ResetZoom() => ZoomLevel = 1.0;
 
@@ -320,7 +344,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         SelectedTiles = Array.Empty<TileRegion>();
-        RefreshPreviewBitmap();
+        RefreshPreviewBitmap(deletedTiles);
         RefreshGroupNames();
         RecordEdit($"Delete {deletedTiles.Count} {(deletedTiles.Count == 1 ? "tile" : "tiles")}", before, selectionBefore);
 
@@ -645,12 +669,44 @@ public partial class MainViewModel : ViewModelBase
         GroupNameInput = groupNames.Count == 1 ? groupNames[0] ?? string.Empty : string.Empty;
     }
 
-    private void RefreshPreviewBitmap()
+    // Without changed regions the whole image is copied. A new bitmap is only
+    // created when the image size differs from the current one.
+    private void RefreshPreviewBitmap(IReadOnlyList<TileRegion>? changedRegions = null)
     {
         if (_editableImage is null)
             return;
 
-        using var stream = new MemoryStream(_editableImage.EncodeToPng());
-        PreviewBitmap = new Bitmap(stream);
+        var size = new PixelSize(_editableImage.Width, _editableImage.Height);
+        if (PreviewBitmap is null || PreviewBitmap.PixelSize != size)
+        {
+            PreviewBitmap = new WriteableBitmap(size, new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+            changedRegions = null;
+        }
+
+        using var framebuffer = PreviewBitmap.Lock();
+        if (changedRegions is null)
+        {
+            CopyPixels(framebuffer, 0, 0, size.Width, size.Height);
+        }
+        else
+        {
+            foreach (var region in changedRegions)
+                CopyPixels(framebuffer, region.X, region.Y, region.Width, region.Height);
+        }
+
+        PreviewPixelsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private unsafe void CopyPixels(ILockedFramebuffer framebuffer, int x, int y, int width, int height)
+    {
+        var source = _editableImage!.GetPixels();
+        var rowByteWidth = width * BytesPerPixel;
+
+        for (var row = y; row < y + height; row++)
+        {
+            var sourceRow = source.Slice(row * _editableImage.RowBytes + x * BytesPerPixel, rowByteWidth);
+            var targetRow = new Span<byte>((byte*)framebuffer.Address + row * framebuffer.RowBytes + x * BytesPerPixel, rowByteWidth);
+            sourceRow.CopyTo(targetRow);
+        }
     }
 }

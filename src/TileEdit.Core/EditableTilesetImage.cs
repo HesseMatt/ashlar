@@ -19,6 +19,12 @@ public sealed class EditableTilesetImage : IDisposable
 
     public int Height => _bitmap.Height;
 
+    public int RowBytes => _bitmap.RowBytes;
+
+    // Unpremultiplied RGBA bytes, RowBytes apart. Only valid until the next edit
+    // that changes the image size (Repack) or disposes it.
+    public ReadOnlySpan<byte> GetPixels() => _bitmap.GetPixelSpan();
+
     public static EditableTilesetImage Load(string filePath) => new(Decode(File.ReadAllBytes(filePath)));
 
     public static EditableTilesetImage Load(byte[] encodedImageBytes) => new(Decode(encodedImageBytes));

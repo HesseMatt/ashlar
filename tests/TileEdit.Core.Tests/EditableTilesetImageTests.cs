@@ -28,6 +28,46 @@ public class EditableTilesetImageTests
     }
 
     [Fact]
+    public void GetPixels_ExposesUnpremultipliedRgbaBytesRowByRow()
+    {
+        var filePath = CreateSampleImage(3, 2, new SKColor(200, 100, 50, 128));
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+
+            var pixels = image.GetPixels();
+
+            Assert.True(image.RowBytes >= 3 * 4);
+            Assert.Equal(image.RowBytes * 2, pixels.Length);
+            Assert.Equal([200, 100, 50, 128], pixels.Slice(image.RowBytes + 4, 4).ToArray());
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void GetPixels_ReflectsEditsMadeAfterwards()
+    {
+        var filePath = CreateSampleImage(4, 4, Red);
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+            image.ClearRegion(new TileRegion("tile_0001", 0, 0, 2, 2));
+
+            var pixels = image.GetPixels();
+
+            Assert.Equal([0, 0, 0, 0], pixels.Slice(0, 4).ToArray());
+            Assert.Equal([255, 0, 0, 255], pixels.Slice(2 * 4, 4).ToArray());
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
     public void ClearRegion_MakesThePixelsInThatRegionTransparent()
     {
         var filePath = CreateSampleImage(4, 4, Red);

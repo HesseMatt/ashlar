@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using TileEdit.App.ViewModels;
@@ -44,11 +45,20 @@ public partial class MainWindow : Window
             return;
 
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        UpdateInterpolation(viewModel);
         viewModel.TilesetLoaded += (_, _) => ScrollToTilesetStart();
+        viewModel.PreviewPixelsChanged += (_, _) =>
+        {
+            TilesetImage.InvalidateVisual();
+            TileOverlay.InvalidateVisual();
+        };
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainViewModel.PreviewInterpolation) && sender is MainViewModel viewModel)
+            UpdateInterpolation(viewModel);
+
         if (e.PropertyName is nameof(MainViewModel.ZoomLevel) or nameof(MainViewModel.TileWidth)
             or nameof(MainViewModel.TileHeight) or nameof(MainViewModel.ImageWidth)
             or nameof(MainViewModel.ImageHeight) or nameof(MainViewModel.HasImage))
@@ -57,10 +67,30 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateInterpolation(MainViewModel viewModel)
+    {
+        RenderOptions.SetBitmapInterpolationMode(TilesetImage, viewModel.PreviewInterpolation);
+        RenderOptions.SetBitmapInterpolationMode(TileOverlay, viewModel.PreviewInterpolation);
+    }
+
     private void OnScrollViewerPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property == ScrollViewer.ViewportProperty)
             UpdateOverscrollPadding();
+
+        if (e.Property == ScrollViewer.ViewportProperty || e.Property == ScrollViewer.OffsetProperty
+            || e.Property == ScrollViewer.ExtentProperty)
+        {
+            UpdateVisibleArea();
+        }
+    }
+
+    private void UpdateVisibleArea()
+    {
+        var viewport = TileCanvasScrollViewer.Viewport;
+        var topLeft = TileCanvasScrollViewer.TranslatePoint(new Point(0, 0), TileCanvasContent);
+        var bottomRight = TileCanvasScrollViewer.TranslatePoint(new Point(viewport.Width, viewport.Height), TileCanvasContent);
+        TileOverlay.VisibleArea = topLeft is { } start && bottomRight is { } end ? new Rect(start, end) : null;
     }
 
     // Lets the view be panned past the tileset's edges, but never so far that the

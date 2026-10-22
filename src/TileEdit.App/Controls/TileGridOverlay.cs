@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
@@ -42,12 +43,25 @@ public class TileGridOverlay : Control
     public static readonly StyledProperty<IImage?> ImageProperty =
         AvaloniaProperty.Register<TileGridOverlay, IImage?>(nameof(Image));
 
+    public static readonly StyledProperty<IBrush?> PixelGridBrushProperty =
+        AvaloniaProperty.Register<TileGridOverlay, IBrush?>(nameof(PixelGridBrush));
+
+    public static readonly StyledProperty<bool> ShowPixelGridProperty =
+        AvaloniaProperty.Register<TileGridOverlay, bool>(nameof(ShowPixelGrid));
+
+    public static readonly StyledProperty<double> ZoomLevelProperty =
+        AvaloniaProperty.Register<TileGridOverlay, double>(nameof(ZoomLevel), defaultValue: 1.0);
+
+    public static readonly StyledProperty<Rect?> VisibleAreaProperty =
+        AvaloniaProperty.Register<TileGridOverlay, Rect?>(nameof(VisibleArea));
+
     static TileGridOverlay()
     {
         AffectsRender<TileGridOverlay>(
             ImageWidthProperty, ImageHeightProperty, TileWidthProperty, TileHeightProperty, SelectedTilesProperty,
             SelectionRectangleProperty, MoveOffsetProperty, ImageProperty,
-            GridBrushProperty, AccentBrushProperty, AccentFillBrushProperty);
+            GridBrushProperty, AccentBrushProperty, AccentFillBrushProperty,
+            PixelGridBrushProperty, ShowPixelGridProperty, ZoomLevelProperty, VisibleAreaProperty);
     }
 
     public int ImageWidth
@@ -104,6 +118,32 @@ public class TileGridOverlay : Control
         set => SetValue(GridBrushProperty, value);
     }
 
+    public IBrush? PixelGridBrush
+    {
+        get => GetValue(PixelGridBrushProperty);
+        set => SetValue(PixelGridBrushProperty, value);
+    }
+
+    public bool ShowPixelGrid
+    {
+        get => GetValue(ShowPixelGridProperty);
+        set => SetValue(ShowPixelGridProperty, value);
+    }
+
+    public double ZoomLevel
+    {
+        get => GetValue(ZoomLevelProperty);
+        set => SetValue(ZoomLevelProperty, value);
+    }
+
+    // The part of the image currently scrolled into view, in image pixels. Null
+    // means "everything".
+    public Rect? VisibleArea
+    {
+        get => GetValue(VisibleAreaProperty);
+        set => SetValue(VisibleAreaProperty, value);
+    }
+
     public IBrush? AccentBrush
     {
         get => GetValue(AccentBrushProperty);
@@ -121,8 +161,11 @@ public class TileGridOverlay : Control
         if (TileWidth <= 0 || TileHeight <= 0)
             return;
 
-        var gridPen = new Pen(GridBrush, 0.5);
-        var highlightPen = new Pen(AccentBrush, 1);
+        if (ShowPixelGrid)
+            RenderPixelGrid(context);
+
+        var gridPen = new Pen(GridBrush, LineWidth(0.5));
+        var highlightPen = new Pen(AccentBrush, LineWidth(1));
 
         for (var x = TileWidth; x < ImageWidth; x += TileWidth)
             context.DrawLine(gridPen, new Point(x, 0), new Point(x, ImageHeight));
@@ -137,14 +180,33 @@ public class TileGridOverlay : Control
             RenderMovePreview(context, offset);
 
         if (SelectionRectangle is { } rectangle)
-            context.DrawRectangle(AccentFillBrush, new Pen(AccentBrush, 1, DashStyle.Dash), rectangle);
+            context.DrawRectangle(AccentFillBrush, new Pen(AccentBrush, LineWidth(1), DashStyle.Dash), rectangle);
+    }
+
+    // The overlay is scaled with the image, so at 32x a 2-unit line would be 64
+    // screen pixels wide. Widths are given in image units and capped at 2 screen pixels.
+    private double LineWidth(double imageUnits) => Math.Min(imageUnits, 2 / ZoomLevel);
+
+    // Only the lines inside the visible area are drawn, so the cost depends on
+    // the viewport and not on the image size.
+    private void RenderPixelGrid(DrawingContext context)
+    {
+        var imageBounds = new Rect(0, 0, ImageWidth, ImageHeight);
+        var area = VisibleArea is { } visible ? visible.Intersect(imageBounds) : imageBounds;
+        var pen = new Pen(PixelGridBrush, 1 / ZoomLevel);
+
+        for (var x = (int)Math.Ceiling(area.Left); x <= area.Right; x++)
+            context.DrawLine(pen, new Point(x, area.Top), new Point(x, area.Bottom));
+
+        for (var y = (int)Math.Ceiling(area.Top); y <= area.Bottom; y++)
+            context.DrawLine(pen, new Point(area.Left, y), new Point(area.Right, y));
     }
 
     private void RenderMovePreview(DrawingContext context, Vector offset)
     {
-        var movePen = new Pen(AccentBrush, 2);
+        var movePen = new Pen(AccentBrush, LineWidth(2));
         // Dashed outline plus a cross keeps "deleted" distinct from a normal move without another hue.
-        var outsidePen = new Pen(AccentBrush, 2, DashStyle.Dash);
+        var outsidePen = new Pen(AccentBrush, LineWidth(2), DashStyle.Dash);
 
         foreach (var tile in SelectedTiles)
         {

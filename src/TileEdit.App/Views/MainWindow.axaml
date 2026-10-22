@@ -148,12 +148,13 @@
                             </Panel.RenderTransform>
                             <controls:TransparencyCheckerboard ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
                                                                TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
-                            <Image Source="{Binding PreviewBitmap}" Stretch="None" />
-                            <controls:TileGridOverlay ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
+                            <Image x:Name="TilesetImage" Source="{Binding PreviewBitmap}" Stretch="None" />
+                            <controls:TileGridOverlay x:Name="TileOverlay" ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
                                                        TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
                                                        SelectedTiles="{Binding SelectedTiles}"
                                                        SelectionRectangle="{Binding SelectionRectangle}"
-                                                       MoveOffset="{Binding MoveOffset}" Image="{Binding PreviewBitmap}" />
+                                                       MoveOffset="{Binding MoveOffset}" Image="{Binding PreviewBitmap}"
+                                                       ZoomLevel="{Binding ZoomLevel}" ShowPixelGrid="{Binding ShowPixelGrid}" />
                         </Panel>
                     </Panel>
                 </Border>
