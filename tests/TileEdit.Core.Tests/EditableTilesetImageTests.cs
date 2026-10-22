@@ -246,6 +246,44 @@ public class EditableTilesetImageTests
         }
     }
 
+    [Fact]
+    public void TryGetPixel_ReturnsTheExactRgbaValue()
+    {
+        var filePath = CreateSampleImage(3, 3, Red);
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+            image.SetPixel(1, 2, new PixelColor(10, 20, 30, 0));
+
+            Assert.True(image.TryGetPixel(1, 2, out var color));
+            Assert.Equal(new PixelColor(10, 20, 30, 0), color);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    [InlineData(3, 0)]
+    [InlineData(0, 3)]
+    public void TryGetPixel_OutsideTheImage_ReturnsFalse(int x, int y)
+    {
+        var filePath = CreateSampleImage(3, 3, Red);
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+
+            Assert.False(image.TryGetPixel(x, y, out _));
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
     [Theory]
     [InlineData(-1, 0)]
     [InlineData(0, -1)]

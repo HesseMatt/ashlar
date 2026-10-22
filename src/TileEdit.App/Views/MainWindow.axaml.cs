@@ -24,10 +24,12 @@ public partial class MainWindow : Window
     private IPointer? _moveDragPointer;
     private bool _isDrawing;
     private IPointer? _drawPointer;
+    private bool _isPicking;
+    private IPointer? _pickPointer;
 
     // A rectangle press is pending before the drag threshold is crossed, which
     // the view model does not know about yet.
-    private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging || _isDrawing;
+    private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging || _isDrawing || _isPicking;
 
     // Screen distance the pointer has to travel before a press counts as a drag
     // rather than a click.
@@ -236,6 +238,10 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 viewModel.IsDrawToolActive = !viewModel.IsDrawToolActive;
                 break;
+            case Key.I when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+                e.Handled = true;
+                viewModel.IsPipetteToolActive = !viewModel.IsPipetteToolActive;
+                break;
             case Key.Z when ctrl && shift && e.Source is not TextBox && !IsPointerDragPending:
             case Key.Y when ctrl && e.Source is not TextBox && !IsPointerDragPending:
                 e.Handled = true;
@@ -333,6 +339,20 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (viewModel.IsPipetteToolActive)
+        {
+            if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
+            {
+                var (pickX, pickY) = ImagePixelAt(e);
+                viewModel.PickColor(pickX, pickY);
+                _isPicking = true;
+                _pickPointer = e.Pointer;
+                e.Pointer.Capture(canvas);
+            }
+
+            return;
+        }
+
         if (viewModel.IsRectangleToolActive && e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
         {
             // Whether this becomes a click or a drag is only known once the pointer
@@ -373,6 +393,14 @@ public partial class MainWindow : Window
         pointer?.Capture(null);
     }
 
+    private void ResetPick()
+    {
+        var pointer = _pickPointer;
+        _isPicking = false;
+        _pickPointer = null;
+        pointer?.Capture(null);
+    }
+
     private void ResetMoveDrag()
     {
         var pointer = _moveDragPointer;
@@ -383,6 +411,13 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (_isPicking && DataContext is MainViewModel pickViewModel)
+        {
+            var (pickPixelX, pickPixelY) = ImagePixelAt(e);
+            pickViewModel.PickColor(pickPixelX, pickPixelY);
+            return;
+        }
+
         if (_isDrawing && DataContext is MainViewModel drawViewModel)
         {
             var (drawPixelX, drawPixelY) = ImagePixelAt(e);
@@ -423,6 +458,12 @@ public partial class MainWindow : Window
 
     private void OnTileCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (_isPicking && e.InitialPressMouseButton == MouseButton.Left)
+        {
+            ResetPick();
+            return;
+        }
+
         if (_isDrawing && e.InitialPressMouseButton == MouseButton.Left && DataContext is MainViewModel drawViewModel)
         {
             drawViewModel.CommitStroke();
@@ -463,6 +504,8 @@ public partial class MainWindow : Window
 
         _isDrawing = false;
         _drawPointer = null;
+        _isPicking = false;
+        _pickPointer = null;
 
         if (_isRectangleDragging && DataContext is MainViewModel viewModel)
             viewModel.EndSelectionDrag();

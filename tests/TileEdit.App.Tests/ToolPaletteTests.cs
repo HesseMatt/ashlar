@@ -35,6 +35,8 @@ public class ToolPaletteTests : IDisposable
 
     private ToggleButton DrawButton => _window.FindControl<ToggleButton>("DrawButton")!;
 
+    private ToggleButton PipetteButton => _window.FindControl<ToggleButton>("PipetteButton")!;
+
     private Button DeleteButton => _window.FindControl<Button>("DeleteButton")!;
 
     [AvaloniaFact]
@@ -43,6 +45,7 @@ public class ToolPaletteTests : IDisposable
         Assert.False(RectangleSelectButton.IsEnabled);
         Assert.False(MoveButton.IsEnabled);
         Assert.False(DrawButton.IsEnabled);
+        Assert.False(PipetteButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
     }
 
@@ -54,6 +57,7 @@ public class ToolPaletteTests : IDisposable
         Assert.True(RectangleSelectButton.IsEnabled);
         Assert.True(MoveButton.IsEnabled);
         Assert.True(DrawButton.IsEnabled);
+        Assert.True(PipetteButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
 
         _viewModel.HandleCanvasClick(1, 1, addToSelection: false);
@@ -113,6 +117,18 @@ public class ToolPaletteTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void PipetteToggleActivatesThePipetteTool()
+    {
+        _viewModel.LoadTileset(_imagePath);
+
+        PipetteButton.IsChecked = true;
+        Assert.Equal(CanvasTool.Pipette, _viewModel.ActiveTool);
+
+        _viewModel.IsDrawToolActive = true;
+        Assert.False(PipetteButton.IsChecked);
+    }
+
+    [AvaloniaFact]
     public void DrawColorPickerIsRenderedAndFollowsTheDrawColor()
     {
         _viewModel.LoadTileset(_imagePath);
@@ -135,6 +151,7 @@ public class ToolPaletteTests : IDisposable
         Assert.Equal(DeleteButton.Bounds.Size, RectangleSelectButton.Bounds.Size);
         Assert.Equal(DeleteButton.Bounds.Size, MoveButton.Bounds.Size);
         Assert.Equal(DeleteButton.Bounds.Size, DrawButton.Bounds.Size);
+        Assert.Equal(DeleteButton.Bounds.Size, PipetteButton.Bounds.Size);
     }
 
     [AvaloniaFact]
