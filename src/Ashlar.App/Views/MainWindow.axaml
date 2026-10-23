@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="1150" d:DesignHeight="650"
         x:Class="Ashlar.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/ashlar-icon.ico"
         Title="Ashlar"
         Width="1150" Height="650"
         KeyDown="OnWindowKeyDown">
