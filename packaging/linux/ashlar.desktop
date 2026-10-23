@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ashlar
+Comment=Manage tilesets for game development
+Exec=Ashlar.App
+Icon=ashlar
+Categories=Graphics;
+StartupWMClass=Ashlar.App

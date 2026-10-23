@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/icon.png" alt="Ashlar icon" width="128" height="128">
+</p>
+
 # Ashlar
 
 Lightweight, local desktop application for managing tilesets for game
