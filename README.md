@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/icon.png" alt="Ashlar icon" width="128" height="128">
+</p>
+
 # Ashlar
 
 Lightweight, local desktop application for managing tilesets for game
@@ -56,6 +60,17 @@ file describing every tile by name and position:
 dotnet build
 dotnet run --project src/Ashlar.App
 dotnet test
+```
+
+### Linux desktop integration
+
+Many Linux desktops only show the window icon for apps that have a
+`.desktop` entry. To install one for your user (assumes a published
+`Ashlar.App` binary on your `PATH`):
+
+```bash
+install -Dm644 docs/icon.png ~/.local/share/icons/hicolor/256x256/apps/ashlar.png
+install -Dm644 packaging/linux/ashlar.desktop ~/.local/share/applications/ashlar.desktop
 ```
 
 ## License
