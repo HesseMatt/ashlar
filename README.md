@@ -62,17 +62,6 @@ dotnet run --project src/Ashlar.App
 dotnet test
 ```
 
-### Linux desktop integration
-
-Many Linux desktops only show the window icon for apps that have a
-`.desktop` entry. To install one for your user (assumes a published
-`Ashlar.App` binary on your `PATH`):
-
-```bash
-install -Dm644 docs/icon.png ~/.local/share/icons/hicolor/256x256/apps/ashlar.png
-install -Dm644 packaging/linux/ashlar.desktop ~/.local/share/applications/ashlar.desktop
-```
-
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE). In short: free to use, copy,
