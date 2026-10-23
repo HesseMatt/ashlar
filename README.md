@@ -1,4 +1,4 @@
-# tileedit
+# Ashlar
 
 Lightweight, local desktop application for managing tilesets for game
 development.
@@ -35,7 +35,7 @@ file describing every tile by name and position:
 ### Project files
 
 - Save and reopen a tileset as a self-contained project file
-  (`*.tileproj.json`, embeds the image) to resume editing later.
+  (`*.ashlar.json`, embeds the image) to resume editing later.
 - Images are only ever imported to start a new tileset; the export XML is
   an output and cannot be reopened.
 
@@ -47,7 +47,7 @@ file describing every tile by name and position:
 
 ```bash
 dotnet build
-dotnet run --project src/TileEdit.App
+dotnet run --project src/Ashlar.App
 ```
 
 ## License
