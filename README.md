@@ -1,7 +1,14 @@
 # Ashlar
 
 Lightweight, local desktop application for managing tilesets for game
-development.
+development. Ashlar detects the tile grid of a tileset image, lets you edit
+it, and exports the image together with a `TextureAtlas` XML file that
+describes every tile.
+
+The name comes from masonry: an *ashlar* is a precisely cut, rectangular
+stone block laid in a regular grid, much like the tiles of a tileset.
+
+![Ashlar showing a tileset with its tile grid, tool palette, and tile inspector](docs/screenshot.png)
 
 ## Features
 
@@ -48,6 +55,7 @@ file describing every tile by name and position:
 ```bash
 dotnet build
 dotnet run --project src/Ashlar.App
+dotnet test
 ```
 
 ## License
