@@ -6,7 +6,7 @@ Toolbar icons
 
 The tool palette icons (rectangle select, move, delete) are taken from
 Lucide (https://lucide.dev) and embedded as vector path data in
-src/TileEdit.App/Views/MainWindow.axaml.
+src/Ashlar.App/Views/MainWindow.axaml.
 
 Lucide is licensed under the ISC License:
 
