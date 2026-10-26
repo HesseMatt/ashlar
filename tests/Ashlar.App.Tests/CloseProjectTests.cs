@@ -52,7 +52,7 @@ public class CloseProjectTests : IDisposable
     public void ClosingTheWindowWithoutUnsavedChangesClosesIt()
     {
         _viewModel.LoadTileset(WriteImage(), 16, 16);
-        _viewModel.SaveProject(Path.Combine(_directory, "a.ashlar.json"));
+        _viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
 
         _window.Close();
 

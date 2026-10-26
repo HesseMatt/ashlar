@@ -37,7 +37,7 @@ public class UnsavedChangesTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        var saved = viewModel.SaveProject(Path.Combine(_directory, "a.ashlar.json"));
+        var saved = viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
 
         Assert.True(saved);
         Assert.False(viewModel.HasUnsavedChanges);
@@ -48,7 +48,7 @@ public class UnsavedChangesTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "a.ashlar.json"));
+        var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "a.ashlar"));
 
         Assert.False(saved);
         Assert.True(viewModel.HasUnsavedChanges);
@@ -125,11 +125,11 @@ public class UnsavedChangesTests : IDisposable
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
         viewModel.DeleteSelectedTiles();
 
-        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar.json"));
+        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
         viewModel.Undo();
         Assert.True(viewModel.HasUnsavedChanges);
 
-        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar.json"));
+        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
         viewModel.Redo();
         Assert.True(viewModel.HasUnsavedChanges);
     }
@@ -198,7 +198,7 @@ public class UnsavedChangesTests : IDisposable
 
     private string SaveProject(MainViewModel viewModel)
     {
-        var path = Path.Combine(_directory, $"{Guid.NewGuid():N}.ashlar.json");
+        var path = Path.Combine(_directory, $"{Guid.NewGuid():N}.ashlar");
         viewModel.SaveProject(path);
         return path;
     }

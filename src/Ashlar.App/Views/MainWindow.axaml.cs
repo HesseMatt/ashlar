@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -230,7 +231,7 @@ public partial class MainWindow : Window
         {
             Title = "Open tileset project",
             AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Ashlar project") { Patterns = ["*.json"] }],
+            FileTypeFilter = [new FilePickerFileType("Ashlar project") { Patterns = ["*.ashlar"] }],
         });
 
         if (files.Count == 0)
@@ -757,15 +758,22 @@ public partial class MainWindow : Window
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save tileset project",
-            SuggestedFileName = "tileset",
-            DefaultExtension = "ashlar.json",
-            FileTypeChoices = [new FilePickerFileType("Ashlar project") { Patterns = ["*.ashlar.json"] }],
+            SuggestedFileName = viewModel.SuggestedProjectFileName,
+            DefaultExtension = "ashlar",
+            FileTypeChoices = [new FilePickerFileType("Ashlar project") { Patterns = ["*.ashlar"] }],
         });
 
         if (file is null)
             return false;
 
         var path = file.TryGetLocalPath();
-        return path is not null && viewModel.SaveProject(path);
+        if (path is null)
+            return false;
+
+        // Not every platform picker applies DefaultExtension.
+        if (!Path.HasExtension(path))
+            path += ".ashlar";
+
+        return viewModel.SaveProject(path);
     }
 }

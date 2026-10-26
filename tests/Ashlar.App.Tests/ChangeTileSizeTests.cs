@@ -105,7 +105,7 @@ public class ChangeTileSizeTests : IDisposable
         edited.BeginMoveDrag(1, 1);
         edited.UpdateMoveDrag(17, 1);
         edited.CommitMoveDrag();
-        var path = Path.Combine(_directory, "edited.ashlar.json");
+        var path = Path.Combine(_directory, "edited.ashlar");
         edited.SaveProject(path);
         var reopened = new MainViewModel();
         reopened.OpenProject(path);
@@ -133,7 +133,7 @@ public class ChangeTileSizeTests : IDisposable
     {
         var saved = new MainViewModel();
         saved.LoadTileset(WriteImage(), 32, 32);
-        var path = Path.Combine(_directory, "project.ashlar.json");
+        var path = Path.Combine(_directory, "project.ashlar");
         saved.SaveProject(path);
 
         var reopened = OpenImage();
