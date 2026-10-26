@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -27,6 +28,10 @@ public partial class MainWindow : Window
     private bool _isPicking;
     private IPointer? _pickPointer;
 
+    // Set once the user has settled the unsaved-changes question, so the
+    // close that follows does not ask again.
+    private bool _canCloseWindow;
+
     // A rectangle press is pending before the drag threshold is crossed, which
     // the view model does not know about yet.
     private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging || _isDrawing || _isPicking;
@@ -41,6 +46,36 @@ public partial class MainWindow : Window
 
         TileCanvasScrollViewer.PropertyChanged += OnScrollViewerPropertyChanged;
         DataContextChanged += OnDataContextChanged;
+    }
+
+    protected override async void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+
+        if (_canCloseWindow || DataContext is not MainViewModel viewModel || !viewModel.HasImage || !viewModel.HasUnsavedChanges)
+            return;
+
+        e.Cancel = true;
+        if (await ConfirmDiscardingUnsavedChangesAsync(viewModel))
+        {
+            _canCloseWindow = true;
+            Close();
+        }
+    }
+
+    // Returns whether the caller may go on and replace or close the open
+    // tileset. Saving counts as settling the question only if it succeeded.
+    private async Task<bool> ConfirmDiscardingUnsavedChangesAsync(MainViewModel viewModel)
+    {
+        if (!viewModel.HasImage || !viewModel.HasUnsavedChanges)
+            return true;
+
+        return await new UnsavedChangesDialog().ShowDialog<UnsavedChangesChoice>(this) switch
+        {
+            UnsavedChangesChoice.Save => await SaveProjectAsync(viewModel),
+            UnsavedChangesChoice.Discard => true,
+            _ => false,
+        };
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -154,7 +189,16 @@ public partial class MainWindow : Window
         if (size is not var (tileWidth, tileHeight))
             return;
 
+        if (!await ConfirmDiscardingUnsavedChangesAsync(viewModel))
+            return;
+
         viewModel.LoadTileset(path, tileWidth, tileHeight);
+    }
+
+    private async void OnCloseProjectClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && await ConfirmDiscardingUnsavedChangesAsync(viewModel))
+            viewModel.CloseProject();
     }
 
     private async void OnChangeTileSizeClick(object? sender, RoutedEventArgs e)
@@ -196,7 +240,10 @@ public partial class MainWindow : Window
         if (path is null)
             return;
 
-        if (DataContext is MainViewModel viewModel)
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        if (await ConfirmDiscardingUnsavedChangesAsync(viewModel))
             viewModel.OpenProject(path);
     }
 
@@ -246,6 +293,10 @@ public partial class MainWindow : Window
             case Key.O when ctrl:
                 e.Handled = true;
                 OnOpenTilesetClick(this, new RoutedEventArgs());
+                break;
+            case Key.W when ctrl && viewModel.HasImage:
+                e.Handled = true;
+                OnCloseProjectClick(this, new RoutedEventArgs());
                 break;
             case Key.E when ctrl && viewModel.HasImage:
                 e.Handled = true;
@@ -688,6 +739,12 @@ public partial class MainWindow : Window
 
     private async void OnSaveProjectClick(object? sender, RoutedEventArgs e)
     {
+        if (DataContext is MainViewModel viewModel)
+            await SaveProjectAsync(viewModel);
+    }
+
+    private async Task<bool> SaveProjectAsync(MainViewModel viewModel)
+    {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save tileset project",
@@ -697,13 +754,9 @@ public partial class MainWindow : Window
         });
 
         if (file is null)
-            return;
+            return false;
 
         var path = file.TryGetLocalPath();
-        if (path is null)
-            return;
-
-        if (DataContext is MainViewModel viewModel)
-            viewModel.SaveProject(path);
+        return path is not null && viewModel.SaveProject(path);
     }
 }

@@ -47,6 +47,8 @@
                 <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+E" />
                 <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+S" />
                 <MenuItem Header="Save project..." Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+Shift+S" />
+                <Separator />
+                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+W" />
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding CanUndo}" InputGesture="Ctrl+Z" />
