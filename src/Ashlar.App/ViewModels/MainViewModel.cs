@@ -41,7 +41,7 @@ public partial class MainViewModel : ViewModelBase
     private string _texturePath = string.Empty;
 
     [ObservableProperty]
-    private string _statusMessage = "Open a tileset image to get started.";
+    private string _statusMessage = InitialStatusMessage;
 
     [ObservableProperty]
     private ObservableCollection<TileRegion> _tiles = new();
@@ -53,6 +53,11 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasEdits;
+
+    // Tracks whether the current state was saved as a project. Independent of
+    // HasEdits: a freshly imported tileset has no edits but was never saved.
+    [ObservableProperty]
+    private bool _hasUnsavedChanges;
 
     [ObservableProperty]
     private bool _canUndo;
@@ -91,11 +96,13 @@ public partial class MainViewModel : ViewModelBase
 
     public const double PixelGridZoom = 8.0;
 
+    private const string InitialStatusMessage = "Open a tileset image to get started.";
+    private const int DefaultTileSize = 16;
     private const double ZoomStep = 0.1;
     private const int BytesPerPixel = 4;
 
-    private int _tileWidth = 16;
-    private int _tileHeight = 16;
+    private int _tileWidth = DefaultTileSize;
+    private int _tileHeight = DefaultTileSize;
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
     private bool _isConfirmingGroupNameInput;
@@ -232,6 +239,7 @@ public partial class MainViewModel : ViewModelBase
         TileWidth = tileWidth;
         TileHeight = tileHeight;
         RebuildGrid();
+        HasUnsavedChanges = true;
         StatusMessage = $"Changed the tile size to {TileSizeText} ({Tiles.Count} tiles).";
     }
 
@@ -261,6 +269,7 @@ public partial class MainViewModel : ViewModelBase
         TileWidth = tileWidth;
         TileHeight = tileHeight;
         RebuildGrid();
+        HasUnsavedChanges = true;
 
         StatusMessage = $"{_sourceFileName} ({image.Width}x{image.Height}) - tile size {TileSizeText}.";
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
@@ -313,9 +322,36 @@ public partial class MainViewModel : ViewModelBase
         ResetHistory(startedWithEdits: !project.Tiles.SequenceEqual(
             TilesetGridBuilder.Build(project.ImageFileName, image, project.TileWidth, project.TileHeight)));
         RefreshGroupNames();
+        HasUnsavedChanges = false;
 
         StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Tiles.Count} tiles).";
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void CloseProject()
+    {
+        EndSelectionDrag();
+        EndMoveDrag();
+        _drawStroke = null;
+
+        _editableImage?.Dispose();
+        _editableImage = null;
+        PreviewBitmap = null;
+        ImageWidth = 0;
+        ImageHeight = 0;
+        _sourceFileName = null;
+        Tiles = new ObservableCollection<TileRegion>();
+        SelectedTiles = Array.Empty<TileRegion>();
+        GroupNames = new ObservableCollection<string>();
+        ActiveTool = CanvasTool.Select;
+        ZoomLevel = 1.0;
+        TexturePath = string.Empty;
+        DrawColor = Colors.Black;
+        TileWidth = DefaultTileSize;
+        TileHeight = DefaultTileSize;
+        ResetHistory(startedWithEdits: false);
+        HasUnsavedChanges = false;
+        StatusMessage = InitialStatusMessage;
     }
 
     public ExportDialogViewModel CreateExportDialogViewModel() =>
@@ -597,6 +633,7 @@ public partial class MainViewModel : ViewModelBase
         var step = _history.Undo();
         Restore(step.Before, step.SelectionBefore);
         UpdateHistoryState();
+        HasUnsavedChanges = true;
         StatusMessage = $"Undid: {step.Description}.";
     }
 
@@ -608,6 +645,7 @@ public partial class MainViewModel : ViewModelBase
         var step = _history.Redo();
         Restore(step.After, step.SelectionAfter);
         UpdateHistoryState();
+        HasUnsavedChanges = true;
         StatusMessage = $"Redid: {step.Description}.";
     }
 
@@ -627,10 +665,10 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    public void SaveProject(string outputPath)
+    public bool SaveProject(string outputPath)
     {
         if (_sourceFileName is null || _editableImage is null)
-            return;
+            return false;
 
         var project = new TilesetProject(_sourceFileName, _editableImage.EncodeToPng(), TexturePath, TileWidth, TileHeight, Tiles,
             new PixelColor(DrawColor.R, DrawColor.G, DrawColor.B, DrawColor.A));
@@ -638,11 +676,14 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             TilesetProjectFile.Save(project, outputPath);
+            HasUnsavedChanges = false;
             StatusMessage = $"Saved project to {Path.GetFileName(outputPath)}.";
+            return true;
         }
         catch (Exception ex)
         {
             StatusMessage = $"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}";
+            return false;
         }
     }
 
@@ -692,6 +733,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _history.Record(new EditStep(description, before, CaptureState(), selectionBefore, SelectedNames()));
         UpdateHistoryState();
+        HasUnsavedChanges = true;
     }
 
     private void ResetHistory(bool startedWithEdits)
