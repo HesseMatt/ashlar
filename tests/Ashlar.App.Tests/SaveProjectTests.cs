@@ -22,6 +22,24 @@ public class SaveProjectTests : IDisposable
     }
 
     [Fact]
+    public void SuggestedProjectFileNameIsTheImportedImageName()
+    {
+        Assert.Equal("tiles", OpenImage().SuggestedProjectFileName);
+    }
+
+    [Fact]
+    public void SuggestedProjectFileNameSurvivesReopeningAProject()
+    {
+        var path = Path.Combine(_directory, "a.ashlar");
+        OpenImage().SaveProject(path);
+        var viewModel = new MainViewModel();
+
+        viewModel.OpenProject(path);
+
+        Assert.Equal("tiles", viewModel.SuggestedProjectFileName);
+    }
+
+    [Fact]
     public void SavingRemembersThePath()
     {
         var viewModel = OpenImage();

@@ -758,7 +758,7 @@ public partial class MainWindow : Window
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save tileset project",
-            SuggestedFileName = "tileset",
+            SuggestedFileName = viewModel.SuggestedProjectFileName,
             DefaultExtension = "ashlar",
             FileTypeChoices = [new FilePickerFileType("Ashlar project") { Patterns = ["*.ashlar"] }],
         });

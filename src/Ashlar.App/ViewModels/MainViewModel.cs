@@ -208,6 +208,9 @@ public partial class MainViewModel : ViewModelBase
 
     private bool IsDragInProgress => _selectionDrag is not null || _moveDrag is not null || _drawStroke is not null;
 
+    public string SuggestedProjectFileName =>
+        _sourceFileName is null ? "tileset" : Path.GetFileNameWithoutExtension(_sourceFileName);
+
     private string DefaultGroupName =>
         _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));
 
