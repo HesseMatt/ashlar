@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Ashlar.App.ViewModels"
         xmlns:controls="using:Ashlar.App.Controls"
+        xmlns:converters="using:Avalonia.Controls.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1150" d:DesignHeight="650"
@@ -19,6 +20,7 @@
     </Design.DataContext>
 
     <Window.Resources>
+        <converters:ToBrushConverter x:Key="ToBrushConverter" />
         <!-- Icon paths are from Lucide (https://lucide.dev), 24x24 viewBox, stroked. See NOTICE. -->
         <StreamGeometry x:Key="RectangleSelectIcon">M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z M5 3a2 2 0 0 0-2 2 M19 3a2 2 0 0 1 2 2 M5 21a2 2 0 0 1-2-2 M9 3h1 M9 21h2 M14 3h1 M3 9v1 M21 9v2 M3 14v1</StreamGeometry>
         <StreamGeometry x:Key="MoveIcon">M12 2v20 m15 19-3 3-3-3 m19 9 3 3-3 3 M2 12h20 m5 9-3 3 3 3 m9 5 3-3 3 3</StreamGeometry>
@@ -75,13 +77,6 @@
             </MenuItem>
         </Menu>
 
-        <Border Classes="panel" DockPanel.Dock="Top" Margin="6,6,6,0" Padding="12,6">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="Draw color:" VerticalAlignment="Center" />
-                <ColorPicker x:Name="DrawColorPicker" Color="{Binding DrawColor}" IsAlphaEnabled="True" IsEnabled="{Binding HasImage}" />
-            </StackPanel>
-        </Border>
-
         <Border Classes="panelHeader" DockPanel.Dock="Bottom" Margin="0" BorderThickness="0,1,0,0" Padding="12,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Classes="secondary" Text="{Binding StatusMessage}" />
@@ -137,6 +132,16 @@
                         ToolTip.Tip="Delete (Del)">
                     <Path Data="{StaticResource DeleteIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
+                </Button>
+                <Separator Margin="2,2" />
+                <Button Classes="tool" x:Name="DrawColorButton" IsEnabled="{Binding HasImage}" ToolTip.Tip="Draw color">
+                    <Border x:Name="DrawColorSwatch" Width="26" Height="26" CornerRadius="3"
+                            Background="{Binding DrawColor, Converter={StaticResource ToBrushConverter}}" />
+                    <Button.Flyout>
+                        <Flyout Placement="RightEdgeAlignedTop">
+                            <ColorView x:Name="DrawColorView" Color="{Binding DrawColor}" IsAlphaEnabled="True" />
+                        </Flyout>
+                    </Button.Flyout>
                 </Button>
             </StackPanel>
         </Border>

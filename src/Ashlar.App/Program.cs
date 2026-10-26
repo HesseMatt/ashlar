@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.X11;
 using System;
 
 namespace Ashlar.App;
@@ -16,6 +17,7 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .With(new X11PlatformOptions { OverlayPopups = true })
 #if DEBUG
             .WithDeveloperTools()
 #endif
