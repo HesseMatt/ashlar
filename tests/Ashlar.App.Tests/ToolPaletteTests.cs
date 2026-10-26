@@ -128,32 +128,46 @@ public class ToolPaletteTests : IDisposable
         Assert.False(PipetteButton.IsChecked);
     }
 
+    private Button DrawColorButton => _window.FindControl<Button>("DrawColorButton")!;
+
     [AvaloniaFact]
-    public void DrawColorPickerIsRenderedAndFollowsTheDrawColor()
+    public void DrawColorSwatchFollowsTheDrawColor()
     {
         _viewModel.LoadTileset(_imagePath, 16, 16);
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
-        var picker = _window.FindControl<ColorPicker>("DrawColorPicker")!;
-        Assert.True(picker.Bounds.Width > 0 && picker.Bounds.Height > 0);
-        Assert.NotEmpty(picker.GetVisualDescendants());
-        Assert.Equal(Colors.Black, picker.Color);
+        var swatch = _window.FindControl<Border>("DrawColorSwatch")!;
+        Assert.Equal(Colors.Black, ((ISolidColorBrush)swatch.Background!).Color);
 
         _viewModel.DrawColor = Color.FromArgb(128, 1, 2, 3);
-        Assert.Equal(Color.FromArgb(128, 1, 2, 3), picker.Color);
+        Assert.Equal(Color.FromArgb(128, 1, 2, 3), ((ISolidColorBrush)swatch.Background!).Color);
     }
 
     [AvaloniaFact]
-    public void DrawColorPickerSitsBelowDeleteAsACompactSwatchWithATooltip()
+    public void DrawColorFlyoutEditsTheDrawColor()
+    {
+        _viewModel.LoadTileset(_imagePath, 16, 16);
+
+        var flyout = (Flyout)DrawColorButton.Flyout!;
+        flyout.ShowAt(DrawColorButton);
+        var colorView = (ColorView)flyout.Content!;
+        Assert.True(colorView.IsAlphaEnabled);
+        Assert.Equal(_viewModel.DrawColor, colorView.Color);
+
+        colorView.Color = Color.FromArgb(128, 4, 5, 6);
+        Assert.Equal(Color.FromArgb(128, 4, 5, 6), _viewModel.DrawColor);
+    }
+
+    [AvaloniaFact]
+    public void DrawColorButtonSitsBelowDeleteWithATooltip()
     {
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
-        var picker = _window.FindControl<ColorPicker>("DrawColorPicker")!;
-        Assert.False(picker.IsEnabled);
-        Assert.Equal("Draw color", ToolTip.GetTip(picker));
-        Assert.True(picker.Bounds.Width <= DeleteButton.Bounds.Width);
-        Assert.True(picker.Bounds.Top > DeleteButton.Bounds.Bottom);
-        Assert.Same(DeleteButton.Parent, picker.Parent);
+        Assert.False(DrawColorButton.IsEnabled);
+        Assert.Equal("Draw color", ToolTip.GetTip(DrawColorButton));
+        Assert.Equal(DeleteButton.Bounds.Size, DrawColorButton.Bounds.Size);
+        Assert.True(DrawColorButton.Bounds.Top > DeleteButton.Bounds.Bottom);
+        Assert.Same(DeleteButton.Parent, DrawColorButton.Parent);
     }
 
     [AvaloniaFact]
