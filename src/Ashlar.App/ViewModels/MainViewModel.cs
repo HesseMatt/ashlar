@@ -59,6 +59,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasUnsavedChanges;
 
+    // The file a plain Save writes to; null until the project was saved or opened.
+    public string? ProjectPath { get; private set; }
+
     [ObservableProperty]
     private bool _canUndo;
 
@@ -257,6 +260,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = Path.GetFileName(filePath);
+        ProjectPath = null;
         ResetHistory(startedWithEdits: false);
         SelectedTiles = Array.Empty<TileRegion>();
         EndSelectionDrag();
@@ -307,6 +311,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshPreviewBitmap();
 
         _sourceFileName = project.ImageFileName;
+        ProjectPath = filePath;
         SelectedTiles = Array.Empty<TileRegion>();
         EndSelectionDrag();
         EndMoveDrag();
@@ -340,6 +345,7 @@ public partial class MainViewModel : ViewModelBase
         ImageWidth = 0;
         ImageHeight = 0;
         _sourceFileName = null;
+        ProjectPath = null;
         Tiles = new ObservableCollection<TileRegion>();
         SelectedTiles = Array.Empty<TileRegion>();
         GroupNames = new ObservableCollection<string>();
@@ -676,6 +682,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             TilesetProjectFile.Save(project, outputPath);
+            ProjectPath = outputPath;
             HasUnsavedChanges = false;
             StatusMessage = $"Saved project to {Path.GetFileName(outputPath)}.";
             return true;
