@@ -144,6 +144,19 @@ public class ToolPaletteTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void DrawColorPickerSitsBelowDeleteAsACompactSwatchWithATooltip()
+    {
+        _window.GetLayoutManager()?.ExecuteLayoutPass();
+
+        var picker = _window.FindControl<ColorPicker>("DrawColorPicker")!;
+        Assert.False(picker.IsEnabled);
+        Assert.Equal("Draw color", ToolTip.GetTip(picker));
+        Assert.True(picker.Bounds.Width <= DeleteButton.Bounds.Width);
+        Assert.True(picker.Bounds.Top > DeleteButton.Bounds.Bottom);
+        Assert.Same(DeleteButton.Parent, picker.Parent);
+    }
+
+    [AvaloniaFact]
     public void AllButtonsHaveTheSameSize()
     {
         _window.GetLayoutManager()?.ExecuteLayoutPass();

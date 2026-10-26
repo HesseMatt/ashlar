@@ -75,13 +75,6 @@
             </MenuItem>
         </Menu>
 
-        <Border Classes="panel" DockPanel.Dock="Top" Margin="6,6,6,0" Padding="12,6">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="Draw color:" VerticalAlignment="Center" />
-                <ColorPicker x:Name="DrawColorPicker" Color="{Binding DrawColor}" IsAlphaEnabled="True" IsEnabled="{Binding HasImage}" />
-            </StackPanel>
-        </Border>
-
         <Border Classes="panelHeader" DockPanel.Dock="Bottom" Margin="0" BorderThickness="0,1,0,0" Padding="12,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Classes="secondary" Text="{Binding StatusMessage}" />
@@ -138,6 +131,9 @@
                     <Path Data="{StaticResource DeleteIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </Button>
+                <Separator Margin="2,2" />
+                <ColorPicker x:Name="DrawColorPicker" Width="36" Height="36" MinWidth="0" Color="{Binding DrawColor}" IsAlphaEnabled="True"
+                             IsEnabled="{Binding HasImage}" ToolTip.Tip="Draw color" />
             </StackPanel>
         </Border>
 
