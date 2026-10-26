@@ -41,7 +41,7 @@ public class MoveToolTests : IDisposable
 
         Assert.Equal(new Vector(32, 16), viewModel.MoveOffset);
         Assert.Equal((0, 0), (viewModel.Tiles[0].X, viewModel.Tiles[0].Y));
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class MoveToolTests : IDisposable
         viewModel.UpdateMoveDrag(60, 60);
         viewModel.CommitMoveDrag();
         Assert.Equal(["tiles_0001"], Names(viewModel.SelectedTiles));
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class MoveToolTests : IDisposable
 
         Assert.Null(viewModel.MoveOffset);
         Assert.Equal((0, 0), (viewModel.Tiles[0].X, viewModel.Tiles[0].Y));
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class MoveToolTests : IDisposable
         var viewModel = OpenImage();
         viewModel.IsMoveToolActive = true;
 
-        viewModel.LoadTileset(WriteImage("other.png"));
+        viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
         Assert.False(viewModel.IsMoveToolActive);
     }
@@ -157,9 +157,7 @@ public class MoveToolTests : IDisposable
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage("tiles.png"));
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage("tiles.png"), 16, 16);
         return viewModel;
     }
 

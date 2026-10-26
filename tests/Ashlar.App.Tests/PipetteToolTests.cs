@@ -90,13 +90,13 @@ public class PipetteToolTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void PickingDoesNotLockTheTileSize()
+    public void PickingIsNotAnEdit()
     {
         var viewModel = OpenImage();
 
         viewModel.PickColor(1, 1);
 
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
         Assert.False(viewModel.CanUndo);
     }
 
@@ -119,9 +119,7 @@ public class PipetteToolTests : IDisposable
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage());
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage(), 16, 16);
         viewModel.IsPipetteToolActive = true;
         return viewModel;
     }

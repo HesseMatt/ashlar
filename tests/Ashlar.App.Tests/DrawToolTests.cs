@@ -19,7 +19,7 @@ public class DrawToolTests : IDisposable
         viewModel.IsDrawToolActive = false;
 
         Assert.False(viewModel.BeginStroke(1, 1));
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [AvaloniaFact]
@@ -167,14 +167,14 @@ public class DrawToolTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void DrawingLocksTheTileSize()
+    public void DrawingCountsAsAnEdit()
     {
         var viewModel = OpenImage();
 
         viewModel.BeginStroke(1, 1);
         viewModel.CommitStroke();
 
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
     }
 
     [AvaloniaFact]
@@ -210,9 +210,7 @@ public class DrawToolTests : IDisposable
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage());
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage(), 16, 16);
         viewModel.IsDrawToolActive = true;
         return viewModel;
     }

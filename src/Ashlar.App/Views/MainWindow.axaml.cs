@@ -143,8 +143,41 @@ public partial class MainWindow : Window
         if (path is null)
             return;
 
-        if (DataContext is MainViewModel viewModel)
-            viewModel.LoadTileset(path);
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        using var image = viewModel.ReadImage(path);
+        if (image is null)
+            return;
+
+        var size = await new TileSizeDialog(TileSizeDialogViewModel.ForImport(image)).ShowDialog<(int, int)?>(this);
+        if (size is not var (tileWidth, tileHeight))
+            return;
+
+        viewModel.LoadTileset(path, tileWidth, tileHeight);
+    }
+
+    private async void OnChangeTileSizeClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+            return;
+
+        var size = await new TileSizeDialog(viewModel.CreateChangeTileSizeDialogViewModel()).ShowDialog<(int, int)?>(this);
+        if (size is not var (tileWidth, tileHeight))
+            return;
+
+        if (viewModel.NeedsTileSizeConfirmation(tileWidth, tileHeight))
+        {
+            var confirmed = await new ConfirmDialog(
+                "Change tile size",
+                "Changing the tile size rebuilds the grid. Tile names, group assignments, deleted tiles and the undo history "
+                + "are lost; the image pixels are kept.",
+                "Change tile size").ShowDialog<bool>(this);
+            if (!confirmed)
+                return;
+        }
+
+        viewModel.ChangeTileSize(tileWidth, tileHeight);
     }
 
     private async void OnOpenProjectClick(object? sender, RoutedEventArgs e)

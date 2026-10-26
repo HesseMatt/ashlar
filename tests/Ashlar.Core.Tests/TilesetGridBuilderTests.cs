@@ -82,6 +82,47 @@ public class TilesetGridBuilderTests
         Assert.Empty(Build(bitmap, "dungeon.png", 20, 20));
     }
 
+    [Fact]
+    public void BlockCellPositions_ListsTheBlockRowByRowFromItsFirstCell()
+    {
+        var positions = TilesetGridBuilder.BlockCellPositions(80, 80, 20, 20, firstColumn: 1, firstRow: 2, columns: 2, rows: 2);
+
+        Assert.Equal([(20, 40), (40, 40), (20, 60), (40, 60)], positions);
+    }
+
+    [Fact]
+    public void BlockCellPositions_LeavesOutCellsOutsideTheImage()
+    {
+        var positions = TilesetGridBuilder.BlockCellPositions(45, 20, 20, 20, 0, 0, columns: 5, rows: 5);
+
+        Assert.Equal([(0, 0), (20, 0)], positions);
+    }
+
+    [Fact]
+    public void FirstContentCell_SkipsAnEmptyLeadingBorder()
+    {
+        using var bitmap = NewTransparentBitmap(100, 100);
+        bitmap.SetPixel(45, 25, SKColors.Red);
+        bitmap.SetPixel(25, 65, SKColors.Red);
+
+        Assert.Equal((1, 1), FirstContentCellOf(bitmap, 20, 20));
+    }
+
+    [Fact]
+    public void FirstContentCell_FullyEmptyImage_StartsAtTheTopLeft()
+    {
+        using var bitmap = NewTransparentBitmap(40, 40);
+
+        Assert.Equal((0, 0), FirstContentCellOf(bitmap, 20, 20));
+    }
+
+    private static (int Column, int Row) FirstContentCellOf(SKBitmap bitmap, int tileWidth, int tileHeight)
+    {
+        using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
+        using var image = EditableTilesetImage.Load(data.ToArray());
+        return TilesetGridBuilder.FirstContentCell(image, tileWidth, tileHeight);
+    }
+
     private static IReadOnlyList<TileRegion> BuildFor(
         string fileName, int imageWidth, int imageHeight, int tileWidth, int tileHeight)
     {

@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Ashlar.App.ViewModels"
+        x:Class="Ashlar.App.Views.TileSizeDialog"
+        x:DataType="vm:TileSizeDialogViewModel"
+        Title="Tile size"
+        Width="420" Height="500"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                    HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Name="OkButton" Content="OK" IsDefault="True" Click="OnOkClick" MinWidth="80" />
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="OnCancelClick" MinWidth="80" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="Tile width:" VerticalAlignment="Center" />
+            <NumericUpDown Name="TileWidthBox" Value="{Binding TileWidth}" Minimum="1" Width="130" />
+            <TextBlock Text="Tile height:" VerticalAlignment="Center" />
+            <NumericUpDown Name="TileHeightBox" Value="{Binding TileHeight}" Minimum="1" Width="130" />
+        </StackPanel>
+
+        <StackPanel Spacing="4" Margin="0,12,0,0">
+            <TextBlock Classes="secondary" Text="Preview" FontWeight="SemiBold" />
+            <ItemsControl Name="PreviewList" ItemsSource="{Binding PreviewCells}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Width="310" HorizontalAlignment="Left" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:Object">
+                        <Border Width="56" Height="56" Margin="0,0,6,6" BorderThickness="1" BorderBrush="Gray" Background="#22808080">
+                            <Image Source="{Binding}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </DockPanel>
+</Window>

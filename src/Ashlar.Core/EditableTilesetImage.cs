@@ -38,6 +38,22 @@ public sealed class EditableTilesetImage : IDisposable
         return SKBitmap.Decode(encodedImageBytes, info) ?? throw new InvalidDataException("Could not decode image.");
     }
 
+    // Tightly packed unpremultiplied RGBA bytes of one region, without the row padding of the image itself.
+    public byte[] CopyRegion(int x, int y, int width, int height)
+    {
+        var pixels = _bitmap.GetPixelSpan();
+        var rowByteWidth = width * BytesPerPixel;
+        var copy = new byte[height * rowByteWidth];
+
+        for (var row = 0; row < height; row++)
+        {
+            var sourceRow = pixels.Slice((y + row) * _bitmap.RowBytes + x * BytesPerPixel, rowByteWidth);
+            sourceRow.CopyTo(copy.AsSpan(row * rowByteWidth, rowByteWidth));
+        }
+
+        return copy;
+    }
+
     // Pixels are RGBA, so every fourth byte (starting at offset 3) is an alpha value.
     public bool IsRegionEmpty(int x, int y, int width, int height)
     {

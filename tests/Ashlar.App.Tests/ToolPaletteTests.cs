@@ -52,7 +52,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void ToolTogglesAreEnabledOnceAnImageIsLoadedAndDeleteWaitsForASelection()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
 
         Assert.True(RectangleSelectButton.IsEnabled);
         Assert.True(MoveButton.IsEnabled);
@@ -68,7 +68,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void TogglesFollowTheActiveToolAndAreMutuallyExclusive()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
 
         _viewModel.IsRectangleToolActive = true;
         Assert.True(RectangleSelectButton.IsChecked);
@@ -87,7 +87,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void CheckingATogglePicksTheToolAndUncheckingReturnsToClickSelection()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
 
         RectangleSelectButton.IsChecked = true;
         Assert.Equal(CanvasTool.Rectangle, _viewModel.ActiveTool);
@@ -103,7 +103,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void DrawToggleActivatesTheDrawTool()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
 
         DrawButton.IsChecked = true;
         Assert.Equal(CanvasTool.Draw, _viewModel.ActiveTool);
@@ -119,7 +119,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void PipetteToggleActivatesThePipetteTool()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
 
         PipetteButton.IsChecked = true;
         Assert.Equal(CanvasTool.Pipette, _viewModel.ActiveTool);
@@ -131,7 +131,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void DrawColorPickerIsRenderedAndFollowsTheDrawColor()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
         var picker = _window.FindControl<ColorPicker>("DrawColorPicker")!;
@@ -157,7 +157,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void IconsFollowTheButtonsStateColors()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
         var icon = (Avalonia.Controls.Shapes.Path)MoveButton.Content!;
@@ -173,7 +173,7 @@ public class ToolPaletteTests : IDisposable
     [AvaloniaFact]
     public void DeleteButtonDeletesTheSelectedTiles()
     {
-        _viewModel.LoadTileset(_imagePath);
+        _viewModel.LoadTileset(_imagePath, 16, 16);
         _viewModel.HandleCanvasClick(1, 1, addToSelection: false);
 
         var tileCount = _viewModel.Tiles.Count;
