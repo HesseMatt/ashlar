@@ -49,11 +49,11 @@ public partial class TileSizeDialogViewModel : ObservableObject
     private unsafe void UpdatePreview()
     {
         var size = new PixelSize(TileWidth, TileHeight);
-        var positions = TilesetGridBuilder.TopLeftCellPositions(
-            _image.Width, _image.Height, TileWidth, TileHeight, PreviewColumns, PreviewRows);
+        var (firstColumn, firstRow) = TilesetGridBuilder.FirstContentCell(_image, TileWidth, TileHeight);
+        var positions = TilesetGridBuilder.BlockCellPositions(
+            _image.Width, _image.Height, TileWidth, TileHeight, firstColumn, firstRow, PreviewColumns, PreviewRows);
 
         PreviewCells = positions
-            .Where(position => !_image.IsRegionEmpty(position.X, position.Y, TileWidth, TileHeight))
             .Select(position =>
             {
                 var pixels = _image.CopyRegion(position.X, position.Y, TileWidth, TileHeight);

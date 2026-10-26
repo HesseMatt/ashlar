@@ -33,16 +33,38 @@ public static class TilesetGridBuilder
         return tiles;
     }
 
-    // The same cells Build walks, in the same order, but without skipping empty ones.
-    // Only the top-left block of the given number of columns and rows is listed.
-    public static IReadOnlyList<(int X, int Y)> TopLeftCellPositions(
-        int imageWidth, int imageHeight, int tileWidth, int tileHeight, int columns, int rows)
+    // The top-left-most column and row (as cell indices) that hold content, found independently,
+    // so a tileset with an empty border can be previewed from where its content begins.
+    public static (int Column, int Row) FirstContentCell(EditableTilesetImage image, int tileWidth, int tileHeight)
+    {
+        var firstColumn = int.MaxValue;
+        var firstRow = int.MaxValue;
+
+        for (var row = 0; (row + 1) * tileHeight <= image.Height; row++)
+        {
+            for (var column = 0; (column + 1) * tileWidth <= image.Width; column++)
+            {
+                if (image.IsRegionEmpty(column * tileWidth, row * tileHeight, tileWidth, tileHeight))
+                    continue;
+
+                firstColumn = Math.Min(firstColumn, column);
+                firstRow = Math.Min(firstRow, row);
+            }
+        }
+
+        return firstColumn == int.MaxValue ? (0, 0) : (firstColumn, firstRow);
+    }
+
+    // Cells of a block of the given size starting at a cell, row by row; cells outside the image are left out.
+    public static IReadOnlyList<(int X, int Y)> BlockCellPositions(
+        int imageWidth, int imageHeight, int tileWidth, int tileHeight,
+        int firstColumn, int firstRow, int columns, int rows)
     {
         var positions = new List<(int X, int Y)>();
 
-        for (var row = 0; row < rows && (row + 1) * tileHeight <= imageHeight; row++)
+        for (var row = firstRow; row < firstRow + rows && (row + 1) * tileHeight <= imageHeight; row++)
         {
-            for (var column = 0; column < columns && (column + 1) * tileWidth <= imageWidth; column++)
+            for (var column = firstColumn; column < firstColumn + columns && (column + 1) * tileWidth <= imageWidth; column++)
                 positions.Add((column * tileWidth, row * tileHeight));
         }
 

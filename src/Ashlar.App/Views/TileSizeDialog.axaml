@@ -24,7 +24,7 @@
         </StackPanel>
 
         <StackPanel Spacing="4" Margin="0,12,0,0">
-            <TextBlock Classes="secondary" Text="Preview (non-empty cells of the top-left 5x5 block)" FontWeight="SemiBold" />
+            <TextBlock Classes="secondary" Text="Preview (5x5 cells, starting where the content begins)" FontWeight="SemiBold" />
             <ItemsControl Name="PreviewList" ItemsSource="{Binding PreviewCells}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>

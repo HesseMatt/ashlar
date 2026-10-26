@@ -47,13 +47,14 @@ public class TileSizeDialogTests : IDisposable
     }
 
     [Fact]
-    public void PreviewSkipsEmptyCellsSoAnEmptyBorderDoesNotHideTheContent()
+    public void PreviewStartsWhereTheContentBeginsAndKeepsEmptyCellsInside()
     {
-        using var image = LoadImage(160, 160, isFilled: (x, y) => x >= 16 && y >= 16);
+        // Empty first row and column, plus one empty cell inside the content.
+        using var image = LoadImage(160, 160, isFilled: (x, y) => x >= 16 && y >= 16 && !(x >= 32 && x < 48 && y >= 32 && y < 48));
 
         var viewModel = new TileSizeDialogViewModel(image, 16, 16);
 
-        Assert.Equal(16, viewModel.PreviewCells.Length);
+        Assert.Equal(25, viewModel.PreviewCells.Length);
     }
 
     [Fact]
