@@ -323,6 +323,10 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 viewModel.IsDrawToolActive = !viewModel.IsDrawToolActive;
                 break;
+            case Key.G when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+                e.Handled = true;
+                viewModel.IsBucketToolActive = !viewModel.IsBucketToolActive;
+                break;
             case Key.I when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
                 e.Handled = true;
                 viewModel.IsPipetteToolActive = !viewModel.IsPipetteToolActive;
@@ -419,6 +423,17 @@ public partial class MainWindow : Window
                     _drawPointer = e.Pointer;
                     e.Pointer.Capture(canvas);
                 }
+            }
+
+            return;
+        }
+
+        if (viewModel.IsBucketToolActive)
+        {
+            if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
+            {
+                var (fillX, fillY) = ImagePixelAt(e);
+                viewModel.Fill(fillX, fillY);
             }
 
             return;
