@@ -1,0 +1,118 @@
+using Avalonia.Controls;
+using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
+using SkiaSharp;
+using Ashlar.App.ViewModels;
+using Ashlar.App.Views;
+using Ashlar.Core;
+
+namespace Ashlar.App.Tests;
+
+public class TileSizeDialogTests : IDisposable
+{
+    private readonly string _directory = Directory.CreateTempSubdirectory().FullName;
+
+    public void Dispose() => Directory.Delete(_directory, recursive: true);
+
+    [Fact]
+    public void ImportDialogIsPrefilledWithTheDetectedSuggestion()
+    {
+        using var image = LoadImage(64, 64);
+
+        var viewModel = TileSizeDialogViewModel.ForImport(image);
+
+        Assert.Equal((16, 16), (viewModel.TileWidth, viewModel.TileHeight));
+    }
+
+    [Fact]
+    public void PreviewShowsTheFirstFiveCellsAtTheTileSize()
+    {
+        using var image = LoadImage(64, 64);
+
+        var viewModel = new TileSizeDialogViewModel(image, 16, 16);
+
+        Assert.Equal(5, viewModel.PreviewCells.Length);
+        Assert.All(viewModel.PreviewCells, cell => Assert.Equal((16, 16), (cell.PixelSize.Width, cell.PixelSize.Height)));
+    }
+
+    [Fact]
+    public void PreviewShowsFewerCellsWhenTheImageHasFewer()
+    {
+        using var image = LoadImage(64, 32);
+
+        var viewModel = new TileSizeDialogViewModel(image, 32, 32);
+
+        Assert.Equal(2, viewModel.PreviewCells.Length);
+    }
+
+    [Fact]
+    public void PreviewUpdatesWhenTheTileSizeIsEdited()
+    {
+        using var image = LoadImage(64, 64);
+        var viewModel = new TileSizeDialogViewModel(image, 16, 16);
+
+        viewModel.TileWidth = 32;
+        viewModel.TileHeight = 32;
+
+        Assert.Equal(4, viewModel.PreviewCells.Length);
+        Assert.Equal(32, viewModel.PreviewCells[0].PixelSize.Width);
+    }
+
+    [AvaloniaFact]
+    public void PreviewIncludesEmptyCellsAndDrawsPixelsWithoutSmoothing()
+    {
+        using var image = LoadImage(32, 16, transparentFromX: 16);
+        var dialog = new TileSizeDialog(new TileSizeDialogViewModel(image, 16, 16));
+        dialog.Show();
+
+        var cells = dialog.FindControl<ItemsControl>("PreviewList")!.GetVisualDescendants()
+            .OfType<Avalonia.Controls.Image>().ToList();
+
+        Assert.Equal(2, cells.Count);
+        Assert.All(cells, cell => Assert.Equal(
+            Avalonia.Media.Imaging.BitmapInterpolationMode.None, Avalonia.Media.RenderOptions.GetBitmapInterpolationMode(cell)));
+    }
+
+    [AvaloniaFact]
+    public async Task OkReturnsTheEnteredTileSize()
+    {
+        using var image = LoadImage(64, 64);
+        var dialog = new TileSizeDialog(new TileSizeDialogViewModel(image, 16, 16));
+        var owner = new Window();
+        owner.Show();
+        var result = dialog.ShowDialog<(int, int)?>(owner);
+        dialog.FindControl<NumericUpDown>("TileWidthBox")!.Value = 32;
+
+        dialog.FindControl<Button>("OkButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+        Assert.Equal((32, 16), await result);
+    }
+
+    [AvaloniaFact]
+    public async Task CancelReturnsNothing()
+    {
+        using var image = LoadImage(64, 64);
+        var dialog = new TileSizeDialog(new TileSizeDialogViewModel(image, 16, 16));
+        var owner = new Window();
+        owner.Show();
+        var result = dialog.ShowDialog<(int, int)?>(owner);
+        dialog.FindControl<NumericUpDown>("TileWidthBox")!.Value = 32;
+
+        dialog.FindControl<Button>("CancelButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+        Assert.Null(await result);
+    }
+
+    private EditableTilesetImage LoadImage(int width, int height, int? transparentFromX = null)
+    {
+        using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+        bitmap.Erase(SKColors.Red);
+        for (var x = transparentFromX ?? width; x < width; x++)
+            for (var y = 0; y < height; y++)
+                bitmap.SetPixel(x, y, SKColors.Transparent);
+
+        using var data = SKImage.FromBitmap(bitmap).Encode(SKEncodedImageFormat.Png, 100);
+        return EditableTilesetImage.Load(data.ToArray());
+    }
+}

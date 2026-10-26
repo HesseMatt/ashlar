@@ -9,7 +9,6 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Ashlar.Core;
-using Ashlar.Core.Detection;
 using Ashlar.Core.Editing;
 using Ashlar.Core.Model;
 using Ashlar.Core.Serialization;
@@ -39,12 +38,6 @@ public partial class MainViewModel : ViewModelBase
     private double _zoomLevel = 1.0;
 
     [ObservableProperty]
-    private int _tileWidth = 16;
-
-    [ObservableProperty]
-    private int _tileHeight = 16;
-
-    [ObservableProperty]
     private string _texturePath = string.Empty;
 
     [ObservableProperty]
@@ -59,7 +52,6 @@ public partial class MainViewModel : ViewModelBase
     private IReadOnlyList<TileRegion> _selectedTiles = Array.Empty<TileRegion>();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanEditTileSize))]
     private bool _hasEdits;
 
     [ObservableProperty]
@@ -102,6 +94,8 @@ public partial class MainViewModel : ViewModelBase
     private const double ZoomStep = 0.1;
     private const int BytesPerPixel = 4;
 
+    private int _tileWidth = 16;
+    private int _tileHeight = 16;
     private string? _sourceFileName;
     private EditableTilesetImage? _editableImage;
     private bool _isConfirmingGroupNameInput;
@@ -134,6 +128,28 @@ public partial class MainViewModel : ViewModelBase
     // and the views have to be told to draw it again.
     public event EventHandler? PreviewPixelsChanged;
 
+    public int TileWidth
+    {
+        get => _tileWidth;
+        private set
+        {
+            if (SetProperty(ref _tileWidth, value))
+                OnPropertyChanged(nameof(TileSizeText));
+        }
+    }
+
+    public int TileHeight
+    {
+        get => _tileHeight;
+        private set
+        {
+            if (SetProperty(ref _tileHeight, value))
+                OnPropertyChanged(nameof(TileSizeText));
+        }
+    }
+
+    public string TileSizeText => $"{TileWidth}x{TileHeight}";
+
     public bool HasImage => PreviewBitmap is not null;
 
     public double ScaledImageWidth => ImageWidth * ZoomLevel;
@@ -146,8 +162,6 @@ public partial class MainViewModel : ViewModelBase
     public bool ShowPixelGrid => ZoomLevel >= PixelGridZoom;
 
     public string ZoomPercentageText => $"{ZoomLevel:P0}";
-
-    public bool CanEditTileSize => !HasEdits;
 
     public bool HasSelectedTiles => SelectedTiles.Count > 0;
 
@@ -187,22 +201,45 @@ public partial class MainViewModel : ViewModelBase
     private string DefaultGroupName =>
         _sourceFileName is null ? string.Empty : TilesetGridBuilder.SanitizeBaseName(Path.GetFileNameWithoutExtension(_sourceFileName));
 
-    partial void OnTileWidthChanged(int value) => RebuildGrid();
-
-    partial void OnTileHeightChanged(int value) => RebuildGrid();
-
-    public void LoadTileset(string filePath)
+    // Reads an image for the tile size dialog without touching the open
+    // tileset, so cancelling the import leaves everything as it was.
+    public EditableTilesetImage? ReadImage(string filePath)
     {
-        EditableTilesetImage image;
         try
         {
-            image = EditableTilesetImage.Load(filePath);
+            return EditableTilesetImage.Load(filePath);
         }
         catch (Exception ex)
         {
             StatusMessage = $"Could not open '{Path.GetFileName(filePath)}': {ex.Message}";
-            return;
+            return null;
         }
+    }
+
+    public TileSizeDialogViewModel CreateChangeTileSizeDialogViewModel() =>
+        new(_editableImage!, TileWidth, TileHeight);
+
+    // Rebuilding the grid drops tile names, group assignments, deleted tiles
+    // and the undo history, so that is only done after the user agreed to it.
+    public bool NeedsTileSizeConfirmation(int tileWidth, int tileHeight) =>
+        HasEdits && IsDifferentTileSize(tileWidth, tileHeight);
+
+    public void ChangeTileSize(int tileWidth, int tileHeight)
+    {
+        if (_editableImage is null || !IsDifferentTileSize(tileWidth, tileHeight))
+            return;
+
+        TileWidth = tileWidth;
+        TileHeight = tileHeight;
+        RebuildGrid();
+        StatusMessage = $"Changed the tile size to {TileSizeText} ({Tiles.Count} tiles).";
+    }
+
+    public void LoadTileset(string filePath, int tileWidth, int tileHeight)
+    {
+        var image = ReadImage(filePath);
+        if (image is null)
+            return;
 
         _editableImage?.Dispose();
         _editableImage = image;
@@ -221,12 +258,11 @@ public partial class MainViewModel : ViewModelBase
         ZoomLevel = 1.0;
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
 
-        var suggestion = TileSizeDetector.DetectCandidates(image.Width, image.Height).First();
-        TileWidth = suggestion.TileWidth;
-        TileHeight = suggestion.TileHeight;
+        TileWidth = tileWidth;
+        TileHeight = tileHeight;
         RebuildGrid();
 
-        StatusMessage = $"{_sourceFileName} ({image.Width}x{image.Height}) - suggested tile size {TileWidth}x{TileHeight}.";
+        StatusMessage = $"{_sourceFileName} ({image.Width}x{image.Height}) - tile size {TileSizeText}.";
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
@@ -665,8 +701,8 @@ public partial class MainViewModel : ViewModelBase
         UpdateHistoryState();
     }
 
-    // A tileset opened with edits stays locked even with every recorded step
-    // undone, because its initial state is itself an edited one.
+    // A tileset opened with edits still counts as edited with every recorded
+    // step undone, because its initial state is itself an edited one.
     private void UpdateHistoryState()
     {
         CanUndo = _history.CanUndo;
@@ -741,6 +777,9 @@ public partial class MainViewModel : ViewModelBase
     // plain integer division would round toward zero instead of down.
     private static int FloorDiv(int value, int divisor) => (int)Math.Floor((double)value / divisor);
 
+    private bool IsDifferentTileSize(int tileWidth, int tileHeight) =>
+        tileWidth != TileWidth || tileHeight != TileHeight;
+
     private void RebuildGrid()
     {
         if (_sourceFileName is null || _editableImage is null)
@@ -752,8 +791,7 @@ public partial class MainViewModel : ViewModelBase
         EndSelectionDrag();
         EndMoveDrag();
         RefreshGroupNames();
-        _history.Clear();
-        UpdateHistoryState();
+        ResetHistory(startedWithEdits: false);
     }
 
     private void RefreshGroupNames()

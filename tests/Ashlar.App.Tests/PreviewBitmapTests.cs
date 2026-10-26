@@ -112,11 +112,11 @@ public class PreviewBitmapTests : IDisposable
         var viewModel = OpenImage(32, 32, new SKColor(255, 0, 0, 255));
         var first = viewModel.PreviewBitmap;
 
-        viewModel.LoadTileset(WriteImage(32, 32, new SKColor(0, 255, 0, 255)));
+        viewModel.LoadTileset(WriteImage(32, 32, new SKColor(0, 255, 0, 255)), 16, 16);
         Assert.Same(first, viewModel.PreviewBitmap);
         Assert.Equal([0, 255, 0, 255], PixelAt(viewModel, 0, 0));
 
-        viewModel.LoadTileset(WriteImage(48, 16, new SKColor(0, 0, 255, 255)));
+        viewModel.LoadTileset(WriteImage(48, 16, new SKColor(0, 0, 255, 255)), 16, 16);
         Assert.NotSame(first, viewModel.PreviewBitmap);
         Assert.Equal(new Avalonia.PixelSize(48, 16), viewModel.PreviewBitmap!.PixelSize);
     }
@@ -131,9 +131,7 @@ public class PreviewBitmapTests : IDisposable
     private MainViewModel OpenImage(int width, int height, SKColor color)
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage(width, height, color));
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage(width, height, color), 16, 16);
         return viewModel;
     }
 

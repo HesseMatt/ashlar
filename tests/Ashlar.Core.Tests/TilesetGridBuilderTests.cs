@@ -82,6 +82,30 @@ public class TilesetGridBuilderTests
         Assert.Empty(Build(bitmap, "dungeon.png", 20, 20));
     }
 
+    [Fact]
+    public void FirstCellPositions_ListsCellsRowByRowFromTheTopLeft()
+    {
+        var positions = TilesetGridBuilder.FirstCellPositions(60, 40, 20, 20, count: 5);
+
+        Assert.Equal([(0, 0), (20, 0), (40, 0), (0, 20), (20, 20)], positions);
+    }
+
+    [Fact]
+    public void FirstCellPositions_ImageWithFewerCells_ReturnsOnlyThose()
+    {
+        var positions = TilesetGridBuilder.FirstCellPositions(40, 20, 20, 20, count: 5);
+
+        Assert.Equal([(0, 0), (20, 0)], positions);
+    }
+
+    [Fact]
+    public void FirstCellPositions_LeftoverPixelsDontFormACell()
+    {
+        var positions = TilesetGridBuilder.FirstCellPositions(45, 20, 20, 20, count: 5);
+
+        Assert.Equal([(0, 0), (20, 0)], positions);
+    }
+
     private static IReadOnlyList<TileRegion> BuildFor(
         string fileName, int imageWidth, int imageHeight, int tileWidth, int tileHeight)
     {

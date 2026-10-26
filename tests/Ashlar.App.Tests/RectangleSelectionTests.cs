@@ -131,7 +131,7 @@ public class RectangleSelectionTests : IDisposable
         var viewModel = OpenImage();
         viewModel.IsRectangleToolActive = true;
 
-        viewModel.LoadTileset(WriteImage("other.png"));
+        viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
         Assert.False(viewModel.IsRectangleToolActive);
     }
@@ -139,9 +139,7 @@ public class RectangleSelectionTests : IDisposable
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage("tiles.png"));
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage("tiles.png"), 16, 16);
         return viewModel;
     }
 

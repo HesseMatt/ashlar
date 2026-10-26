@@ -3,33 +3,33 @@ using Ashlar.App.ViewModels;
 
 namespace Ashlar.App.Tests;
 
-public class TileSizeLockTests : IDisposable
+public class HasEditsTests : IDisposable
 {
     private readonly string _directory = Directory.CreateTempSubdirectory().FullName;
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
     [Fact]
-    public void TileSizeIsEditableAfterImportingAnImage()
+    public void NoEditsAfterImportingAnImage()
     {
         var viewModel = OpenImage();
 
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [Fact]
-    public void DeletingATileLocksTheTileSize()
+    public void DeletingATileCountsAsAnEdit()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
 
         viewModel.DeleteSelectedTiles();
 
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
     }
 
     [Fact]
-    public void MovingATileLocksTheTileSize()
+    public void MovingATileCountsAsAnEdit()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
@@ -39,11 +39,11 @@ public class TileSizeLockTests : IDisposable
         viewModel.UpdateMoveDrag(17, 1);
         viewModel.CommitMoveDrag();
 
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
     }
 
     [Fact]
-    public void MoveWithoutNetOffsetDoesNotLockTheTileSize()
+    public void MoveWithoutNetOffsetIsNotAnEdit()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
@@ -54,11 +54,11 @@ public class TileSizeLockTests : IDisposable
         viewModel.UpdateMoveDrag(5, 5);
         viewModel.CommitMoveDrag();
 
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [Fact]
-    public void TileSizeStaysLockedAfterFurtherEdits()
+    public void TilesetStaysEditedAfterFurtherEdits()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
@@ -67,34 +67,34 @@ public class TileSizeLockTests : IDisposable
         viewModel.HandleCanvasClick(17, 1, addToSelection: false);
         viewModel.DeleteSelectedTiles();
 
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
     }
 
     [Fact]
-    public void ImportingANewImageUnlocksTheTileSize()
+    public void ImportingANewImageClearsTheEdits()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
         viewModel.DeleteSelectedTiles();
 
-        viewModel.LoadTileset(WriteImage("other.png"));
+        viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     [Fact]
-    public void ProjectWithoutEditsOpensWithEditableTileSize()
+    public void ProjectWithoutEditsOpensWithoutEdits()
     {
         var projectPath = SaveProject(OpenImage());
 
         var reopened = new MainViewModel();
         reopened.OpenProject(projectPath);
 
-        Assert.True(reopened.CanEditTileSize);
+        Assert.False(reopened.HasEdits);
     }
 
     [Fact]
-    public void UneditedProjectWithEmptyCellsOpensWithEditableTileSize()
+    public void UneditedProjectWithEmptyCellsOpensWithoutEdits()
     {
         var path = Path.Combine(_directory, "sparse.png");
         using (var bitmap = new SKBitmap(new SKImageInfo(64, 64, SKColorType.Rgba8888, SKAlphaType.Unpremul)))
@@ -106,16 +106,16 @@ public class TileSizeLockTests : IDisposable
         }
 
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(path);
+        viewModel.LoadTileset(path, 16, 16);
         var reopened = new MainViewModel();
         reopened.OpenProject(SaveProject(viewModel));
 
         Assert.Single(reopened.Tiles);
-        Assert.True(reopened.CanEditTileSize);
+        Assert.False(reopened.HasEdits);
     }
 
     [Fact]
-    public void ProjectWithEditsOpensWithLockedTileSize()
+    public void ProjectWithEditsOpensWithEdits()
     {
         var viewModel = OpenImage();
         MoveFirstTileOneCellRight(viewModel);
@@ -124,11 +124,11 @@ public class TileSizeLockTests : IDisposable
         var reopened = new MainViewModel();
         reopened.OpenProject(projectPath);
 
-        Assert.False(reopened.CanEditTileSize);
+        Assert.True(reopened.HasEdits);
     }
 
     [Fact]
-    public void OpeningAnUneditedProjectUnlocksTheTileSize()
+    public void OpeningAnUneditedProjectClearsTheEdits()
     {
         var unedited = SaveProject(OpenImage());
         var viewModel = OpenImage();
@@ -137,15 +137,13 @@ public class TileSizeLockTests : IDisposable
 
         viewModel.OpenProject(unedited);
 
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
     }
 
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage("tiles.png"));
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage("tiles.png"), 16, 16);
         return viewModel;
     }
 

@@ -166,7 +166,7 @@ public class UndoRedoTests : IDisposable
         viewModel.DeleteSelectedTiles();
         viewModel.Undo();
 
-        viewModel.LoadTileset(WriteImage("other.png"));
+        viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
         Assert.False(viewModel.CanUndo);
         Assert.False(viewModel.CanRedo);
@@ -202,24 +202,24 @@ public class UndoRedoTests : IDisposable
     }
 
     [Fact]
-    public void UndoingEveryEditUnlocksTheTileSize()
+    public void UndoingEveryEditClearsTheEdits()
     {
         var viewModel = OpenImage();
         viewModel.HandleCanvasClick(1, 1, addToSelection: false);
         viewModel.DeleteSelectedTiles();
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
 
         viewModel.Undo();
 
-        Assert.True(viewModel.CanEditTileSize);
+        Assert.False(viewModel.HasEdits);
 
         viewModel.Redo();
 
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
     }
 
     [Fact]
-    public void ProjectOpenedWithEditsStaysLockedAfterUndoingEveryStep()
+    public void ProjectOpenedWithEditsStaysEditedAfterUndoingEveryStep()
     {
         var edited = OpenImage();
         edited.HandleCanvasClick(1, 1, addToSelection: false);
@@ -235,7 +235,7 @@ public class UndoRedoTests : IDisposable
         viewModel.Undo();
 
         Assert.False(viewModel.CanUndo);
-        Assert.False(viewModel.CanEditTileSize);
+        Assert.True(viewModel.HasEdits);
     }
 
     [Fact]
@@ -246,7 +246,7 @@ public class UndoRedoTests : IDisposable
         viewModel.DeleteSelectedTiles();
         viewModel.Undo();
 
-        viewModel.TileWidth = 32;
+        viewModel.ChangeTileSize(32, 16);
 
         Assert.False(viewModel.CanRedo);
     }
@@ -302,9 +302,7 @@ public class UndoRedoTests : IDisposable
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
-        viewModel.LoadTileset(WriteImage("tiles.png"));
-        viewModel.TileWidth = 16;
-        viewModel.TileHeight = 16;
+        viewModel.LoadTileset(WriteImage("tiles.png"), 16, 16);
         return viewModel;
     }
 

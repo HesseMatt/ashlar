@@ -33,6 +33,26 @@ public static class TilesetGridBuilder
         return tiles;
     }
 
+    // The same cells Build walks, in the same order, but without skipping empty ones.
+    public static IReadOnlyList<(int X, int Y)> FirstCellPositions(
+        int imageWidth, int imageHeight, int tileWidth, int tileHeight, int count)
+    {
+        var positions = new List<(int X, int Y)>();
+
+        for (var y = 0; y + tileHeight <= imageHeight; y += tileHeight)
+        {
+            for (var x = 0; x + tileWidth <= imageWidth; x += tileWidth)
+            {
+                if (positions.Count == count)
+                    return positions;
+
+                positions.Add((x, y));
+            }
+        }
+
+        return positions;
+    }
+
     public static string SanitizeBaseName(string name)
     {
         var withUnderscores = name.Replace(' ', '_');

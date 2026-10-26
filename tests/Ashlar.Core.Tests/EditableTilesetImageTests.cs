@@ -308,6 +308,25 @@ public class EditableTilesetImageTests
         }
     }
 
+    [Fact]
+    public void CopyRegion_ReturnsTightlyPackedPixelsOfJustThatRegion()
+    {
+        var filePath = CreateSampleImage(4, 4, Red);
+        try
+        {
+            using var image = EditableTilesetImage.Load(filePath);
+            image.SetPixel(1, 2, new PixelColor(0, 0, 255, 255));
+
+            var copy = image.CopyRegion(1, 2, 2, 1);
+
+            Assert.Equal([0, 0, 255, 255, 255, 0, 0, 255], copy);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
     private static string CreateSampleImage(int width, int height, SKColor color)
     {
         var filePath = Path.GetTempFileName() + ".png";

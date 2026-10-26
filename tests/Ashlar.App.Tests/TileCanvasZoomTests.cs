@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.VisualTree;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
+using Ashlar.Core.Detection;
 using Ashlar.App.Views;
 
 namespace Ashlar.App.Tests;
@@ -193,7 +194,8 @@ public class TileCanvasZoomTests
             };
             window.Show();
 
-            viewModel.LoadTileset(imagePath);
+            var suggestion = TileSizeDetector.DetectCandidates(width, height).First();
+            viewModel.LoadTileset(imagePath, suggestion.TileWidth, suggestion.TileHeight);
 
             var canvas = new TileCanvas(window, viewModel, imagePath);
             canvas.Layout();
@@ -214,8 +216,7 @@ public class TileCanvasZoomTests
 
         public void SetTileSize(int size)
         {
-            _viewModel.TileWidth = size;
-            _viewModel.TileHeight = size;
+            _viewModel.ChangeTileSize(size, size);
             Layout();
         }
 
