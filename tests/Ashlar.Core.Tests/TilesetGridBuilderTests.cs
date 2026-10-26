@@ -83,25 +83,25 @@ public class TilesetGridBuilderTests
     }
 
     [Fact]
-    public void FirstCellPositions_ListsCellsRowByRowFromTheTopLeft()
+    public void TopLeftCellPositions_ListsTheBlockRowByRowFromTheTopLeft()
     {
-        var positions = TilesetGridBuilder.FirstCellPositions(60, 40, 20, 20, count: 5);
+        var positions = TilesetGridBuilder.TopLeftCellPositions(60, 40, 20, 20, columns: 2, rows: 2);
 
-        Assert.Equal([(0, 0), (20, 0), (40, 0), (0, 20), (20, 20)], positions);
+        Assert.Equal([(0, 0), (20, 0), (0, 20), (20, 20)], positions);
     }
 
     [Fact]
-    public void FirstCellPositions_ImageWithFewerCells_ReturnsOnlyThose()
+    public void TopLeftCellPositions_ImageSmallerThanTheBlock_ReturnsOnlyExistingCells()
     {
-        var positions = TilesetGridBuilder.FirstCellPositions(40, 20, 20, 20, count: 5);
+        var positions = TilesetGridBuilder.TopLeftCellPositions(40, 20, 20, 20, columns: 5, rows: 5);
 
         Assert.Equal([(0, 0), (20, 0)], positions);
     }
 
     [Fact]
-    public void FirstCellPositions_LeftoverPixelsDontFormACell()
+    public void TopLeftCellPositions_LeftoverPixelsDontFormACell()
     {
-        var positions = TilesetGridBuilder.FirstCellPositions(45, 20, 20, 20, count: 5);
+        var positions = TilesetGridBuilder.TopLeftCellPositions(45, 20, 20, 20, columns: 5, rows: 5);
 
         Assert.Equal([(0, 0), (20, 0)], positions);
     }

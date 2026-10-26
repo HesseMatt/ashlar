@@ -4,7 +4,7 @@
         x:Class="Ashlar.App.Views.TileSizeDialog"
         x:DataType="vm:TileSizeDialogViewModel"
         Title="Tile size"
-        Width="560" Height="300"
+        Width="420" Height="500"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         ShowInTaskbar="False">
@@ -24,16 +24,16 @@
         </StackPanel>
 
         <StackPanel Spacing="4" Margin="0,12,0,0">
-            <TextBlock Classes="secondary" Text="Preview (first cells)" FontWeight="SemiBold" />
+            <TextBlock Classes="secondary" Text="Preview (non-empty cells of the top-left 5x5 block)" FontWeight="SemiBold" />
             <ItemsControl Name="PreviewList" ItemsSource="{Binding PreviewCells}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                        <WrapPanel Width="310" HorizontalAlignment="Left" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="x:Object">
-                        <Border Width="96" Height="96" BorderThickness="1" BorderBrush="Gray" Background="#22808080">
+                        <Border Width="56" Height="56" Margin="0,0,6,6" BorderThickness="1" BorderBrush="Gray" Background="#22808080">
                             <Image Source="{Binding}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
                         </Border>
                     </DataTemplate>

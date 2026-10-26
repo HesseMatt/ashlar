@@ -11,7 +11,8 @@ namespace Ashlar.App.ViewModels;
 
 public partial class TileSizeDialogViewModel : ObservableObject
 {
-    public const int PreviewCellCount = 5;
+    public const int PreviewColumns = 5;
+    public const int PreviewRows = 5;
 
     private const int BytesPerPixel = 4;
 
@@ -48,9 +49,11 @@ public partial class TileSizeDialogViewModel : ObservableObject
     private unsafe void UpdatePreview()
     {
         var size = new PixelSize(TileWidth, TileHeight);
-        var positions = TilesetGridBuilder.FirstCellPositions(_image.Width, _image.Height, TileWidth, TileHeight, PreviewCellCount);
+        var positions = TilesetGridBuilder.TopLeftCellPositions(
+            _image.Width, _image.Height, TileWidth, TileHeight, PreviewColumns, PreviewRows);
 
         PreviewCells = positions
+            .Where(position => !_image.IsRegionEmpty(position.X, position.Y, TileWidth, TileHeight))
             .Select(position =>
             {
                 var pixels = _image.CopyRegion(position.X, position.Y, TileWidth, TileHeight);

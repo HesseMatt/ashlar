@@ -34,20 +34,16 @@ public static class TilesetGridBuilder
     }
 
     // The same cells Build walks, in the same order, but without skipping empty ones.
-    public static IReadOnlyList<(int X, int Y)> FirstCellPositions(
-        int imageWidth, int imageHeight, int tileWidth, int tileHeight, int count)
+    // Only the top-left block of the given number of columns and rows is listed.
+    public static IReadOnlyList<(int X, int Y)> TopLeftCellPositions(
+        int imageWidth, int imageHeight, int tileWidth, int tileHeight, int columns, int rows)
     {
         var positions = new List<(int X, int Y)>();
 
-        for (var y = 0; y + tileHeight <= imageHeight; y += tileHeight)
+        for (var row = 0; row < rows && (row + 1) * tileHeight <= imageHeight; row++)
         {
-            for (var x = 0; x + tileWidth <= imageWidth; x += tileWidth)
-            {
-                if (positions.Count == count)
-                    return positions;
-
-                positions.Add((x, y));
-            }
+            for (var column = 0; column < columns && (column + 1) * tileWidth <= imageWidth; column++)
+                positions.Add((column * tileWidth, row * tileHeight));
         }
 
         return positions;

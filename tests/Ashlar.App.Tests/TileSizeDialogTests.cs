@@ -26,24 +26,34 @@ public class TileSizeDialogTests : IDisposable
     }
 
     [Fact]
-    public void PreviewShowsTheFirstFiveCellsAtTheTileSize()
+    public void PreviewShowsTheCellsOfTheTopLeftBlockAtTheTileSize()
     {
         using var image = LoadImage(64, 64);
 
         var viewModel = new TileSizeDialogViewModel(image, 16, 16);
 
-        Assert.Equal(5, viewModel.PreviewCells.Length);
+        Assert.Equal(16, viewModel.PreviewCells.Length);
         Assert.All(viewModel.PreviewCells, cell => Assert.Equal((16, 16), (cell.PixelSize.Width, cell.PixelSize.Height)));
     }
 
     [Fact]
-    public void PreviewShowsFewerCellsWhenTheImageHasFewer()
+    public void PreviewIsLimitedToFiveColumnsAndFiveRows()
     {
-        using var image = LoadImage(64, 32);
+        using var image = LoadImage(160, 160);
 
-        var viewModel = new TileSizeDialogViewModel(image, 32, 32);
+        var viewModel = new TileSizeDialogViewModel(image, 16, 16);
 
-        Assert.Equal(2, viewModel.PreviewCells.Length);
+        Assert.Equal(25, viewModel.PreviewCells.Length);
+    }
+
+    [Fact]
+    public void PreviewSkipsEmptyCellsSoAnEmptyBorderDoesNotHideTheContent()
+    {
+        using var image = LoadImage(160, 160, isFilled: (x, y) => x >= 16 && y >= 16);
+
+        var viewModel = new TileSizeDialogViewModel(image, 16, 16);
+
+        Assert.Equal(16, viewModel.PreviewCells.Length);
     }
 
     [Fact]
@@ -60,9 +70,9 @@ public class TileSizeDialogTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void PreviewIncludesEmptyCellsAndDrawsPixelsWithoutSmoothing()
+    public void PreviewDrawsPixelsWithoutSmoothing()
     {
-        using var image = LoadImage(32, 16, transparentFromX: 16);
+        using var image = LoadImage(32, 16);
         var dialog = new TileSizeDialog(new TileSizeDialogViewModel(image, 16, 16));
         dialog.Show();
 
@@ -104,13 +114,12 @@ public class TileSizeDialogTests : IDisposable
         Assert.Null(await result);
     }
 
-    private EditableTilesetImage LoadImage(int width, int height, int? transparentFromX = null)
+    private EditableTilesetImage LoadImage(int width, int height, Func<int, int, bool>? isFilled = null)
     {
         using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
-        bitmap.Erase(SKColors.Red);
-        for (var x = transparentFromX ?? width; x < width; x++)
+        for (var x = 0; x < width; x++)
             for (var y = 0; y < height; y++)
-                bitmap.SetPixel(x, y, SKColors.Transparent);
+                bitmap.SetPixel(x, y, isFilled is null || isFilled(x, y) ? SKColors.Red : SKColors.Transparent);
 
         using var data = SKImage.FromBitmap(bitmap).Encode(SKEncodedImageFormat.Png, 100);
         return EditableTilesetImage.Load(data.ToArray());
