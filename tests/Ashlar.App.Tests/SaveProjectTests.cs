@@ -25,7 +25,7 @@ public class SaveProjectTests : IDisposable
     public void SavingRemembersThePath()
     {
         var viewModel = OpenImage();
-        var path = Path.Combine(_directory, "a.ashlar.json");
+        var path = Path.Combine(_directory, "a.ashlar");
 
         viewModel.SaveProject(path);
 
@@ -35,7 +35,7 @@ public class SaveProjectTests : IDisposable
     [Fact]
     public void OpeningAProjectRemembersItsPath()
     {
-        var path = Path.Combine(_directory, "a.ashlar.json");
+        var path = Path.Combine(_directory, "a.ashlar");
         OpenImage().SaveProject(path);
         var viewModel = new MainViewModel();
 
@@ -48,7 +48,7 @@ public class SaveProjectTests : IDisposable
     public void ImportingATilesetForgetsThePath()
     {
         var viewModel = OpenImage();
-        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar.json"));
+        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
 
         viewModel.LoadTileset(WriteImage(), 16, 16);
 
@@ -59,7 +59,7 @@ public class SaveProjectTests : IDisposable
     public void ClosingTheProjectForgetsThePath()
     {
         var viewModel = OpenImage();
-        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar.json"));
+        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
 
         viewModel.CloseProject();
 
@@ -70,11 +70,11 @@ public class SaveProjectTests : IDisposable
     public void AFailedSaveKeepsThePreviousPathAndTheUnsavedFlag()
     {
         var viewModel = OpenImage();
-        var path = Path.Combine(_directory, "a.ashlar.json");
+        var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
         viewModel.ChangeTileSize(8, 8);
 
-        var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "b.ashlar.json"));
+        var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "b.ashlar"));
 
         Assert.False(saved);
         Assert.Equal(path, viewModel.ProjectPath);
@@ -86,7 +86,7 @@ public class SaveProjectTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.SaveProject(Path.Combine(_directory, "missing", "a.ashlar.json"));
+        viewModel.SaveProject(Path.Combine(_directory, "missing", "a.ashlar"));
 
         Assert.Null(viewModel.ProjectPath);
     }
@@ -119,7 +119,7 @@ public class SaveProjectTests : IDisposable
     public void CtrlSWritesToTheRememberedPathWithoutADialog()
     {
         var viewModel = OpenImage();
-        var path = Path.Combine(_directory, "a.ashlar.json");
+        var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
         File.Delete(path);
         viewModel.ChangeTileSize(8, 8);
@@ -137,7 +137,7 @@ public class SaveProjectTests : IDisposable
     public void CtrlSWritesEvenWithoutUnsavedChanges()
     {
         var viewModel = OpenImage();
-        var path = Path.Combine(_directory, "a.ashlar.json");
+        var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
         File.Delete(path);
         var window = new MainWindow { DataContext = viewModel, Width = 800, Height = 600 };

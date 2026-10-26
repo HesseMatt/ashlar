@@ -46,7 +46,8 @@ file describing every tile by name and position:
 ### Project files
 
 - Save and reopen a tileset as a self-contained project file
-  (`*.ashlar.json`, embeds the image) to resume editing later.
+  (`*.ashlar`, embeds the image) to resume editing later. Projects saved with the older `.ashlar.json`
+  extension need to be renamed to `.ashlar` to be opened.
 - Images are only ever imported to start a new tileset; the export XML is
   an output and cannot be reopened.
 

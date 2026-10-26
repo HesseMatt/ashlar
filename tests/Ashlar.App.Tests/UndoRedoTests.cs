@@ -308,7 +308,7 @@ public class UndoRedoTests : IDisposable
 
     private string SaveProject(MainViewModel viewModel)
     {
-        var path = Path.Combine(_directory, $"{Guid.NewGuid():N}.ashlar.json");
+        var path = Path.Combine(_directory, $"{Guid.NewGuid():N}.ashlar");
         viewModel.SaveProject(path);
         return path;
     }
