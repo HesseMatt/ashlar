@@ -88,6 +88,10 @@ public sealed class EditableTilesetImage : IDisposable
         return true;
     }
 
+    // Returns the filled positions as y * Width + x, see FloodFiller.
+    public List<int> FloodFill(int x, int y, PixelColor color) =>
+        FloodFiller.Fill(_bitmap.GetPixelSpan(), _bitmap.RowBytes, Width, Height, x, y, color);
+
     public bool TryGetPixel(int x, int y, out PixelColor color)
     {
         if (x < 0 || y < 0 || x >= Width || y >= Height)

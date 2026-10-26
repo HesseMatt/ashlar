@@ -35,6 +35,8 @@ public class ToolPaletteTests : IDisposable
 
     private ToggleButton DrawButton => _window.FindControl<ToggleButton>("DrawButton")!;
 
+    private ToggleButton BucketButton => _window.FindControl<ToggleButton>("BucketButton")!;
+
     private ToggleButton PipetteButton => _window.FindControl<ToggleButton>("PipetteButton")!;
 
     private Button DeleteButton => _window.FindControl<Button>("DeleteButton")!;
@@ -45,6 +47,7 @@ public class ToolPaletteTests : IDisposable
         Assert.False(RectangleSelectButton.IsEnabled);
         Assert.False(MoveButton.IsEnabled);
         Assert.False(DrawButton.IsEnabled);
+        Assert.False(BucketButton.IsEnabled);
         Assert.False(PipetteButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
     }
@@ -57,6 +60,7 @@ public class ToolPaletteTests : IDisposable
         Assert.True(RectangleSelectButton.IsEnabled);
         Assert.True(MoveButton.IsEnabled);
         Assert.True(DrawButton.IsEnabled);
+        Assert.True(BucketButton.IsEnabled);
         Assert.True(PipetteButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
 
@@ -114,6 +118,22 @@ public class ToolPaletteTests : IDisposable
         _viewModel.IsDrawToolActive = true;
         _viewModel.IsDrawToolActive = false;
         Assert.Equal(CanvasTool.Select, _viewModel.ActiveTool);
+    }
+
+    [AvaloniaFact]
+    public void BucketToggleActivatesTheBucketToolAndSitsBetweenDrawAndPipette()
+    {
+        _viewModel.LoadTileset(_imagePath, 16, 16);
+        _window.GetLayoutManager()?.ExecuteLayoutPass();
+
+        BucketButton.IsChecked = true;
+        Assert.Equal(CanvasTool.Bucket, _viewModel.ActiveTool);
+        Assert.Equal("Bucket (G)", ToolTip.GetTip(BucketButton));
+        Assert.True(BucketButton.Bounds.Top > DrawButton.Bounds.Bottom);
+        Assert.True(BucketButton.Bounds.Bottom < PipetteButton.Bounds.Top);
+
+        _viewModel.IsDrawToolActive = true;
+        Assert.False(BucketButton.IsChecked);
     }
 
     [AvaloniaFact]
@@ -178,6 +198,7 @@ public class ToolPaletteTests : IDisposable
         Assert.Equal(DeleteButton.Bounds.Size, RectangleSelectButton.Bounds.Size);
         Assert.Equal(DeleteButton.Bounds.Size, MoveButton.Bounds.Size);
         Assert.Equal(DeleteButton.Bounds.Size, DrawButton.Bounds.Size);
+        Assert.Equal(DeleteButton.Bounds.Size, BucketButton.Bounds.Size);
         Assert.Equal(DeleteButton.Bounds.Size, PipetteButton.Bounds.Size);
     }
 

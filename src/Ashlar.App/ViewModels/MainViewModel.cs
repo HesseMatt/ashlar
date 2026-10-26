@@ -78,6 +78,7 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsRectangleToolActive))]
     [NotifyPropertyChangedFor(nameof(IsMoveToolActive))]
     [NotifyPropertyChangedFor(nameof(IsDrawToolActive))]
+    [NotifyPropertyChangedFor(nameof(IsBucketToolActive))]
     [NotifyPropertyChangedFor(nameof(IsPipetteToolActive))]
     private CanvasTool _activeTool;
 
@@ -191,6 +192,12 @@ public partial class MainViewModel : ViewModelBase
     {
         get => ActiveTool == CanvasTool.Draw;
         set => SetToolActive(CanvasTool.Draw, value);
+    }
+
+    public bool IsBucketToolActive
+    {
+        get => ActiveTool == CanvasTool.Bucket;
+        set => SetToolActive(CanvasTool.Bucket, value);
     }
 
     public bool IsPipetteToolActive
@@ -581,6 +588,32 @@ public partial class MainViewModel : ViewModelBase
         Restore(stroke.Before, stroke.SelectionBefore);
     }
 
+    public bool Fill(int pixelX, int pixelY)
+    {
+        if (!IsBucketToolActive || _editableImage is null)
+            return false;
+
+        var color = new PixelColor(DrawColor.R, DrawColor.G, DrawColor.B, DrawColor.A);
+        if (!_editableImage.TryGetPixel(pixelX, pixelY, out var clicked) || clicked == color)
+            return false;
+
+        var before = CaptureState();
+        var selectionBefore = SelectedNames();
+        var filled = _editableImage.FloodFill(pixelX, pixelY, color);
+
+        var createdTiles = color.A > 0 ? CreateTilesUnder(filled) : 0;
+        RefreshPreviewBitmap();
+        RefreshGroupNames();
+        RecordEdit("Fill", before, selectionBefore);
+        StatusMessage = createdTiles switch
+        {
+            0 => "Filled an area of the image. Use \"Save image...\" to write this change to disk.",
+            1 => "Filled an area of the image and created 1 tile.",
+            _ => $"Filled an area of the image and created {createdTiles} tiles.",
+        };
+        return true;
+    }
+
     public bool PickColor(int pixelX, int pixelY)
     {
         if (!IsPipetteToolActive || _editableImage is null || !_editableImage.TryGetPixel(pixelX, pixelY, out var picked))
@@ -733,6 +766,33 @@ public partial class MainViewModel : ViewModelBase
 
         Tiles.Add(tile);
         stroke.CreatedTiles++;
+    }
+
+    // Cells are visited row by row so the new tiles are numbered in reading order.
+    private int CreateTilesUnder(IReadOnlyList<int> filledPositions)
+    {
+        var columns = (ImageWidth + TileWidth - 1) / TileWidth;
+        var rows = (ImageHeight + TileHeight - 1) / TileHeight;
+        var touched = new bool[columns * rows];
+        foreach (var position in filledPositions)
+            touched[position / ImageWidth / TileHeight * columns + position % ImageWidth / TileWidth] = true;
+
+        var created = 0;
+        for (var cell = 0; cell < touched.Length; cell++)
+        {
+            if (!touched[cell])
+                continue;
+
+            var tile = DrawnTileCreator.CreateTile(
+                Tiles, cell % columns * TileWidth, cell / columns * TileHeight, TileWidth, TileHeight, ImageWidth, ImageHeight, DefaultGroupName);
+            if (tile is null)
+                continue;
+
+            Tiles.Add(tile);
+            created++;
+        }
+
+        return created;
     }
 
     private TilesetState CaptureState() => new(_editableImage!.EncodeToPng(), Tiles.ToList());
