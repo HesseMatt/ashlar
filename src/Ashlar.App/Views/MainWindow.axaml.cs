@@ -304,11 +304,11 @@ public partial class MainWindow : Window
                 break;
             case Key.S when ctrl && shift && viewModel.HasImage:
                 e.Handled = true;
-                OnSaveProjectClick(this, new RoutedEventArgs());
+                OnSaveProjectAsClick(this, new RoutedEventArgs());
                 break;
             case Key.S when ctrl && viewModel.HasImage:
                 e.Handled = true;
-                OnSaveImageClick(this, new RoutedEventArgs());
+                OnSaveProjectClick(this, new RoutedEventArgs());
                 break;
             case Key.R when ctrl && !shift && viewModel.HasImage:
                 e.Handled = true;
@@ -743,7 +743,16 @@ public partial class MainWindow : Window
             await SaveProjectAsync(viewModel);
     }
 
-    private async Task<bool> SaveProjectAsync(MainViewModel viewModel)
+    private async void OnSaveProjectAsClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            await SaveProjectAsAsync(viewModel);
+    }
+
+    private async Task<bool> SaveProjectAsync(MainViewModel viewModel) =>
+        viewModel.ProjectPath is { } path ? viewModel.SaveProject(path) : await SaveProjectAsAsync(viewModel);
+
+    private async Task<bool> SaveProjectAsAsync(MainViewModel viewModel)
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {

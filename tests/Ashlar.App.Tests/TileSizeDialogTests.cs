@@ -15,7 +15,7 @@ public class TileSizeDialogTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void ImportDialogIsPrefilledWithTheDetectedSuggestion()
     {
         using var image = LoadImage(64, 64);
@@ -25,7 +25,7 @@ public class TileSizeDialogTests : IDisposable
         Assert.Equal((16, 16), (viewModel.TileWidth, viewModel.TileHeight));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PreviewShowsTheCellsOfTheTopLeftBlockAtTheTileSize()
     {
         using var image = LoadImage(64, 64);
@@ -36,7 +36,7 @@ public class TileSizeDialogTests : IDisposable
         Assert.All(viewModel.PreviewCells, cell => Assert.Equal((16, 16), (cell.PixelSize.Width, cell.PixelSize.Height)));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PreviewIsLimitedToFiveColumnsAndFiveRows()
     {
         using var image = LoadImage(160, 160);
@@ -46,7 +46,7 @@ public class TileSizeDialogTests : IDisposable
         Assert.Equal(25, viewModel.PreviewCells.Length);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PreviewStartsWhereTheContentBeginsAndKeepsEmptyCellsInside()
     {
         // Empty first row and column, plus one empty cell inside the content.
@@ -57,7 +57,7 @@ public class TileSizeDialogTests : IDisposable
         Assert.Equal(25, viewModel.PreviewCells.Length);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PreviewUpdatesWhenTheTileSizeIsEdited()
     {
         using var image = LoadImage(64, 64);
