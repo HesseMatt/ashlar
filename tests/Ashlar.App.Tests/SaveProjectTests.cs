@@ -63,14 +63,15 @@ public class SaveProjectTests : IDisposable
     }
 
     [Fact]
-    public void ImportingATilesetForgetsThePath()
+    public void ImportingAnotherTilesetKeepsThePath()
     {
         var viewModel = OpenImage();
-        viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
+        var path = Path.Combine(_directory, "a.ashlar");
+        viewModel.SaveProject(path);
 
         viewModel.LoadTileset(WriteImage(), 16, 16);
 
-        Assert.Null(viewModel.ProjectPath);
+        Assert.Equal(path, viewModel.ProjectPath);
     }
 
     [Fact]

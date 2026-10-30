@@ -154,7 +154,7 @@ public class TileCanvasZoomTests
     {
         // Fixed instead of inherited from the window's own default size, so the
         // geometry the tests rely on doesn't change with the app's chrome.
-        private const int WindowWidth = 800;
+        private const int WindowWidth = 1000;
         private const int WindowHeight = 600;
 
         private readonly Window _window;

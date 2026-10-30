@@ -66,6 +66,21 @@
             </StackPanel>
         </Border>
 
+        <Border x:Name="TilesetListPanel" Classes="panelHeader" DockPanel.Dock="Left" Width="200" Margin="0" BorderThickness="0,0,1,0"
+                Padding="8" IsVisible="{Binding IsProjectOpen}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Tilesets" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,6,0,0">
+                    <TextBox x:Name="TilesetNameBox" PlaceholderText="Tileset name" IsEnabled="{Binding HasTilesets}" />
+                    <Button x:Name="RenameTilesetButton" Content="Rename" Click="OnRenameTilesetClick" IsEnabled="{Binding HasTilesets}" />
+                    <Button x:Name="RemoveTilesetButton" Content="Remove" Click="OnRemoveTilesetClick" IsEnabled="{Binding HasTilesets}" />
+                    <Button x:Name="AddTilesetButton" Content="Add tileset..." Click="OnOpenTilesetClick" />
+                </StackPanel>
+                <ListBox x:Name="TilesetList" ItemsSource="{Binding TilesetNames}" SelectedItem="{Binding SelectedTilesetName, Mode=OneWay}"
+                         SelectionChanged="OnTilesetSelectionChanged" />
+            </DockPanel>
+        </Border>
+
         <Panel>
             <views:TilesetEditorView x:Name="EditorView" DataContext="{Binding Editor}" />
             <Border x:Name="EmptyProjectPanel" Classes="canvas" Margin="6" IsVisible="{Binding IsProjectEmpty}">
