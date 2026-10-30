@@ -101,10 +101,12 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel { SelectedTilesetName: { } name } viewModel)
             return;
 
-        var confirmed = await new ConfirmDialog(
-            "Remove tileset",
-            $"Remove the tileset '{name}' from the project? Its image and all its edits are lost once the project is saved.",
-            "Remove").ShowDialog<bool>(this);
+        var message = $"Remove the tileset '{name}' from the project? Its image and all its edits are lost once the project is saved.";
+        var mapCount = viewModel.MapEditor.CountMapsUsing(name);
+        if (mapCount > 0)
+            message += $" The {mapCount} map(s) using it are deleted as well.";
+
+        var confirmed = await new ConfirmDialog("Remove tileset", message, "Remove").ShowDialog<bool>(this);
         if (confirmed)
             viewModel.RemoveSelectedTileset();
     }

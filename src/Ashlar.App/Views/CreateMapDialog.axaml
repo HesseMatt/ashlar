@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Ashlar.App.ViewModels"
+        x:Class="Ashlar.App.Views.CreateMapDialog"
+        x:DataType="vm:CreateMapDialogViewModel"
+        Title="Create map"
+        Width="400" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <StackPanel Margin="12" Spacing="8">
+        <TextBlock Text="Name" />
+        <TextBox Name="NameBox" Text="{Binding Name}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="Width:" VerticalAlignment="Center" />
+            <NumericUpDown Name="WidthBox" Value="{Binding Width}" Minimum="1" Maximum="1000" Width="120" />
+            <TextBlock Text="Height:" VerticalAlignment="Center" />
+            <NumericUpDown Name="HeightBox" Value="{Binding Height}" Minimum="1" Maximum="1000" Width="120" />
+        </StackPanel>
+        <TextBlock Text="Tileset (cannot be changed later)" />
+        <ComboBox Name="TilesetBox" ItemsSource="{Binding TilesetNames}" SelectedItem="{Binding SelectedTileset}" HorizontalAlignment="Stretch" />
+        <TextBlock Name="ErrorText" Classes="secondary" Text="{Binding Error}" MinHeight="18" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Name="OkButton" Content="Create" IsDefault="True" Click="OnOkClick" IsEnabled="{Binding IsValid}" MinWidth="80" />
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="OnCancelClick" MinWidth="80" />
+        </StackPanel>
+    </StackPanel>
+</Window>

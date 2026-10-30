@@ -27,13 +27,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _selectedTilesetName;
 
+    partial void OnSelectedTilesetNameChanged(string? value) => MapEditor.PreferredTilesetName = value;
+
     public ObservableCollection<string> TilesetNames { get; } = new();
 
     public bool HasTilesets => _tilesets.Count > 0;
 
     public TilesetEditorViewModel Editor { get; } = new() { StatusMessage = InitialStatusMessage };
 
-    public MapEditorViewModel MapEditor { get; } = new();
+    public MapEditorViewModel MapEditor { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveToolBar))]
@@ -52,11 +54,13 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
+        MapEditor = new MapEditorViewModel(TilesetNames);
         Editor.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TilesetEditorViewModel.HasImage))
                 OnPropertyChanged(nameof(IsProjectEmpty));
         };
+        MapEditor.MapsChanged += (_, _) => Editor.HasUnsavedChanges = true;
     }
 
     // The file a plain Save writes to; null until the project was saved or opened.
@@ -136,7 +140,9 @@ public partial class MainViewModel : ViewModelBase
         if (newName == TilesetNames[_selectedIndex])
             return true;
 
+        var oldName = TilesetNames[_selectedIndex];
         _tilesets[_selectedIndex] = _tilesets[_selectedIndex] with { Name = newName };
+        MapEditor.RenameTileset(oldName, newName);
         TilesetNames[_selectedIndex] = newName;
         SelectedTilesetName = newName;
         Editor.HasUnsavedChanges = true;
@@ -153,6 +159,7 @@ public partial class MainViewModel : ViewModelBase
         var removedIndex = _selectedIndex;
         _tilesets.RemoveAt(removedIndex);
         TilesetNames.RemoveAt(removedIndex);
+        MapEditor.DeleteMapsUsing(removedName);
 
         if (_tilesets.Count == 0)
         {
@@ -200,6 +207,8 @@ public partial class MainViewModel : ViewModelBase
             TilesetNames.Add(tileset.Name);
         }
 
+        MapEditor.Load(project.Maps);
+
         OnPropertyChanged(nameof(HasTilesets));
         if (_tilesets.Count == 0)
         {
@@ -220,6 +229,7 @@ public partial class MainViewModel : ViewModelBase
     private void ResetProject(bool isOpen)
     {
         Editor.Close();
+        MapEditor.Clear();
         _tilesets.Clear();
         TilesetNames.Clear();
         _selectedIndex = -1;
@@ -290,7 +300,7 @@ public partial class MainViewModel : ViewModelBase
     private Project BuildProject()
     {
         CaptureSelectedTileset();
-        return new Project(_tilesets.ToList(), []);
+        return new Project(_tilesets.ToList(), MapEditor.Maps.ToList());
     }
 
     // The editor holds the live state of the selected tileset; the list entry
