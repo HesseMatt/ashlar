@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SkiaSharp;
 using Ashlar.App.Controls;
@@ -123,6 +124,27 @@ public class MapCanvasTests : IDisposable
         var visible = MapView(window).FindControl<TileMapCanvas>("MapCells")!.VisibleArea;
         Assert.NotNull(visible);
         Assert.True(visible!.Value.Width < 1600);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void AMapSelectedWhileTheMapsTabIsHiddenStartsAtTheTopLeftOnceShown()
+    {
+        var viewModel = ProjectWithForestMap(width: 200, height: 200);
+        viewModel.MapEditor.CreateMap("small", 2, 2, "forest");
+        var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
+        window.Show();
+        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps.Single(map => map.Name == "level1");
+        Dispatcher.UIThread.RunJobs();
+
+        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        Dispatcher.UIThread.RunJobs();
+
+        var view = MapView(window);
+        var scroll = view.FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
+        var padding = view.FindControl<Border>("MapCanvasPadding")!.Padding;
+        Assert.True(padding.Left > 0);
+        Assert.Equal((padding.Left, padding.Top), (scroll.Offset.X, scroll.Offset.Y));
         window.Close();
     }
 

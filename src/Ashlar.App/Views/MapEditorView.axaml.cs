@@ -15,6 +15,7 @@ namespace Ashlar.App.Views;
 public partial class MapEditorView : UserControl
 {
     private readonly CanvasViewport _viewport;
+    private bool _scrollToStartPending;
 
     public MapEditorView()
     {
@@ -34,6 +35,8 @@ public partial class MapEditorView : UserControl
         viewModel.MapShown += (_, _) => Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
         UpdateInterpolation(viewModel);
         UpdateOverscrollPadding();
+        // The tab content is created lazily, so a map selected before that was never scrolled to its start.
+        _scrollToStartPending = viewModel.HasSelectedMap;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -59,7 +62,11 @@ public partial class MapEditorView : UserControl
     private void OnScrollViewerPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property == ScrollViewer.ViewportProperty)
+        {
             UpdateOverscrollPadding();
+            if (_scrollToStartPending && MapCanvasScrollViewer.IsEffectivelyVisible)
+                Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
+        }
 
         if (e.Property == ScrollViewer.ViewportProperty || e.Property == ScrollViewer.OffsetProperty
             || e.Property == ScrollViewer.ExtentProperty)
@@ -89,6 +96,11 @@ public partial class MapEditorView : UserControl
     private void ScrollToMapStart()
     {
         if (DataContext is not MapEditorViewModel viewModel)
+            return;
+
+        // A hidden tab has no viewport yet; scrolling now would be lost, so retry once it is shown.
+        _scrollToStartPending = !MapCanvasScrollViewer.IsEffectivelyVisible;
+        if (_scrollToStartPending)
             return;
 
         _viewport.ScrollToStart(viewModel.ScaledMapWidth, viewModel.ScaledMapHeight,
