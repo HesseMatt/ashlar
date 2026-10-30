@@ -547,13 +547,15 @@ public partial class MapEditorViewModel : ViewModelBase
     // deletion in the tileset editor restores the tile but not these cells.
     public void ClearDeletedTiles(string tilesetName, IReadOnlySet<string> deletedTileNames)
     {
-        if (MapTileCleaner.ClearTiles(Maps, tilesetName, deletedTileNames) == 0)
-            return;
+        var clearedCells = MapTileCleaner.ClearTiles(Maps, tilesetName, deletedTileNames);
 
-        // Older steps of any map of the tileset may still hold the deleted tiles, not just the cells that were cleared.
+        // Older and redo steps of any map of the tileset may still hold the deleted tiles, even if no current cell does.
         foreach (var map in Maps.Where(map => map.TilesetName == tilesetName))
             _histories.Remove(map.Name);
         UpdateHistoryState();
+
+        if (clearedCells == 0)
+            return;
 
         RefreshCellRegions();
         MapsChanged?.Invoke(this, EventArgs.Empty);

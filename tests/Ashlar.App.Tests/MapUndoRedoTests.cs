@@ -272,6 +272,23 @@ public class MapUndoRedoTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void ClearingDeletedTilesDropsTheHistoryEvenIfNoCellHoldsTheTile()
+    {
+        var viewModel = ProjectWithMap();
+        var editor = viewModel.MapEditor;
+        Stroke(editor, (0, 0));
+        editor.Undo();
+        Assert.True(editor.CanRedo);
+
+        viewModel.Editor.HandleCanvasClick(0, 0, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+
+        Assert.False(editor.CanRedo);
+        Assert.False(editor.CanUndo);
+        Assert.Null(editor.SelectedMap![0, 0]);
+    }
+
+    [AvaloniaFact]
     public void ClosingTheProjectDropsTheHistory()
     {
         var viewModel = ProjectWithMap();
@@ -308,9 +325,9 @@ public class MapUndoRedoTests : IDisposable
         var viewModel = ProjectWithMap();
         var editor = viewModel.MapEditor;
         editor.SelectedPaletteTile = editor.PaletteTiles[1];
-        Stroke(editor, (0, 0));
         viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
         viewModel.Editor.DeleteSelectedTiles();
+        Stroke(editor, (0, 0));
 
         viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
         Assert.True(viewModel.CanUndo);
