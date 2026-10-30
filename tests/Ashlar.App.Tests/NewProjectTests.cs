@@ -141,7 +141,8 @@ public class NewProjectTests : IDisposable
         var viewModel = new MainViewModel();
         var window = new MainWindow { DataContext = viewModel, Width = 800, Height = 600 };
         window.Show();
-        var panel = window.GetLogicalDescendants().OfType<Border>().Single(b => b.Name == "EmptyProjectPanel");
+        // The logical tree can yield the same control twice.
+        var panel = window.GetLogicalDescendants().OfType<Border>().Where(b => b.Name == "EmptyProjectPanel").Distinct().Single();
         Assert.False(panel.IsVisible);
 
         viewModel.NewProject();

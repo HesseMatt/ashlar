@@ -523,12 +523,6 @@ public partial class TilesetEditorView : UserControl
         return new Vector(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
     }
 
-    private void OnDeleteSelectedTilesClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is TilesetEditorViewModel editor)
-            editor.DeleteSelectedTiles();
-    }
-
     private void OnGroupNameInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter)

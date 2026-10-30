@@ -12,6 +12,9 @@ namespace Ashlar.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
+    public const int TilesetsTabIndex = 0;
+    public const int MapsTabIndex = 1;
+
     private const string InitialStatusMessage = "Create a project or open a tileset image to get started.";
 
     [ObservableProperty]
@@ -29,6 +32,18 @@ public partial class MainViewModel : ViewModelBase
     public bool HasTilesets => _tilesets.Count > 0;
 
     public TilesetEditorViewModel Editor { get; } = new() { StatusMessage = InitialStatusMessage };
+
+    public MapEditorViewModel MapEditor { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveToolBar))]
+    [NotifyPropertyChangedFor(nameof(IsTilesetsTabActive))]
+    private int _selectedTabIndex;
+
+    public bool IsTilesetsTabActive => SelectedTabIndex == TilesetsTabIndex;
+
+    // The editor whose tool bar is shown; the window picks the tool bar view by its type.
+    public ViewModelBase ActiveToolBar => SelectedTabIndex == MapsTabIndex ? MapEditor : Editor;
 
     public bool IsProjectEmpty => IsProjectOpen && !Editor.HasImage;
 
