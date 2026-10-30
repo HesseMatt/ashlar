@@ -79,7 +79,7 @@ public partial class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Editor.StatusMessage = $"Could not open '{Path.GetFileName(filePath)}': {ex.Message}";
+            ReportStatus($"Could not open '{Path.GetFileName(filePath)}': {ex.Message}");
             return null;
         }
     }
@@ -104,7 +104,7 @@ public partial class MainViewModel : ViewModelBase
         _selectedIndex = _tilesets.Count - 1;
         SelectedTilesetName = name;
         OnPropertyChanged(nameof(HasTilesets));
-        Editor.StatusMessage = $"{fileName} ({image.Width}x{image.Height}) - tile size {Editor.TileSizeText}.";
+        ReportStatus($"{fileName} ({image.Width}x{image.Height}) - tile size {Editor.TileSizeText}.");
     }
 
     public void SelectTileset(string name)
@@ -126,14 +126,14 @@ public partial class MainViewModel : ViewModelBase
         newName = newName.Trim();
         if (newName.Length == 0)
         {
-            Editor.StatusMessage = "A tileset name cannot be empty.";
+            ReportStatus("A tileset name cannot be empty.");
             return false;
         }
 
         var existingIndex = TilesetNames.IndexOf(newName);
         if (existingIndex >= 0 && existingIndex != _selectedIndex)
         {
-            Editor.StatusMessage = $"A tileset named '{newName}' already exists in this project.";
+            ReportStatus($"A tileset named '{newName}' already exists in this project.");
             return false;
         }
 
@@ -146,7 +146,7 @@ public partial class MainViewModel : ViewModelBase
         TilesetNames[_selectedIndex] = newName;
         SelectedTilesetName = newName;
         Editor.HasUnsavedChanges = true;
-        Editor.StatusMessage = $"Renamed the tileset to '{newName}'.";
+        ReportStatus($"Renamed the tileset to '{newName}'.");
         return true;
     }
 
@@ -175,13 +175,13 @@ public partial class MainViewModel : ViewModelBase
 
         OnPropertyChanged(nameof(HasTilesets));
         Editor.HasUnsavedChanges = true;
-        Editor.StatusMessage = $"Removed the tileset '{removedName}'.";
+        ReportStatus($"Removed the tileset '{removedName}'.");
     }
 
     public void NewProject()
     {
         ResetProject(isOpen: true);
-        Editor.StatusMessage = "New project. Import a tileset to add the first one.";
+        ReportStatus("New project. Import a tileset to add the first one.");
     }
 
     public void OpenProject(string filePath)
@@ -195,7 +195,7 @@ public partial class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Editor.StatusMessage = $"Could not open project '{Path.GetFileName(filePath)}': {ex.Message}";
+            ReportStatus($"Could not open project '{Path.GetFileName(filePath)}': {ex.Message}");
             return;
         }
 
@@ -212,18 +212,19 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasTilesets));
         if (_tilesets.Count == 0)
         {
-            Editor.StatusMessage = $"Resumed project {Path.GetFileName(filePath)} (no tilesets).";
+            ReportStatus($"Resumed project {Path.GetFileName(filePath)} (no tilesets).");
             return;
         }
 
         ActivateTileset(0);
-        Editor.StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({_tilesets.Count} tilesets).";
+        ReportStatus($"Resumed project {Path.GetFileName(filePath)} ({_tilesets.Count} tilesets).");
     }
 
     public void CloseProject()
     {
         ResetProject(isOpen: false);
         Editor.StatusMessage = InitialStatusMessage;
+        MapEditor.StatusMessage = InitialStatusMessage;
     }
 
     private void ResetProject(bool isOpen)
@@ -253,11 +254,11 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             TextureAtlasXmlWriter.Write(tileset, outputPath);
-            Editor.StatusMessage = $"Exported {Editor.Tiles.Count} tiles to {Path.GetFileName(outputPath)}.";
+            ReportStatus($"Exported {Editor.Tiles.Count} tiles to {Path.GetFileName(outputPath)}.");
         }
         catch (Exception ex)
         {
-            Editor.StatusMessage = $"Could not export to '{Path.GetFileName(outputPath)}': {ex.Message}";
+            ReportStatus($"Could not export to '{Path.GetFileName(outputPath)}': {ex.Message}");
         }
     }
 
@@ -269,12 +270,21 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             image.SaveAsPng(outputPath);
-            Editor.StatusMessage = $"Saved image to {Path.GetFileName(outputPath)}.";
+            ReportStatus($"Saved image to {Path.GetFileName(outputPath)}.");
         }
         catch (Exception ex)
         {
-            Editor.StatusMessage = $"Could not save image to '{Path.GetFileName(outputPath)}': {ex.Message}";
+            ReportStatus($"Could not save image to '{Path.GetFileName(outputPath)}': {ex.Message}");
         }
+    }
+
+    // The status bar shows the active tab's message, so shell-level messages go to that editor.
+    private void ReportStatus(string message)
+    {
+        if (IsTilesetsTabActive)
+            Editor.StatusMessage = message;
+        else
+            MapEditor.StatusMessage = message;
     }
 
     public bool SaveProject(string outputPath)
@@ -287,12 +297,12 @@ public partial class MainViewModel : ViewModelBase
             ProjectFile.Save(BuildProject(), outputPath);
             ProjectPath = outputPath;
             Editor.HasUnsavedChanges = false;
-            Editor.StatusMessage = $"Saved project to {Path.GetFileName(outputPath)}.";
+            ReportStatus($"Saved project to {Path.GetFileName(outputPath)}.");
             return true;
         }
         catch (Exception ex)
         {
-            Editor.StatusMessage = $"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}";
+            ReportStatus($"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}");
             return false;
         }
     }
@@ -327,7 +337,7 @@ public partial class MainViewModel : ViewModelBase
         TexturePath = tileset.TexturePath;
         _selectedIndex = index;
         SelectedTilesetName = tileset.Name;
-        Editor.StatusMessage = $"{tileset.Name} ({Editor.Tiles.Count} tiles) - tile size {Editor.TileSizeText}.";
+        ReportStatus($"{tileset.Name} ({Editor.Tiles.Count} tiles) - tile size {Editor.TileSizeText}.");
     }
 
     private string CreateUniqueName(string baseName)

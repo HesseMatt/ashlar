@@ -94,6 +94,24 @@ public class MapListTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void SavingFromTheMapsTabReportsInTheStatusBar()
+    {
+        var viewModel = TwoTilesets();
+        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
+        window.Show();
+        var status = window.FindControl<TextBlock>("MapStatusText")!;
+
+        viewModel.SaveProject(Path.Combine(_directory, "p.ashlar"));
+        Assert.True(status.IsVisible);
+        Assert.Contains("Saved project", status.Text);
+
+        viewModel.SaveProject(Path.Combine(_directory, "missing", "x.ashlar"));
+        Assert.Contains("Could not save project", status.Text);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void DeletingSelectsANeighbourAndMarksTheProjectChanged()
     {
         var viewModel = TwoTilesets();
