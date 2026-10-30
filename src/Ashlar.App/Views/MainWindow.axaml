@@ -42,8 +42,8 @@
                 <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+W" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Undo" Click="OnUndoClick" InputGesture="Ctrl+Z"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.CanUndo" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Redo" Click="OnRedoClick" InputGesture="Ctrl+Y"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.CanRedo" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding CanUndo}" InputGesture="Ctrl+Z" />
+                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding CanRedo}" InputGesture="Ctrl+Y" />
                 <Separator />
                 <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
                 <Separator />

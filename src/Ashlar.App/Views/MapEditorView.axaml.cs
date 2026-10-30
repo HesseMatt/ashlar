@@ -145,8 +145,20 @@ public partial class MapEditorView : UserControl
         if (DataContext is not MapEditorViewModel viewModel)
             return;
 
+        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+
         switch (e.Key)
         {
+            case Key.Z when ctrl && shift && e.Source is not TextBox && !IsPointerDragPending:
+            case Key.Y when ctrl && e.Source is not TextBox && !IsPointerDragPending:
+                e.Handled = true;
+                viewModel.Redo();
+                break;
+            case Key.Z when ctrl && e.Source is not TextBox && !IsPointerDragPending:
+                e.Handled = true;
+                viewModel.Undo();
+                break;
             case Key.Escape when _rectangleDragOrigin is not null:
                 e.Handled = true;
                 viewModel.CancelSelectionDrag();
