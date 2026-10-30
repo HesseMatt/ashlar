@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Ashlar.App.ViewModels"
+             x:Class="Ashlar.App.Views.MapToolBar"
+             x:DataType="vm:MapEditorViewModel">
+
+    <UserControl.Resources>
+        <!-- Icon path is from Lucide (https://lucide.dev), 24x24 viewBox, stroked. See NOTICE. -->
+        <StreamGeometry x:Key="DrawIcon">M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z m15 5 4 4</StreamGeometry>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Border.panel Path">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Classes="panel" Margin="6,6,0,6" Padding="4" VerticalAlignment="Top">
+        <StackPanel Spacing="4">
+            <ToggleButton Classes="tool" x:Name="MapDrawButton" IsChecked="{Binding IsDrawToolActive}" IsEnabled="{Binding HasSelectedMap}"
+                          ToolTip.Tip="Draw">
+                <Path Data="{StaticResource DrawIcon}"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
+            </ToggleButton>
+        </StackPanel>
+    </Border>
+
+</UserControl>

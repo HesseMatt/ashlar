@@ -22,9 +22,8 @@
         <DataTemplate DataType="vm:TilesetEditorViewModel">
             <views:TilesetToolBar />
         </DataTemplate>
-        <!-- The map editor has no tools yet. -->
         <DataTemplate DataType="vm:MapEditorViewModel">
-            <Panel />
+            <views:MapToolBar />
         </DataTemplate>
     </Window.DataTemplates>
 
