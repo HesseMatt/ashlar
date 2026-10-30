@@ -17,10 +17,10 @@ public class PreviewBitmapTests : IDisposable
         var viewModel = new MainViewModel();
 
         for (var i = 0; i < 500; i++)
-            viewModel.ZoomIn();
+            viewModel.Editor.ZoomIn();
 
-        Assert.Equal(32.0, viewModel.ZoomLevel);
-        Assert.Equal("3,200%", viewModel.ZoomPercentageText.Replace(" ", ""));
+        Assert.Equal(32.0, viewModel.Editor.ZoomLevel);
+        Assert.Equal("3,200%", viewModel.Editor.ZoomPercentageText.Replace(" ", ""));
     }
 
     [Fact]
@@ -29,19 +29,19 @@ public class PreviewBitmapTests : IDisposable
         var viewModel = new MainViewModel();
 
         for (var i = 0; i < 500; i++)
-            viewModel.ZoomOut();
+            viewModel.Editor.ZoomOut();
 
-        Assert.Equal(0.25, viewModel.ZoomLevel);
+        Assert.Equal(0.25, viewModel.Editor.ZoomLevel);
     }
 
     [Fact]
     public void ZoomStepGrowsWithTheZoomLevel()
     {
-        var viewModel = new MainViewModel { ZoomLevel = 10.0 };
+        var viewModel = new MainViewModel { Editor = { ZoomLevel = 10.0 } };
 
-        viewModel.ZoomIn();
+        viewModel.Editor.ZoomIn();
 
-        Assert.Equal(11.0, viewModel.ZoomLevel, 6);
+        Assert.Equal(11.0, viewModel.Editor.ZoomLevel, 6);
     }
 
     [Theory]
@@ -52,9 +52,9 @@ public class PreviewBitmapTests : IDisposable
     [InlineData(32.0, BitmapInterpolationMode.None)]
     public void PixelsAreCrispFromHundredPercentOn(double zoomLevel, BitmapInterpolationMode expected)
     {
-        var viewModel = new MainViewModel { ZoomLevel = zoomLevel };
+        var viewModel = new MainViewModel { Editor = { ZoomLevel = zoomLevel } };
 
-        Assert.Equal(expected, viewModel.PreviewInterpolation);
+        Assert.Equal(expected, viewModel.Editor.PreviewInterpolation);
     }
 
     [Theory]
@@ -64,23 +64,23 @@ public class PreviewBitmapTests : IDisposable
     [InlineData(32.0, true)]
     public void PixelGridAppearsFromEightTimesOn(double zoomLevel, bool expected)
     {
-        var viewModel = new MainViewModel { ZoomLevel = zoomLevel };
+        var viewModel = new MainViewModel { Editor = { ZoomLevel = zoomLevel } };
 
-        Assert.Equal(expected, viewModel.ShowPixelGrid);
+        Assert.Equal(expected, viewModel.Editor.ShowPixelGrid);
     }
 
     [AvaloniaFact]
     public void DeleteUpdatesTheDisplayedBitmapInPlace()
     {
         var viewModel = OpenImage(32, 32, new SKColor(255, 0, 0, 255));
-        var bitmap = viewModel.PreviewBitmap;
+        var bitmap = viewModel.Editor.PreviewBitmap;
         var updates = 0;
-        viewModel.PreviewPixelsChanged += (_, _) => updates++;
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.PreviewPixelsChanged += (_, _) => updates++;
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
 
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.DeleteSelectedTiles();
 
-        Assert.Same(bitmap, viewModel.PreviewBitmap);
+        Assert.Same(bitmap, viewModel.Editor.PreviewBitmap);
         Assert.Equal(1, updates);
         Assert.Equal([0, 0, 0, 0], PixelAt(viewModel, 1, 1));
         Assert.Equal([255, 0, 0, 255], PixelAt(viewModel, 17, 1));
@@ -90,10 +90,10 @@ public class PreviewBitmapTests : IDisposable
     public void UndoRestoresTheDisplayedPixels()
     {
         var viewModel = OpenImage(32, 32, new SKColor(255, 0, 0, 255));
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        viewModel.Undo();
+        viewModel.Editor.Undo();
 
         Assert.Equal([255, 0, 0, 255], PixelAt(viewModel, 1, 1));
     }
@@ -110,20 +110,20 @@ public class PreviewBitmapTests : IDisposable
     public void ANewBitmapIsOnlyCreatedWhenTheImageSizeChanges()
     {
         var viewModel = OpenImage(32, 32, new SKColor(255, 0, 0, 255));
-        var first = viewModel.PreviewBitmap;
+        var first = viewModel.Editor.PreviewBitmap;
 
         viewModel.LoadTileset(WriteImage(32, 32, new SKColor(0, 255, 0, 255)), 16, 16);
-        Assert.Same(first, viewModel.PreviewBitmap);
+        Assert.Same(first, viewModel.Editor.PreviewBitmap);
         Assert.Equal([0, 255, 0, 255], PixelAt(viewModel, 0, 0));
 
         viewModel.LoadTileset(WriteImage(48, 16, new SKColor(0, 0, 255, 255)), 16, 16);
-        Assert.NotSame(first, viewModel.PreviewBitmap);
-        Assert.Equal(new Avalonia.PixelSize(48, 16), viewModel.PreviewBitmap!.PixelSize);
+        Assert.NotSame(first, viewModel.Editor.PreviewBitmap);
+        Assert.Equal(new Avalonia.PixelSize(48, 16), viewModel.Editor.PreviewBitmap!.PixelSize);
     }
 
     private static unsafe byte[] PixelAt(MainViewModel viewModel, int x, int y)
     {
-        using var framebuffer = viewModel.PreviewBitmap!.Lock();
+        using var framebuffer = viewModel.Editor.PreviewBitmap!.Lock();
         var pixel = (byte*)framebuffer.Address + y * framebuffer.RowBytes + x * 4;
         return [pixel[0], pixel[1], pixel[2], pixel[3]];
     }

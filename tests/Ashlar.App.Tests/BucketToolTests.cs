@@ -15,19 +15,19 @@ public class BucketToolTests : IDisposable
     public void FillIsIgnoredUnlessTheBucketToolIsActive()
     {
         var viewModel = OpenImage();
-        viewModel.IsBucketToolActive = false;
+        viewModel.Editor.IsBucketToolActive = false;
 
-        Assert.False(viewModel.Fill(40, 40));
-        Assert.False(viewModel.HasEdits);
+        Assert.False(viewModel.Editor.Fill(40, 40));
+        Assert.False(viewModel.Editor.HasEdits);
     }
 
     [AvaloniaFact]
     public void FillCoversTheWholeCanvasRegardlessOfTilesAndSelection()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
 
-        viewModel.Fill(40, 40);
+        viewModel.Editor.Fill(40, 40);
 
         Assert.Equal([0, 0, 0, 255], PixelAt(viewModel, 63, 63));
         Assert.Equal([0, 0, 0, 255], PixelAt(viewModel, 16, 0));
@@ -38,9 +38,9 @@ public class BucketToolTests : IDisposable
     public void FillWritesTheDrawColorAlphaIncluded()
     {
         var viewModel = OpenImage();
-        viewModel.DrawColor = Color.FromArgb(128, 10, 20, 30);
+        viewModel.Editor.DrawColor = Color.FromArgb(128, 10, 20, 30);
 
-        viewModel.Fill(40, 40);
+        viewModel.Editor.Fill(40, 40);
 
         Assert.Equal([10, 20, 30, 128], PixelAt(viewModel, 40, 40));
     }
@@ -49,14 +49,14 @@ public class BucketToolTests : IDisposable
     public void FillWithTheColorUnderTheClickChangesNothingAndRecordsNoStep()
     {
         var viewModel = OpenImage();
-        viewModel.DrawColor = Color.FromArgb(255, 255, 0, 0);
-        var unsavedBefore = viewModel.HasUnsavedChanges;
+        viewModel.Editor.DrawColor = Color.FromArgb(255, 255, 0, 0);
+        var unsavedBefore = viewModel.Editor.HasUnsavedChanges;
 
-        Assert.False(viewModel.Fill(1, 1));
+        Assert.False(viewModel.Editor.Fill(1, 1));
 
-        Assert.False(viewModel.CanUndo);
-        Assert.False(viewModel.HasEdits);
-        Assert.Equal(unsavedBefore, viewModel.HasUnsavedChanges);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.False(viewModel.Editor.HasEdits);
+        Assert.Equal(unsavedBefore, viewModel.Editor.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -64,47 +64,47 @@ public class BucketToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Fill(40, 40);
+        viewModel.Editor.Fill(40, 40);
 
-        Assert.Equal(16, viewModel.Tiles.Count);
-        Assert.Equal("tiles_0001", viewModel.Tiles[0].Name);
-        Assert.Equal((0, 0), (viewModel.Tiles[0].X, viewModel.Tiles[0].Y));
-        Assert.Equal("tiles_0002", viewModel.Tiles[1].Name);
-        Assert.Equal((16, 0), (viewModel.Tiles[1].X, viewModel.Tiles[1].Y));
-        Assert.Equal("tiles_0016", viewModel.Tiles[^1].Name);
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
+        Assert.Equal("tiles_0001", viewModel.Editor.Tiles[0].Name);
+        Assert.Equal((0, 0), (viewModel.Editor.Tiles[0].X, viewModel.Editor.Tiles[0].Y));
+        Assert.Equal("tiles_0002", viewModel.Editor.Tiles[1].Name);
+        Assert.Equal((16, 0), (viewModel.Editor.Tiles[1].X, viewModel.Editor.Tiles[1].Y));
+        Assert.Equal("tiles_0016", viewModel.Editor.Tiles[^1].Name);
     }
 
     [AvaloniaFact]
     public void FillWithATransparentColorCreatesNoTiles()
     {
         var viewModel = OpenImage();
-        viewModel.DrawColor = Color.FromArgb(0, 0, 0, 0);
-        viewModel.Fill(1, 1);
+        viewModel.Editor.DrawColor = Color.FromArgb(0, 0, 0, 0);
+        viewModel.Editor.Fill(1, 1);
 
-        Assert.Single(viewModel.Tiles);
+        Assert.Single(viewModel.Editor.Tiles);
         Assert.Equal(0, PixelAt(viewModel, 1, 1)[3]);
-        Assert.True(viewModel.CanUndo);
+        Assert.True(viewModel.Editor.CanUndo);
     }
 
     [AvaloniaFact]
     public void FillIsOneUndoStepThatRestoresPixelsTilesAndSelection()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
 
-        viewModel.Fill(40, 40);
-        viewModel.Undo();
+        viewModel.Editor.Fill(40, 40);
+        viewModel.Editor.Undo();
 
-        Assert.False(viewModel.CanUndo);
-        Assert.Single(viewModel.Tiles);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.Single(viewModel.Editor.Tiles);
         Assert.Equal(0, PixelAt(viewModel, 40, 40)[3]);
-        Assert.Single(viewModel.SelectedTiles);
+        Assert.Single(viewModel.Editor.SelectedTiles);
 
-        viewModel.Redo();
+        viewModel.Editor.Redo();
 
-        Assert.Equal(16, viewModel.Tiles.Count);
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
         Assert.Equal([0, 0, 0, 255], PixelAt(viewModel, 40, 40));
-        Assert.True(viewModel.HasUnsavedChanges);
+        Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -112,24 +112,24 @@ public class BucketToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Fill(40, 40);
-        Assert.Contains("created 15 tiles", viewModel.StatusMessage);
+        viewModel.Editor.Fill(40, 40);
+        Assert.Contains("created 15 tiles", viewModel.Editor.StatusMessage);
 
-        viewModel.Undo();
-        Assert.Equal("Undid: Fill.", viewModel.StatusMessage);
+        viewModel.Editor.Undo();
+        Assert.Equal("Undid: Fill.", viewModel.Editor.StatusMessage);
     }
 
     [AvaloniaFact]
     public void FillUpdatesThePreviewBitmapInPlace()
     {
         var viewModel = OpenImage();
-        var bitmap = viewModel.PreviewBitmap;
+        var bitmap = viewModel.Editor.PreviewBitmap;
         var redrawn = 0;
-        viewModel.PreviewPixelsChanged += (_, _) => redrawn++;
+        viewModel.Editor.PreviewPixelsChanged += (_, _) => redrawn++;
 
-        viewModel.Fill(40, 40);
+        viewModel.Editor.Fill(40, 40);
 
-        Assert.Same(bitmap, viewModel.PreviewBitmap);
+        Assert.Same(bitmap, viewModel.Editor.PreviewBitmap);
         Assert.True(redrawn > 0);
         Assert.Equal([0, 0, 0, 255], PreviewPixelAt(viewModel, 40, 40));
     }
@@ -138,7 +138,7 @@ public class BucketToolTests : IDisposable
     {
         var viewModel = new MainViewModel();
         viewModel.LoadTileset(WriteImage(), 16, 16);
-        viewModel.IsBucketToolActive = true;
+        viewModel.Editor.IsBucketToolActive = true;
         return viewModel;
     }
 
@@ -167,7 +167,7 @@ public class BucketToolTests : IDisposable
 
     private static unsafe byte[] PreviewPixelAt(MainViewModel viewModel, int x, int y)
     {
-        using var framebuffer = viewModel.PreviewBitmap!.Lock();
+        using var framebuffer = viewModel.Editor.PreviewBitmap!.Lock();
         var pixel = (byte*)framebuffer.Address + y * framebuffer.RowBytes + x * 4;
         return [pixel[0], pixel[1], pixel[2], pixel[3]];
     }

@@ -204,7 +204,7 @@ public class TileCanvasZoomTests
 
         public void SetZoom(double zoomLevel)
         {
-            _viewModel.ZoomLevel = zoomLevel;
+            _viewModel.Editor.ZoomLevel = zoomLevel;
             Layout();
         }
 
@@ -216,7 +216,7 @@ public class TileCanvasZoomTests
 
         public void SetTileSize(int size)
         {
-            _viewModel.ChangeTileSize(size, size);
+            _viewModel.Editor.ChangeTileSize(size, size);
             Layout();
         }
 
@@ -239,7 +239,7 @@ public class TileCanvasZoomTests
             _scrollViewer.TranslatePoint(new Point(Viewport.Width, Viewport.Height), _content)!.Value;
 
         public Rect ImageBoundsInViewport() =>
-            new(ImageOriginInViewport(), new Size(_content.Bounds.Width * _viewModel.ZoomLevel, _content.Bounds.Height * _viewModel.ZoomLevel));
+            new(ImageOriginInViewport(), new Size(_content.Bounds.Width * _viewModel.Editor.ZoomLevel, _content.Bounds.Height * _viewModel.Editor.ZoomLevel));
 
         // Where the image's top-left pixel ends up within the viewport.
         public Point ImageOriginInViewport() =>
