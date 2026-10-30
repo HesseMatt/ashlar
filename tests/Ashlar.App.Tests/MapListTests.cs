@@ -75,6 +75,25 @@ public class MapListTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void ARefusedRenameShowsItsMessageInTheStatusBar()
+    {
+        var viewModel = TwoTilesets();
+        viewModel.MapEditor.CreateMap("a", 2, 2, "forest");
+        viewModel.MapEditor.CreateMap("b", 2, 2, "forest");
+        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
+        window.Show();
+
+        viewModel.MapEditor.RenameSelectedMap("a");
+
+        var status = window.FindControl<TextBlock>("MapStatusText")!;
+        Assert.True(status.IsVisible);
+        Assert.Contains("already exists", status.Text);
+        Assert.False(window.FindControl<TextBlock>("TilesetStatusText")!.IsVisible);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void DeletingSelectsANeighbourAndMarksTheProjectChanged()
     {
         var viewModel = TwoTilesets();
