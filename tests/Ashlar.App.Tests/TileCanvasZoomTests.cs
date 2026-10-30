@@ -168,8 +168,8 @@ public class TileCanvasZoomTests
             _window = window;
             _viewModel = viewModel;
             _imagePath = imagePath;
-            _scrollViewer = window.FindControl<ScrollViewer>("TileCanvasScrollViewer")!;
-            _content = window.FindControl<Panel>("TileCanvasContent")!;
+            _scrollViewer = window.FindEditorControl<ScrollViewer>("TileCanvasScrollViewer")!;
+            _content = window.FindEditorControl<Panel>("TileCanvasContent")!;
         }
 
         public Size Viewport => _scrollViewer.Viewport;

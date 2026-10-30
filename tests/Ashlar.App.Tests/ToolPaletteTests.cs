@@ -29,17 +29,17 @@ public class ToolPaletteTests : IDisposable
         File.Delete(_imagePath);
     }
 
-    private ToggleButton RectangleSelectButton => _window.FindControl<ToggleButton>("RectangleSelectButton")!;
+    private ToggleButton RectangleSelectButton => _window.FindEditorControl<ToggleButton>("RectangleSelectButton")!;
 
-    private ToggleButton MoveButton => _window.FindControl<ToggleButton>("MoveButton")!;
+    private ToggleButton MoveButton => _window.FindEditorControl<ToggleButton>("MoveButton")!;
 
-    private ToggleButton DrawButton => _window.FindControl<ToggleButton>("DrawButton")!;
+    private ToggleButton DrawButton => _window.FindEditorControl<ToggleButton>("DrawButton")!;
 
-    private ToggleButton BucketButton => _window.FindControl<ToggleButton>("BucketButton")!;
+    private ToggleButton BucketButton => _window.FindEditorControl<ToggleButton>("BucketButton")!;
 
-    private ToggleButton PipetteButton => _window.FindControl<ToggleButton>("PipetteButton")!;
+    private ToggleButton PipetteButton => _window.FindEditorControl<ToggleButton>("PipetteButton")!;
 
-    private Button DeleteButton => _window.FindControl<Button>("DeleteButton")!;
+    private Button DeleteButton => _window.FindEditorControl<Button>("DeleteButton")!;
 
     [AvaloniaFact]
     public void AllButtonsAreDisabledWithoutAnImage()
@@ -148,7 +148,7 @@ public class ToolPaletteTests : IDisposable
         Assert.False(PipetteButton.IsChecked);
     }
 
-    private Button DrawColorButton => _window.FindControl<Button>("DrawColorButton")!;
+    private Button DrawColorButton => _window.FindEditorControl<Button>("DrawColorButton")!;
 
     [AvaloniaFact]
     public void DrawColorSwatchFollowsTheDrawColor()
@@ -156,7 +156,7 @@ public class ToolPaletteTests : IDisposable
         _viewModel.LoadTileset(_imagePath, 16, 16);
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
-        var swatch = _window.FindControl<Border>("DrawColorSwatch")!;
+        var swatch = _window.FindEditorControl<Border>("DrawColorSwatch")!;
         Assert.Equal(Colors.Black, ((ISolidColorBrush)swatch.Background!).Color);
 
         _viewModel.Editor.DrawColor = Color.FromArgb(128, 1, 2, 3);
