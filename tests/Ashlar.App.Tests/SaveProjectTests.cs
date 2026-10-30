@@ -90,13 +90,13 @@ public class SaveProjectTests : IDisposable
         var viewModel = OpenImage();
         var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
-        viewModel.ChangeTileSize(8, 8);
+        viewModel.Editor.ChangeTileSize(8, 8);
 
         var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "b.ashlar"));
 
         Assert.False(saved);
         Assert.Equal(path, viewModel.ProjectPath);
-        Assert.True(viewModel.HasUnsavedChanges);
+        Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
     [Fact]
@@ -140,14 +140,14 @@ public class SaveProjectTests : IDisposable
         var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
         File.Delete(path);
-        viewModel.ChangeTileSize(8, 8);
+        viewModel.Editor.ChangeTileSize(8, 8);
         var window = new MainWindow { DataContext = viewModel, Width = 800, Height = 600 };
         window.Show();
 
         window.KeyPressQwerty(PhysicalKey.S, RawInputModifiers.Control);
 
         Assert.True(File.Exists(path));
-        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.False(viewModel.Editor.HasUnsavedChanges);
         window.Close();
     }
 

@@ -16,8 +16,8 @@ public class ChangeTileSizeTests : IDisposable
 
         viewModel.LoadTileset(WriteImage(), 32, 16);
 
-        Assert.Equal("32x16", viewModel.TileSizeText);
-        Assert.Equal(8, viewModel.Tiles.Count);
+        Assert.Equal("32x16", viewModel.Editor.TileSizeText);
+        Assert.Equal(8, viewModel.Editor.Tiles.Count);
     }
 
     [Fact]
@@ -28,8 +28,8 @@ public class ChangeTileSizeTests : IDisposable
         using var image = viewModel.ReadImage(WriteImage("other.png"));
 
         Assert.NotNull(image);
-        Assert.Equal(16, viewModel.Tiles.Count);
-        Assert.Equal("16x16", viewModel.TileSizeText);
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
+        Assert.Equal("16x16", viewModel.Editor.TileSizeText);
     }
 
     [Fact]
@@ -42,8 +42,8 @@ public class ChangeTileSizeTests : IDisposable
         var image = viewModel.ReadImage(path);
 
         Assert.Null(image);
-        Assert.Contains("Could not open", viewModel.StatusMessage);
-        Assert.Equal(16, viewModel.Tiles.Count);
+        Assert.Contains("Could not open", viewModel.Editor.StatusMessage);
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
     }
 
     [Fact]
@@ -51,81 +51,81 @@ public class ChangeTileSizeTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        Assert.False(viewModel.NeedsTileSizeConfirmation(32, 32));
-        viewModel.ChangeTileSize(32, 32);
+        Assert.False(viewModel.Editor.NeedsTileSizeConfirmation(32, 32));
+        viewModel.Editor.ChangeTileSize(32, 32);
 
-        Assert.Equal(4, viewModel.Tiles.Count);
-        Assert.Equal("32x32", viewModel.TileSizeText);
+        Assert.Equal(4, viewModel.Editor.Tiles.Count);
+        Assert.Equal("32x32", viewModel.Editor.TileSizeText);
     }
 
     [Fact]
     public void ChangingTheSizeOfAnEditedTilesetNeedsConfirmation()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        Assert.True(viewModel.NeedsTileSizeConfirmation(32, 32));
+        Assert.True(viewModel.Editor.NeedsTileSizeConfirmation(32, 32));
     }
 
     [Fact]
     public void ConfirmingTheSameSizeChangesNothingAndNeedsNoConfirmation()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        Assert.False(viewModel.NeedsTileSizeConfirmation(16, 16));
-        viewModel.ChangeTileSize(16, 16);
+        Assert.False(viewModel.Editor.NeedsTileSizeConfirmation(16, 16));
+        viewModel.Editor.ChangeTileSize(16, 16);
 
-        Assert.Equal(15, viewModel.Tiles.Count);
-        Assert.True(viewModel.CanUndo);
+        Assert.Equal(15, viewModel.Editor.Tiles.Count);
+        Assert.True(viewModel.Editor.CanUndo);
     }
 
     [Fact]
     public void AcceptedChangeClearsTheUndoHistoryAndTheEditedState()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        viewModel.ChangeTileSize(32, 32);
+        viewModel.Editor.ChangeTileSize(32, 32);
 
-        Assert.False(viewModel.CanUndo);
-        Assert.False(viewModel.CanRedo);
-        Assert.False(viewModel.HasEdits);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.False(viewModel.Editor.CanRedo);
+        Assert.False(viewModel.Editor.HasEdits);
     }
 
     [Fact]
     public void ChangingTheSizeOfAProjectOpenedWithEditsClearsTheEditedState()
     {
         var edited = OpenImage();
-        edited.HandleCanvasClick(1, 1, addToSelection: false);
-        edited.IsMoveToolActive = true;
-        edited.BeginMoveDrag(1, 1);
-        edited.UpdateMoveDrag(17, 1);
-        edited.CommitMoveDrag();
+        edited.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        edited.Editor.IsMoveToolActive = true;
+        edited.Editor.BeginMoveDrag(1, 1);
+        edited.Editor.UpdateMoveDrag(17, 1);
+        edited.Editor.CommitMoveDrag();
         var path = Path.Combine(_directory, "edited.ashlar");
         edited.SaveProject(path);
         var reopened = new MainViewModel();
         reopened.OpenProject(path);
 
-        reopened.ChangeTileSize(32, 32);
+        reopened.Editor.ChangeTileSize(32, 32);
 
-        Assert.False(reopened.HasEdits);
+        Assert.False(reopened.Editor.HasEdits);
     }
 
     [Fact]
     public void ChangingTheSizeKeepsTheImagePixels()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        viewModel.ChangeTileSize(8, 8);
+        viewModel.Editor.ChangeTileSize(8, 8);
 
         // The deleted tile's four 8x8 cells stay empty, so the grid skips them.
-        Assert.Equal(60, viewModel.Tiles.Count);
+        Assert.Equal(60, viewModel.Editor.Tiles.Count);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class ChangeTileSizeTests : IDisposable
         var reopened = OpenImage();
         reopened.OpenProject(path);
 
-        Assert.Equal("32x32", reopened.TileSizeText);
+        Assert.Equal("32x32", reopened.Editor.TileSizeText);
     }
 
     private MainViewModel OpenImage()

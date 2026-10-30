@@ -47,44 +47,44 @@
                 <MenuItem Header="Open tileset..." Click="OnOpenTilesetClick" InputGesture="Ctrl+O" />
                 <MenuItem Header="Open project..." Click="OnOpenProjectClick" InputGesture="Ctrl+Shift+O" />
                 <Separator />
-                <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+E" />
-                <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding HasImage}" />
-                <MenuItem Header="Save project" Click="OnSaveProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+S" />
-                <MenuItem Header="Save project as..." Click="OnSaveProjectAsClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+Shift+S" />
+                <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+E" />
+                <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding Editor.HasImage}" />
+                <MenuItem Header="Save project" Click="OnSaveProjectClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+S" />
+                <MenuItem Header="Save project as..." Click="OnSaveProjectAsClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+Shift+S" />
                 <Separator />
-                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+W" />
+                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+W" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding CanUndo}" InputGesture="Ctrl+Z" />
-                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding CanRedo}" InputGesture="Ctrl+Y" />
+                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding Editor.CanUndo}" InputGesture="Ctrl+Z" />
+                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding Editor.CanRedo}" InputGesture="Ctrl+Y" />
                 <Separator />
-                <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick" IsEnabled="{Binding HasImage}" />
+                <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick" IsEnabled="{Binding Editor.HasImage}" />
                 <Separator />
-                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}" InputGesture="Delete" />
+                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding Editor.HasSelectedTiles}" InputGesture="Delete" />
                 <Separator />
-                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding IsRectangleToolActive}"
-                          IsEnabled="{Binding HasImage}" InputGesture="Ctrl+R" />
-                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding IsMoveToolActive}"
-                          IsEnabled="{Binding HasImage}" InputGesture="M" />
-                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding IsDrawToolActive}"
-                          IsEnabled="{Binding HasImage}" InputGesture="B" />
-                <MenuItem Header="Bucket" ToggleType="CheckBox" IsChecked="{Binding IsBucketToolActive}"
-                          IsEnabled="{Binding HasImage}" InputGesture="G" />
-                <MenuItem Header="Pipette" ToggleType="CheckBox" IsChecked="{Binding IsPipetteToolActive}"
-                          IsEnabled="{Binding HasImage}" InputGesture="I" />
+                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding Editor.IsRectangleToolActive}"
+                          IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+R" />
+                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding Editor.IsMoveToolActive}"
+                          IsEnabled="{Binding Editor.HasImage}" InputGesture="M" />
+                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding Editor.IsDrawToolActive}"
+                          IsEnabled="{Binding Editor.HasImage}" InputGesture="B" />
+                <MenuItem Header="Bucket" ToggleType="CheckBox" IsChecked="{Binding Editor.IsBucketToolActive}"
+                          IsEnabled="{Binding Editor.HasImage}" InputGesture="G" />
+                <MenuItem Header="Pipette" ToggleType="CheckBox" IsChecked="{Binding Editor.IsPipetteToolActive}"
+                          IsEnabled="{Binding Editor.HasImage}" InputGesture="I" />
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemPlus" />
-                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+OemMinus" />
-                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" IsEnabled="{Binding HasImage}" InputGesture="Ctrl+D0" />
+                <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+OemPlus" />
+                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+OemMinus" />
+                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+D0" />
             </MenuItem>
         </Menu>
 
         <Border Classes="panelHeader" DockPanel.Dock="Bottom" Margin="0" BorderThickness="0,1,0,0" Padding="12,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Classes="secondary" Text="{Binding StatusMessage}" />
-                <TextBlock Classes="secondary" Text="{Binding ZoomPercentageText}" IsVisible="{Binding HasImage}" />
-                <TextBlock Classes="secondary" Text="{Binding TileSizeText}" IsVisible="{Binding HasImage}" />
+                <TextBlock Classes="secondary" Text="{Binding Editor.StatusMessage}" />
+                <TextBlock Classes="secondary" Text="{Binding Editor.ZoomPercentageText}" IsVisible="{Binding Editor.HasImage}" />
+                <TextBlock Classes="secondary" Text="{Binding Editor.TileSizeText}" IsVisible="{Binding Editor.HasImage}" />
             </StackPanel>
         </Border>
 
@@ -96,13 +96,13 @@
                 <StackPanel Spacing="16" Margin="12">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="secondary" Text="Tile ID" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding SelectedTileId}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Editor.SelectedTileId}" TextWrapping="Wrap" />
                     </StackPanel>
 
                     <StackPanel Spacing="4">
                         <TextBlock Classes="secondary" Text="Group" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding GroupNames}" IsEditable="True" Text="{Binding GroupNameInput, Mode=TwoWay}"
-                                  IsEnabled="{Binding HasSelectedTiles}" HorizontalAlignment="Stretch"
+                        <ComboBox ItemsSource="{Binding Editor.GroupNames}" IsEditable="True" Text="{Binding Editor.GroupNameInput, Mode=TwoWay}"
+                                  IsEnabled="{Binding Editor.HasSelectedTiles}" HorizontalAlignment="Stretch"
                                   KeyDown="OnGroupNameInputKeyDown" SelectionChanged="OnGroupNameSelectionChanged" />
                     </StackPanel>
                 </StackPanel>
@@ -111,43 +111,43 @@
 
         <Border Classes="panel" DockPanel.Dock="Left" Margin="6,6,0,6" Padding="4" VerticalAlignment="Top">
             <StackPanel Spacing="4">
-                <ToggleButton Classes="tool" x:Name="RectangleSelectButton" IsChecked="{Binding IsRectangleToolActive}" IsEnabled="{Binding HasImage}"
+                <ToggleButton Classes="tool" x:Name="RectangleSelectButton" IsChecked="{Binding Editor.IsRectangleToolActive}" IsEnabled="{Binding Editor.HasImage}"
                               ToolTip.Tip="Rectangle select (Ctrl+R)">
                     <Path Data="{StaticResource RectangleSelectIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </ToggleButton>
-                <ToggleButton Classes="tool" x:Name="MoveButton" IsChecked="{Binding IsMoveToolActive}" IsEnabled="{Binding HasImage}"
+                <ToggleButton Classes="tool" x:Name="MoveButton" IsChecked="{Binding Editor.IsMoveToolActive}" IsEnabled="{Binding Editor.HasImage}"
                               ToolTip.Tip="Move (M)">
                     <Path Data="{StaticResource MoveIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </ToggleButton>
-                <ToggleButton Classes="tool" x:Name="DrawButton" IsChecked="{Binding IsDrawToolActive}" IsEnabled="{Binding HasImage}"
+                <ToggleButton Classes="tool" x:Name="DrawButton" IsChecked="{Binding Editor.IsDrawToolActive}" IsEnabled="{Binding Editor.HasImage}"
                               ToolTip.Tip="Draw (B)">
                     <Path Data="{StaticResource DrawIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </ToggleButton>
-                <ToggleButton Classes="tool" x:Name="BucketButton" IsChecked="{Binding IsBucketToolActive}" IsEnabled="{Binding HasImage}"
+                <ToggleButton Classes="tool" x:Name="BucketButton" IsChecked="{Binding Editor.IsBucketToolActive}" IsEnabled="{Binding Editor.HasImage}"
                               ToolTip.Tip="Bucket (G)">
                     <Path Data="{StaticResource BucketIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </ToggleButton>
-                <ToggleButton Classes="tool" x:Name="PipetteButton" IsChecked="{Binding IsPipetteToolActive}" IsEnabled="{Binding HasImage}"
+                <ToggleButton Classes="tool" x:Name="PipetteButton" IsChecked="{Binding Editor.IsPipetteToolActive}" IsEnabled="{Binding Editor.HasImage}"
                               ToolTip.Tip="Pipette (I)">
                     <Path Data="{StaticResource PipetteIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </ToggleButton>
-                <Button Classes="tool" x:Name="DeleteButton" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding HasSelectedTiles}"
+                <Button Classes="tool" x:Name="DeleteButton" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding Editor.HasSelectedTiles}"
                         ToolTip.Tip="Delete (Del)">
                     <Path Data="{StaticResource DeleteIcon}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
                 </Button>
                 <Separator Margin="2,2" />
-                <Button Classes="tool" x:Name="DrawColorButton" IsEnabled="{Binding HasImage}" ToolTip.Tip="Draw color">
+                <Button Classes="tool" x:Name="DrawColorButton" IsEnabled="{Binding Editor.HasImage}" ToolTip.Tip="Draw color">
                     <Border x:Name="DrawColorSwatch" Width="26" Height="26" CornerRadius="3"
-                            Background="{Binding DrawColor, Converter={StaticResource ToBrushConverter}}" />
+                            Background="{Binding Editor.DrawColor, Converter={StaticResource ToBrushConverter}}" />
                     <Button.Flyout>
                         <Flyout Placement="RightEdgeAlignedTop">
-                            <ColorView x:Name="DrawColorView" Color="{Binding DrawColor}" IsAlphaEnabled="True" />
+                            <ColorView x:Name="DrawColorView" Color="{Binding Editor.DrawColor}" IsAlphaEnabled="True" />
                         </Flyout>
                     </Button.Flyout>
                 </Button>
@@ -159,31 +159,31 @@
                 <!-- The padding is the overscroll margin around the zoomed tileset (set from code,
                      since it depends on the viewport size). The transparent background makes the
                      padding hit-testable, so panning can start there too. -->
-                <Border x:Name="TileCanvasPadding" Background="Transparent" IsVisible="{Binding HasImage}"
+                <Border x:Name="TileCanvasPadding" Background="Transparent" IsVisible="{Binding Editor.HasImage}"
                         Focusable="True" PointerPressed="OnTileCanvasPointerPressed" PointerMoved="OnTileCanvasPointerMoved"
                         PointerReleased="OnTileCanvasPointerReleased" PointerCaptureLost="OnTileCanvasPointerCaptureLost"
                         PointerWheelChanged="OnTileCanvasPointerWheelChanged">
-                    <Panel Width="{Binding ScaledImageWidth}" Height="{Binding ScaledImageHeight}">
+                    <Panel Width="{Binding Editor.ScaledImageWidth}" Height="{Binding Editor.ScaledImageHeight}">
                         <!-- Left/Top alignment is load-bearing: a Panel centers a child that has an
                              explicit Width/Height, which would place this panel's unscaled layout slot
                              in the middle of the zoomed wrapper above. The ScaleTransform then scales
                              out from there instead of from the wrapper's origin, pushing the right and
                              bottom of the image outside the scrollable extent, where it can't be
                              reached by panning. -->
-                        <Panel x:Name="TileCanvasContent" Width="{Binding ImageWidth}" Height="{Binding ImageHeight}"
+                        <Panel x:Name="TileCanvasContent" Width="{Binding Editor.ImageWidth}" Height="{Binding Editor.ImageHeight}"
                                HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
                             <Panel.RenderTransform>
-                                <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
+                                <ScaleTransform ScaleX="{Binding Editor.ZoomLevel}" ScaleY="{Binding Editor.ZoomLevel}" />
                             </Panel.RenderTransform>
-                            <controls:TransparencyCheckerboard ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                                               TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
-                            <Image x:Name="TilesetImage" Source="{Binding PreviewBitmap}" Stretch="None" />
-                            <controls:TileGridOverlay x:Name="TileOverlay" ImageWidth="{Binding ImageWidth}" ImageHeight="{Binding ImageHeight}"
-                                                       TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
-                                                       SelectedTiles="{Binding SelectedTiles}"
-                                                       SelectionRectangle="{Binding SelectionRectangle}"
-                                                       MoveOffset="{Binding MoveOffset}" Image="{Binding PreviewBitmap}"
-                                                       ZoomLevel="{Binding ZoomLevel}" ShowPixelGrid="{Binding ShowPixelGrid}" />
+                            <controls:TransparencyCheckerboard ImageWidth="{Binding Editor.ImageWidth}" ImageHeight="{Binding Editor.ImageHeight}"
+                                                               TileWidth="{Binding Editor.TileWidth}" TileHeight="{Binding Editor.TileHeight}" />
+                            <Image x:Name="TilesetImage" Source="{Binding Editor.PreviewBitmap}" Stretch="None" />
+                            <controls:TileGridOverlay x:Name="TileOverlay" ImageWidth="{Binding Editor.ImageWidth}" ImageHeight="{Binding Editor.ImageHeight}"
+                                                       TileWidth="{Binding Editor.TileWidth}" TileHeight="{Binding Editor.TileHeight}"
+                                                       SelectedTiles="{Binding Editor.SelectedTiles}"
+                                                       SelectionRectangle="{Binding Editor.SelectionRectangle}"
+                                                       MoveOffset="{Binding Editor.MoveOffset}" Image="{Binding Editor.PreviewBitmap}"
+                                                       ZoomLevel="{Binding Editor.ZoomLevel}" ShowPixelGrid="{Binding Editor.ShowPixelGrid}" />
                         </Panel>
                     </Panel>
                 </Border>

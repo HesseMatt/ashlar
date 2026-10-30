@@ -20,77 +20,77 @@ public class MoveToolTests : IDisposable
         var viewModel = OpenImage();
         SelectRow(viewModel, 0, 2);
 
-        viewModel.BeginMoveDrag(5, 5);
-        viewModel.UpdateMoveDrag(5 + 32 + 7, 5 + 16);
-        viewModel.CommitMoveDrag();
+        viewModel.Editor.BeginMoveDrag(5, 5);
+        viewModel.Editor.UpdateMoveDrag(5 + 32 + 7, 5 + 16);
+        viewModel.Editor.CommitMoveDrag();
 
-        Assert.Equal(["tiles_0001", "tiles_0002"], Names(viewModel.SelectedTiles));
-        Assert.Equal([(32, 16), (48, 16)], viewModel.SelectedTiles.Select(t => (t.X, t.Y)));
-        Assert.Equal("Moved 2 tiles.", viewModel.StatusMessage);
+        Assert.Equal(["tiles_0001", "tiles_0002"], Names(viewModel.Editor.SelectedTiles));
+        Assert.Equal([(32, 16), (48, 16)], viewModel.Editor.SelectedTiles.Select(t => (t.X, t.Y)));
+        Assert.Equal("Moved 2 tiles.", viewModel.Editor.StatusMessage);
     }
 
     [Fact]
     public void PreviewSnapsToTheGridAndTheTilesStayPutUntilRelease()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
 
-        viewModel.BeginMoveDrag(1, 1);
-        viewModel.UpdateMoveDrag(40, 20);
+        viewModel.Editor.BeginMoveDrag(1, 1);
+        viewModel.Editor.UpdateMoveDrag(40, 20);
 
-        Assert.Equal(new Vector(32, 16), viewModel.MoveOffset);
-        Assert.Equal((0, 0), (viewModel.Tiles[0].X, viewModel.Tiles[0].Y));
-        Assert.False(viewModel.HasEdits);
+        Assert.Equal(new Vector(32, 16), viewModel.Editor.MoveOffset);
+        Assert.Equal((0, 0), (viewModel.Editor.Tiles[0].X, viewModel.Editor.Tiles[0].Y));
+        Assert.False(viewModel.Editor.HasEdits);
     }
 
     [Fact]
     public void PressingOnAnUnselectedTileOrEmptySpaceDoesNotStartAMove()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
 
-        Assert.False(viewModel.BeginMoveDrag(40, 40));
-        Assert.False(viewModel.BeginMoveDrag(-5, -5));
+        Assert.False(viewModel.Editor.BeginMoveDrag(40, 40));
+        Assert.False(viewModel.Editor.BeginMoveDrag(-5, -5));
 
-        viewModel.UpdateMoveDrag(60, 60);
-        viewModel.CommitMoveDrag();
-        Assert.Equal(["tiles_0001"], Names(viewModel.SelectedTiles));
-        Assert.False(viewModel.HasEdits);
+        viewModel.Editor.UpdateMoveDrag(60, 60);
+        viewModel.Editor.CommitMoveDrag();
+        Assert.Equal(["tiles_0001"], Names(viewModel.Editor.SelectedTiles));
+        Assert.False(viewModel.Editor.HasEdits);
     }
 
     [Fact]
     public void CancellingTheDragChangesNothing()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
-        viewModel.BeginMoveDrag(1, 1);
-        viewModel.UpdateMoveDrag(40, 1);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor.BeginMoveDrag(1, 1);
+        viewModel.Editor.UpdateMoveDrag(40, 1);
 
-        viewModel.EndMoveDrag();
-        viewModel.CommitMoveDrag();
+        viewModel.Editor.EndMoveDrag();
+        viewModel.Editor.CommitMoveDrag();
 
-        Assert.Null(viewModel.MoveOffset);
-        Assert.Equal((0, 0), (viewModel.Tiles[0].X, viewModel.Tiles[0].Y));
-        Assert.False(viewModel.HasEdits);
+        Assert.Null(viewModel.Editor.MoveOffset);
+        Assert.Equal((0, 0), (viewModel.Editor.Tiles[0].X, viewModel.Editor.Tiles[0].Y));
+        Assert.False(viewModel.Editor.HasEdits);
     }
 
     [Fact]
     public void MovingOntoUnselectedTilesOverwritesThemInsteadOfSwapping()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
 
-        viewModel.BeginMoveDrag(1, 1);
-        viewModel.UpdateMoveDrag(17, 1);
-        viewModel.CommitMoveDrag();
+        viewModel.Editor.BeginMoveDrag(1, 1);
+        viewModel.Editor.UpdateMoveDrag(17, 1);
+        viewModel.Editor.CommitMoveDrag();
 
-        Assert.Equal(15, viewModel.Tiles.Count);
-        Assert.DoesNotContain(viewModel.Tiles, t => t.Name == "tiles_0002");
-        Assert.Equal(16, viewModel.Tiles.Single(t => t.Name == "tiles_0001").X);
+        Assert.Equal(15, viewModel.Editor.Tiles.Count);
+        Assert.DoesNotContain(viewModel.Editor.Tiles, t => t.Name == "tiles_0002");
+        Assert.Equal(16, viewModel.Editor.Tiles.Single(t => t.Name == "tiles_0001").X);
     }
 
     [Fact]
@@ -99,59 +99,59 @@ public class MoveToolTests : IDisposable
         var viewModel = OpenImage();
         SelectRow(viewModel, 0, 4);
 
-        viewModel.BeginMoveDrag(5, 5);
-        viewModel.UpdateMoveDrag(5 + 32, 5);
-        viewModel.CommitMoveDrag();
+        viewModel.Editor.BeginMoveDrag(5, 5);
+        viewModel.Editor.UpdateMoveDrag(5 + 32, 5);
+        viewModel.Editor.CommitMoveDrag();
 
-        Assert.Equal(["tiles_0001", "tiles_0002"], Names(viewModel.SelectedTiles));
-        Assert.Equal(64, viewModel.ImageWidth);
-        Assert.DoesNotContain(viewModel.Tiles, t => t.Name is "tiles_0003" or "tiles_0004");
-        Assert.Contains("2 moved outside the tileset and were deleted", viewModel.StatusMessage);
+        Assert.Equal(["tiles_0001", "tiles_0002"], Names(viewModel.Editor.SelectedTiles));
+        Assert.Equal(64, viewModel.Editor.ImageWidth);
+        Assert.DoesNotContain(viewModel.Editor.Tiles, t => t.Name is "tiles_0003" or "tiles_0004");
+        Assert.Contains("2 moved outside the tileset and were deleted", viewModel.Editor.StatusMessage);
     }
 
     [Fact]
     public void MoveToolStaysActiveAfterAMove()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
 
-        viewModel.BeginMoveDrag(1, 1);
-        viewModel.UpdateMoveDrag(17, 1);
-        viewModel.CommitMoveDrag();
+        viewModel.Editor.BeginMoveDrag(1, 1);
+        viewModel.Editor.UpdateMoveDrag(17, 1);
+        viewModel.Editor.CommitMoveDrag();
 
-        Assert.True(viewModel.IsMoveToolActive);
+        Assert.True(viewModel.Editor.IsMoveToolActive);
     }
 
     [Fact]
     public void ActivatingAnotherToolDeactivatesTheMoveTool()
     {
         var viewModel = OpenImage();
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.IsMoveToolActive = true;
 
-        viewModel.IsRectangleToolActive = true;
+        viewModel.Editor.IsRectangleToolActive = true;
 
-        Assert.False(viewModel.IsMoveToolActive);
-        Assert.True(viewModel.IsRectangleToolActive);
+        Assert.False(viewModel.Editor.IsMoveToolActive);
+        Assert.True(viewModel.Editor.IsRectangleToolActive);
     }
 
     [Fact]
     public void MoveToolResetsWhenANewTilesetIsOpened()
     {
         var viewModel = OpenImage();
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.IsMoveToolActive = true;
 
         viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
-        Assert.False(viewModel.IsMoveToolActive);
+        Assert.False(viewModel.Editor.IsMoveToolActive);
     }
 
     private static void SelectRow(MainViewModel viewModel, int firstColumn, int count)
     {
-        viewModel.BeginSelectionDrag(firstColumn * 16 + 1, 1, addToSelection: false);
-        viewModel.UpdateSelectionDrag((firstColumn + count - 1) * 16 + 1, 1);
-        viewModel.EndSelectionDrag();
-        viewModel.IsMoveToolActive = true;
+        viewModel.Editor.BeginSelectionDrag(firstColumn * 16 + 1, 1, addToSelection: false);
+        viewModel.Editor.UpdateSelectionDrag((firstColumn + count - 1) * 16 + 1, 1);
+        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor.IsMoveToolActive = true;
     }
 
     private MainViewModel OpenImage()

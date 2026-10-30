@@ -64,7 +64,7 @@ public class ToolPaletteTests : IDisposable
         Assert.True(PipetteButton.IsEnabled);
         Assert.False(DeleteButton.IsEnabled);
 
-        _viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        _viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
 
         Assert.True(DeleteButton.IsEnabled);
     }
@@ -74,18 +74,18 @@ public class ToolPaletteTests : IDisposable
     {
         _viewModel.LoadTileset(_imagePath, 16, 16);
 
-        _viewModel.IsRectangleToolActive = true;
+        _viewModel.Editor.IsRectangleToolActive = true;
         Assert.True(RectangleSelectButton.IsChecked);
         Assert.False(MoveButton.IsChecked);
 
-        _viewModel.IsMoveToolActive = true;
+        _viewModel.Editor.IsMoveToolActive = true;
         Assert.False(RectangleSelectButton.IsChecked);
         Assert.True(MoveButton.IsChecked);
 
-        _viewModel.IsMoveToolActive = false;
+        _viewModel.Editor.IsMoveToolActive = false;
         Assert.False(RectangleSelectButton.IsChecked);
         Assert.False(MoveButton.IsChecked);
-        Assert.Equal(CanvasTool.Select, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Select, _viewModel.Editor.ActiveTool);
     }
 
     [AvaloniaFact]
@@ -94,14 +94,14 @@ public class ToolPaletteTests : IDisposable
         _viewModel.LoadTileset(_imagePath, 16, 16);
 
         RectangleSelectButton.IsChecked = true;
-        Assert.Equal(CanvasTool.Rectangle, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Rectangle, _viewModel.Editor.ActiveTool);
 
         MoveButton.IsChecked = true;
-        Assert.Equal(CanvasTool.Move, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Move, _viewModel.Editor.ActiveTool);
         Assert.False(RectangleSelectButton.IsChecked);
 
         MoveButton.IsChecked = false;
-        Assert.Equal(CanvasTool.Select, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Select, _viewModel.Editor.ActiveTool);
     }
 
     [AvaloniaFact]
@@ -110,14 +110,14 @@ public class ToolPaletteTests : IDisposable
         _viewModel.LoadTileset(_imagePath, 16, 16);
 
         DrawButton.IsChecked = true;
-        Assert.Equal(CanvasTool.Draw, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Draw, _viewModel.Editor.ActiveTool);
 
-        _viewModel.IsMoveToolActive = true;
+        _viewModel.Editor.IsMoveToolActive = true;
         Assert.False(DrawButton.IsChecked);
 
-        _viewModel.IsDrawToolActive = true;
-        _viewModel.IsDrawToolActive = false;
-        Assert.Equal(CanvasTool.Select, _viewModel.ActiveTool);
+        _viewModel.Editor.IsDrawToolActive = true;
+        _viewModel.Editor.IsDrawToolActive = false;
+        Assert.Equal(CanvasTool.Select, _viewModel.Editor.ActiveTool);
     }
 
     [AvaloniaFact]
@@ -127,12 +127,12 @@ public class ToolPaletteTests : IDisposable
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
         BucketButton.IsChecked = true;
-        Assert.Equal(CanvasTool.Bucket, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Bucket, _viewModel.Editor.ActiveTool);
         Assert.Equal("Bucket (G)", ToolTip.GetTip(BucketButton));
         Assert.True(BucketButton.Bounds.Top > DrawButton.Bounds.Bottom);
         Assert.True(BucketButton.Bounds.Bottom < PipetteButton.Bounds.Top);
 
-        _viewModel.IsDrawToolActive = true;
+        _viewModel.Editor.IsDrawToolActive = true;
         Assert.False(BucketButton.IsChecked);
     }
 
@@ -142,9 +142,9 @@ public class ToolPaletteTests : IDisposable
         _viewModel.LoadTileset(_imagePath, 16, 16);
 
         PipetteButton.IsChecked = true;
-        Assert.Equal(CanvasTool.Pipette, _viewModel.ActiveTool);
+        Assert.Equal(CanvasTool.Pipette, _viewModel.Editor.ActiveTool);
 
-        _viewModel.IsDrawToolActive = true;
+        _viewModel.Editor.IsDrawToolActive = true;
         Assert.False(PipetteButton.IsChecked);
     }
 
@@ -159,7 +159,7 @@ public class ToolPaletteTests : IDisposable
         var swatch = _window.FindControl<Border>("DrawColorSwatch")!;
         Assert.Equal(Colors.Black, ((ISolidColorBrush)swatch.Background!).Color);
 
-        _viewModel.DrawColor = Color.FromArgb(128, 1, 2, 3);
+        _viewModel.Editor.DrawColor = Color.FromArgb(128, 1, 2, 3);
         Assert.Equal(Color.FromArgb(128, 1, 2, 3), ((ISolidColorBrush)swatch.Background!).Color);
     }
 
@@ -172,10 +172,10 @@ public class ToolPaletteTests : IDisposable
         flyout.ShowAt(DrawColorButton);
         var colorView = (ColorView)flyout.Content!;
         Assert.True(colorView.IsAlphaEnabled);
-        Assert.Equal(_viewModel.DrawColor, colorView.Color);
+        Assert.Equal(_viewModel.Editor.DrawColor, colorView.Color);
 
         colorView.Color = Color.FromArgb(128, 4, 5, 6);
-        Assert.Equal(Color.FromArgb(128, 4, 5, 6), _viewModel.DrawColor);
+        Assert.Equal(Color.FromArgb(128, 4, 5, 6), _viewModel.Editor.DrawColor);
     }
 
     [AvaloniaFact]
@@ -212,7 +212,7 @@ public class ToolPaletteTests : IDisposable
         var presenter = icon.FindAncestorOfType<ContentPresenter>()!;
         Assert.Equal(presenter.Foreground, icon.Stroke);
 
-        _viewModel.IsMoveToolActive = true;
+        _viewModel.Editor.IsMoveToolActive = true;
         _window.GetLayoutManager()?.ExecuteLayoutPass();
 
         Assert.Equal(presenter.Foreground, icon.Stroke);
@@ -222,15 +222,15 @@ public class ToolPaletteTests : IDisposable
     public void DeleteButtonDeletesTheSelectedTiles()
     {
         _viewModel.LoadTileset(_imagePath, 16, 16);
-        _viewModel.HandleCanvasClick(1, 1, addToSelection: false);
+        _viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
 
-        var tileCount = _viewModel.Tiles.Count;
+        var tileCount = _viewModel.Editor.Tiles.Count;
 
         DeleteButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-        Assert.Empty(_viewModel.SelectedTiles);
+        Assert.Empty(_viewModel.Editor.SelectedTiles);
         Assert.False(DeleteButton.IsEnabled);
-        Assert.Equal(tileCount - 1, _viewModel.Tiles.Count);
+        Assert.Equal(tileCount - 1, _viewModel.Editor.Tiles.Count);
     }
 
     private static string CreateSampleImage()

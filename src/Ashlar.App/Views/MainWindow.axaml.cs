@@ -53,7 +53,7 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
 
-        if (_canCloseWindow || DataContext is not MainViewModel viewModel || !viewModel.HasImage || !viewModel.HasUnsavedChanges)
+        if (_canCloseWindow || DataContext is not MainViewModel viewModel || !viewModel.Editor.HasImage || !viewModel.Editor.HasUnsavedChanges)
             return;
 
         e.Cancel = true;
@@ -68,7 +68,7 @@ public partial class MainWindow : Window
     // tileset. Saving counts as settling the question only if it succeeded.
     private async Task<bool> ConfirmDiscardingUnsavedChangesAsync(MainViewModel viewModel)
     {
-        if (!viewModel.HasImage || !viewModel.HasUnsavedChanges)
+        if (!viewModel.Editor.HasImage || !viewModel.Editor.HasUnsavedChanges)
             return true;
 
         return await new UnsavedChangesDialog().ShowDialog<UnsavedChangesChoice>(this) switch
@@ -84,10 +84,10 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        UpdateInterpolation(viewModel);
-        viewModel.TilesetLoaded += (_, _) => ScrollToTilesetStart();
-        viewModel.PreviewPixelsChanged += (_, _) =>
+        viewModel.Editor.PropertyChanged += OnViewModelPropertyChanged;
+        UpdateInterpolation(viewModel.Editor);
+        viewModel.Editor.TilesetLoaded += (_, _) => ScrollToTilesetStart();
+        viewModel.Editor.PreviewPixelsChanged += (_, _) =>
         {
             TilesetImage.InvalidateVisual();
             TileOverlay.InvalidateVisual();
@@ -96,21 +96,21 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.PreviewInterpolation) && sender is MainViewModel viewModel)
-            UpdateInterpolation(viewModel);
+        if (e.PropertyName == nameof(TilesetEditorViewModel.PreviewInterpolation) && sender is TilesetEditorViewModel editor)
+            UpdateInterpolation(editor);
 
-        if (e.PropertyName is nameof(MainViewModel.ZoomLevel) or nameof(MainViewModel.TileWidth)
-            or nameof(MainViewModel.TileHeight) or nameof(MainViewModel.ImageWidth)
-            or nameof(MainViewModel.ImageHeight) or nameof(MainViewModel.HasImage))
+        if (e.PropertyName is nameof(TilesetEditorViewModel.ZoomLevel) or nameof(TilesetEditorViewModel.TileWidth)
+            or nameof(TilesetEditorViewModel.TileHeight) or nameof(TilesetEditorViewModel.ImageWidth)
+            or nameof(TilesetEditorViewModel.ImageHeight) or nameof(TilesetEditorViewModel.HasImage))
         {
             UpdateOverscrollPadding();
         }
     }
 
-    private void UpdateInterpolation(MainViewModel viewModel)
+    private void UpdateInterpolation(TilesetEditorViewModel editor)
     {
-        RenderOptions.SetBitmapInterpolationMode(TilesetImage, viewModel.PreviewInterpolation);
-        RenderOptions.SetBitmapInterpolationMode(TileOverlay, viewModel.PreviewInterpolation);
+        RenderOptions.SetBitmapInterpolationMode(TilesetImage, editor.PreviewInterpolation);
+        RenderOptions.SetBitmapInterpolationMode(TileOverlay, editor.PreviewInterpolation);
     }
 
     private void OnScrollViewerPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -139,12 +139,12 @@ public partial class MainWindow : Window
     // zoomed tileset overflows the viewport; otherwise it stays centered.
     private void UpdateOverscrollPadding()
     {
-        if (DataContext is not MainViewModel viewModel || !viewModel.HasImage)
+        if (DataContext is not MainViewModel viewModel || !viewModel.Editor.HasImage)
             return;
 
         var viewport = TileCanvasScrollViewer.Viewport;
-        var horizontal = OverscrollPadding(viewport.Width, viewModel.ScaledImageWidth, viewModel.TileWidth * viewModel.ZoomLevel);
-        var vertical = OverscrollPadding(viewport.Height, viewModel.ScaledImageHeight, viewModel.TileHeight * viewModel.ZoomLevel);
+        var horizontal = OverscrollPadding(viewport.Width, viewModel.Editor.ScaledImageWidth, viewModel.Editor.TileWidth * viewModel.Editor.ZoomLevel);
+        var vertical = OverscrollPadding(viewport.Height, viewModel.Editor.ScaledImageHeight, viewModel.Editor.TileHeight * viewModel.Editor.ZoomLevel);
         TileCanvasPadding.Padding = new Thickness(horizontal, vertical);
     }
 
@@ -207,11 +207,11 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        var size = await new TileSizeDialog(viewModel.CreateChangeTileSizeDialogViewModel()).ShowDialog<(int, int)?>(this);
+        var size = await new TileSizeDialog(viewModel.Editor.CreateChangeTileSizeDialogViewModel()).ShowDialog<(int, int)?>(this);
         if (size is not var (tileWidth, tileHeight))
             return;
 
-        if (viewModel.NeedsTileSizeConfirmation(tileWidth, tileHeight))
+        if (viewModel.Editor.NeedsTileSizeConfirmation(tileWidth, tileHeight))
         {
             var confirmed = await new ConfirmDialog(
                 "Change tile size",
@@ -222,7 +222,7 @@ public partial class MainWindow : Window
                 return;
         }
 
-        viewModel.ChangeTileSize(tileWidth, tileHeight);
+        viewModel.Editor.ChangeTileSize(tileWidth, tileHeight);
     }
 
     private async void OnOpenProjectClick(object? sender, RoutedEventArgs e)
@@ -295,79 +295,79 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnOpenTilesetClick(this, new RoutedEventArgs());
                 break;
-            case Key.W when ctrl && viewModel.HasImage:
+            case Key.W when ctrl && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnCloseProjectClick(this, new RoutedEventArgs());
                 break;
-            case Key.E when ctrl && viewModel.HasImage:
+            case Key.E when ctrl && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnExportXmlClick(this, new RoutedEventArgs());
                 break;
-            case Key.S when ctrl && shift && viewModel.HasImage:
+            case Key.S when ctrl && shift && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnSaveProjectAsClick(this, new RoutedEventArgs());
                 break;
-            case Key.S when ctrl && viewModel.HasImage:
+            case Key.S when ctrl && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnSaveProjectClick(this, new RoutedEventArgs());
                 break;
-            case Key.R when ctrl && !shift && viewModel.HasImage:
+            case Key.R when ctrl && !shift && viewModel.Editor.HasImage:
                 e.Handled = true;
-                viewModel.IsRectangleToolActive = !viewModel.IsRectangleToolActive;
+                viewModel.Editor.IsRectangleToolActive = !viewModel.Editor.IsRectangleToolActive;
                 break;
-            case Key.M when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+            case Key.M when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.Editor.HasImage:
                 e.Handled = true;
-                viewModel.IsMoveToolActive = !viewModel.IsMoveToolActive;
+                viewModel.Editor.IsMoveToolActive = !viewModel.Editor.IsMoveToolActive;
                 break;
-            case Key.B when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+            case Key.B when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.Editor.HasImage:
                 e.Handled = true;
-                viewModel.IsDrawToolActive = !viewModel.IsDrawToolActive;
+                viewModel.Editor.IsDrawToolActive = !viewModel.Editor.IsDrawToolActive;
                 break;
-            case Key.G when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+            case Key.G when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.Editor.HasImage:
                 e.Handled = true;
-                viewModel.IsBucketToolActive = !viewModel.IsBucketToolActive;
+                viewModel.Editor.IsBucketToolActive = !viewModel.Editor.IsBucketToolActive;
                 break;
-            case Key.I when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.HasImage:
+            case Key.I when e.KeyModifiers == KeyModifiers.None && e.Source is not TextBox && viewModel.Editor.HasImage:
                 e.Handled = true;
-                viewModel.IsPipetteToolActive = !viewModel.IsPipetteToolActive;
+                viewModel.Editor.IsPipetteToolActive = !viewModel.Editor.IsPipetteToolActive;
                 break;
             case Key.Z when ctrl && shift && e.Source is not TextBox && !IsPointerDragPending:
             case Key.Y when ctrl && e.Source is not TextBox && !IsPointerDragPending:
                 e.Handled = true;
-                viewModel.Redo();
+                viewModel.Editor.Redo();
                 break;
             case Key.Z when ctrl && e.Source is not TextBox && !IsPointerDragPending:
                 e.Handled = true;
-                viewModel.Undo();
+                viewModel.Editor.Undo();
                 break;
             case Key.Escape when _rectangleDragOrigin is not null:
                 e.Handled = true;
-                viewModel.CancelSelectionDrag();
+                viewModel.Editor.CancelSelectionDrag();
                 ResetRectangleDrag();
                 break;
             case Key.Escape when _isMoveDragging:
                 e.Handled = true;
-                viewModel.EndMoveDrag();
+                viewModel.Editor.EndMoveDrag();
                 ResetMoveDrag();
                 break;
             case Key.Escape when _isDrawing:
                 e.Handled = true;
-                viewModel.CancelStroke();
+                viewModel.Editor.CancelStroke();
                 ResetDraw();
                 break;
-            case Key.Delete when viewModel.HasSelectedTiles:
+            case Key.Delete when viewModel.Editor.HasSelectedTiles:
                 e.Handled = true;
                 OnDeleteSelectedTilesClick(this, new RoutedEventArgs());
                 break;
-            case Key.OemPlus when ctrl && viewModel.HasImage:
+            case Key.OemPlus when ctrl && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnZoomInClick(this, new RoutedEventArgs());
                 break;
-            case Key.OemMinus when ctrl && viewModel.HasImage:
+            case Key.OemMinus when ctrl && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnZoomOutClick(this, new RoutedEventArgs());
                 break;
-            case Key.D0 when ctrl && viewModel.HasImage:
+            case Key.D0 when ctrl && viewModel.Editor.HasImage:
                 e.Handled = true;
                 OnResetZoomClick(this, new RoutedEventArgs());
                 break;
@@ -396,12 +396,12 @@ public partial class MainWindow : Window
 
         canvas.Focus();
 
-        if (viewModel.IsMoveToolActive)
+        if (viewModel.Editor.IsMoveToolActive)
         {
             if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
             {
                 var (startX, startY) = ImagePixelAt(e);
-                if (viewModel.BeginMoveDrag(startX, startY))
+                if (viewModel.Editor.BeginMoveDrag(startX, startY))
                 {
                     _isMoveDragging = true;
                     _moveDragPointer = e.Pointer;
@@ -412,12 +412,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (viewModel.IsDrawToolActive)
+        if (viewModel.Editor.IsDrawToolActive)
         {
             if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
             {
                 var (startX, startY) = ImagePixelAt(e);
-                if (viewModel.BeginStroke(startX, startY))
+                if (viewModel.Editor.BeginStroke(startX, startY))
                 {
                     _isDrawing = true;
                     _drawPointer = e.Pointer;
@@ -428,23 +428,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (viewModel.IsBucketToolActive)
+        if (viewModel.Editor.IsBucketToolActive)
         {
             if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
             {
                 var (fillX, fillY) = ImagePixelAt(e);
-                viewModel.Fill(fillX, fillY);
+                viewModel.Editor.Fill(fillX, fillY);
             }
 
             return;
         }
 
-        if (viewModel.IsPipetteToolActive)
+        if (viewModel.Editor.IsPipetteToolActive)
         {
             if (e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
             {
                 var (pickX, pickY) = ImagePixelAt(e);
-                viewModel.PickColor(pickX, pickY);
+                viewModel.Editor.PickColor(pickX, pickY);
                 _isPicking = true;
                 _pickPointer = e.Pointer;
                 e.Pointer.Capture(canvas);
@@ -453,7 +453,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (viewModel.IsRectangleToolActive && e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
+        if (viewModel.Editor.IsRectangleToolActive && e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed)
         {
             // Whether this becomes a click or a drag is only known once the pointer
             // has moved (or has been released), so selection is deferred until then.
@@ -466,7 +466,7 @@ public partial class MainWindow : Window
         }
 
         var (pixelX, pixelY) = ImagePixelAt(e);
-        viewModel.HandleCanvasClick(pixelX, pixelY, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+        viewModel.Editor.HandleCanvasClick(pixelX, pixelY, e.KeyModifiers.HasFlag(KeyModifiers.Control));
     }
 
     // Floor, not truncate: the padding makes coordinates in (-1, 0) reachable.
@@ -514,21 +514,21 @@ public partial class MainWindow : Window
         if (_isPicking && DataContext is MainViewModel pickViewModel)
         {
             var (pickPixelX, pickPixelY) = ImagePixelAt(e);
-            pickViewModel.PickColor(pickPixelX, pickPixelY);
+            pickViewModel.Editor.PickColor(pickPixelX, pickPixelY);
             return;
         }
 
         if (_isDrawing && DataContext is MainViewModel drawViewModel)
         {
             var (drawPixelX, drawPixelY) = ImagePixelAt(e);
-            drawViewModel.ContinueStroke(drawPixelX, drawPixelY);
+            drawViewModel.Editor.ContinueStroke(drawPixelX, drawPixelY);
             return;
         }
 
         if (_isMoveDragging && DataContext is MainViewModel moveViewModel)
         {
             var (movePixelX, movePixelY) = ImagePixelAt(e);
-            moveViewModel.UpdateMoveDrag(movePixelX, movePixelY);
+            moveViewModel.Editor.UpdateMoveDrag(movePixelX, movePixelY);
             return;
         }
 
@@ -541,11 +541,11 @@ public partial class MainWindow : Window
                     return;
 
                 _isRectangleDragging = true;
-                viewModel.BeginSelectionDrag(_rectangleDragStartPixel.X, _rectangleDragStartPixel.Y, _rectangleDragAddsToSelection);
+                viewModel.Editor.BeginSelectionDrag(_rectangleDragStartPixel.X, _rectangleDragStartPixel.Y, _rectangleDragAddsToSelection);
             }
 
             var (pixelX, pixelY) = ImagePixelAt(e);
-            viewModel.UpdateSelectionDrag(pixelX, pixelY);
+            viewModel.Editor.UpdateSelectionDrag(pixelX, pixelY);
             return;
         }
 
@@ -566,14 +566,14 @@ public partial class MainWindow : Window
 
         if (_isDrawing && e.InitialPressMouseButton == MouseButton.Left && DataContext is MainViewModel drawViewModel)
         {
-            drawViewModel.CommitStroke();
+            drawViewModel.Editor.CommitStroke();
             ResetDraw();
             return;
         }
 
         if (_isMoveDragging && e.InitialPressMouseButton == MouseButton.Left && DataContext is MainViewModel moveViewModel)
         {
-            moveViewModel.CommitMoveDrag();
+            moveViewModel.Editor.CommitMoveDrag();
             ResetMoveDrag();
             return;
         }
@@ -582,9 +582,9 @@ public partial class MainWindow : Window
             && DataContext is MainViewModel viewModel)
         {
             if (_isRectangleDragging)
-                viewModel.EndSelectionDrag();
+                viewModel.Editor.EndSelectionDrag();
             else
-                viewModel.HandleCanvasClick(_rectangleDragStartPixel.X, _rectangleDragStartPixel.Y, _rectangleDragAddsToSelection);
+                viewModel.Editor.HandleCanvasClick(_rectangleDragStartPixel.X, _rectangleDragStartPixel.Y, _rectangleDragAddsToSelection);
 
             ResetRectangleDrag();
             return;
@@ -600,7 +600,7 @@ public partial class MainWindow : Window
     private void OnTileCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         if (_isDrawing && DataContext is MainViewModel drawViewModel)
-            drawViewModel.CommitStroke();
+            drawViewModel.Editor.CommitStroke();
 
         _isDrawing = false;
         _drawPointer = null;
@@ -608,10 +608,10 @@ public partial class MainWindow : Window
         _pickPointer = null;
 
         if (_isRectangleDragging && DataContext is MainViewModel viewModel)
-            viewModel.EndSelectionDrag();
+            viewModel.Editor.EndSelectionDrag();
 
         if (_isMoveDragging && DataContext is MainViewModel moveViewModel)
-            moveViewModel.EndMoveDrag();
+            moveViewModel.Editor.EndMoveDrag();
 
         _isMoveDragging = false;
         _moveDragPointer = null;
@@ -633,7 +633,7 @@ public partial class MainWindow : Window
         var zoomIn = e.Delta.Y > 0;
         AnchoredZoom(anchorPosition, () =>
         {
-            if (zoomIn) viewModel.ZoomIn(); else viewModel.ZoomOut();
+            if (zoomIn) viewModel.Editor.ZoomIn(); else viewModel.Editor.ZoomOut();
         });
     }
 
@@ -642,7 +642,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        AnchoredZoom(ViewportCenter(), () => viewModel.ZoomIn());
+        AnchoredZoom(ViewportCenter(), () => viewModel.Editor.ZoomIn());
     }
 
     private void OnZoomOutClick(object? sender, RoutedEventArgs e)
@@ -650,7 +650,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        AnchoredZoom(ViewportCenter(), () => viewModel.ZoomOut());
+        AnchoredZoom(ViewportCenter(), () => viewModel.Editor.ZoomOut());
     }
 
     private void OnResetZoomClick(object? sender, RoutedEventArgs e)
@@ -658,7 +658,7 @@ public partial class MainWindow : Window
         if (DataContext is not MainViewModel viewModel)
             return;
 
-        viewModel.ResetZoom();
+        viewModel.Editor.ResetZoom();
         ScrollToTilesetStart();
     }
 
@@ -700,19 +700,19 @@ public partial class MainWindow : Window
     private void OnUndoClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.Undo();
+            viewModel.Editor.Undo();
     }
 
     private void OnRedoClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.Redo();
+            viewModel.Editor.Redo();
     }
 
     private void OnDeleteSelectedTilesClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.DeleteSelectedTiles();
+            viewModel.Editor.DeleteSelectedTiles();
     }
 
     private void OnGroupNameInputKeyDown(object? sender, KeyEventArgs e)
@@ -723,13 +723,13 @@ public partial class MainWindow : Window
         e.Handled = true;
 
         if (DataContext is MainViewModel viewModel)
-            viewModel.ConfirmGroupNameInput();
+            viewModel.Editor.ConfirmGroupNameInput();
     }
 
     private void OnGroupNameSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.ConfirmGroupNameInput();
+            viewModel.Editor.ConfirmGroupNameInput();
     }
 
     private async void OnSaveImageClick(object? sender, RoutedEventArgs e)

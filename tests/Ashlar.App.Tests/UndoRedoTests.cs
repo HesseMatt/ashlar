@@ -15,24 +15,24 @@ public class UndoRedoTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        Assert.False(viewModel.CanUndo);
-        Assert.False(viewModel.CanRedo);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.False(viewModel.Editor.CanRedo);
     }
 
     [Fact]
     public void UndoingADeleteRestoresTilesPixelsAndSelection()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.HandleCanvasClick(17, 1, addToSelection: true);
-        var tilesBefore = viewModel.Tiles.ToList();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: true);
+        var tilesBefore = viewModel.Editor.Tiles.ToList();
 
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
 
-        Assert.Equal(tilesBefore, viewModel.Tiles);
-        Assert.Equal(["tiles_0001", "tiles_0002"], viewModel.SelectedTiles.Select(t => t.Name));
-        Assert.Equal("Undid: Delete 2 tiles.", viewModel.StatusMessage);
+        Assert.Equal(tilesBefore, viewModel.Editor.Tiles);
+        Assert.Equal(["tiles_0001", "tiles_0002"], viewModel.Editor.SelectedTiles.Select(t => t.Name));
+        Assert.Equal("Undid: Delete 2 tiles.", viewModel.Editor.StatusMessage);
         Assert.Equal(SKColors.Red, PixelAt(viewModel, 1, 1));
     }
 
@@ -42,26 +42,26 @@ public class UndoRedoTests : IDisposable
         var viewModel = OpenImage();
         SelectAll(viewModel);
 
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
 
-        Assert.Equal(16, viewModel.Tiles.Count);
-        Assert.False(viewModel.CanUndo);
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
+        Assert.False(viewModel.Editor.CanUndo);
     }
 
     [Fact]
     public void RedoReappliesTheDelete()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
 
-        viewModel.Redo();
+        viewModel.Editor.Redo();
 
-        Assert.Equal(15, viewModel.Tiles.Count);
-        Assert.Empty(viewModel.SelectedTiles);
-        Assert.Equal("Redid: Delete 1 tile.", viewModel.StatusMessage);
+        Assert.Equal(15, viewModel.Editor.Tiles.Count);
+        Assert.Empty(viewModel.Editor.SelectedTiles);
+        Assert.Equal("Redid: Delete 1 tile.", viewModel.Editor.StatusMessage);
         Assert.Equal(SKColor.Empty, PixelAt(viewModel, 1, 1));
     }
 
@@ -69,107 +69,107 @@ public class UndoRedoTests : IDisposable
     public void UndoingAMoveRestoresPositionsAndOverwrittenTiles()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
-        var tilesBefore = viewModel.Tiles.ToList();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
+        var tilesBefore = viewModel.Editor.Tiles.ToList();
 
-        viewModel.BeginMoveDrag(1, 1);
-        viewModel.UpdateMoveDrag(17, 1);
-        viewModel.CommitMoveDrag();
-        Assert.Equal(15, viewModel.Tiles.Count);
+        viewModel.Editor.BeginMoveDrag(1, 1);
+        viewModel.Editor.UpdateMoveDrag(17, 1);
+        viewModel.Editor.CommitMoveDrag();
+        Assert.Equal(15, viewModel.Editor.Tiles.Count);
 
-        viewModel.Undo();
+        viewModel.Editor.Undo();
 
-        Assert.Equal(tilesBefore, viewModel.Tiles);
-        Assert.Equal("tiles_0001", viewModel.SelectedTiles.Single().Name);
-        Assert.Equal((0, 0), (viewModel.SelectedTiles[0].X, viewModel.SelectedTiles[0].Y));
+        Assert.Equal(tilesBefore, viewModel.Editor.Tiles);
+        Assert.Equal("tiles_0001", viewModel.Editor.SelectedTiles.Single().Name);
+        Assert.Equal((0, 0), (viewModel.Editor.SelectedTiles[0].X, viewModel.Editor.SelectedTiles[0].Y));
     }
 
     [Fact]
     public void UndoingAGroupAssignmentRestoresNamesAndSelection()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.GroupNameInput = "enemies";
-        viewModel.ConfirmGroupNameInput();
-        Assert.Equal("enemies_0001", viewModel.Tiles[0].Name);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.GroupNameInput = "enemies";
+        viewModel.Editor.ConfirmGroupNameInput();
+        Assert.Equal("enemies_0001", viewModel.Editor.Tiles[0].Name);
 
-        viewModel.Undo();
+        viewModel.Editor.Undo();
 
-        Assert.Equal("tiles_0001", viewModel.Tiles[0].Name);
-        Assert.Equal("tiles_0001", viewModel.SelectedTiles.Single().Name);
-        Assert.Empty(viewModel.GroupNames);
+        Assert.Equal("tiles_0001", viewModel.Editor.Tiles[0].Name);
+        Assert.Equal("tiles_0001", viewModel.Editor.SelectedTiles.Single().Name);
+        Assert.Empty(viewModel.Editor.GroupNames);
 
-        viewModel.Redo();
+        viewModel.Editor.Redo();
 
-        Assert.Equal("enemies_0001", viewModel.SelectedTiles.Single().Name);
-        Assert.Equal(["enemies"], viewModel.GroupNames);
+        Assert.Equal("enemies_0001", viewModel.Editor.SelectedTiles.Single().Name);
+        Assert.Equal(["enemies"], viewModel.Editor.GroupNames);
     }
 
     [Fact]
     public void ConsecutiveUndosWalkBackThroughEveryStep()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.HandleCanvasClick(17, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        viewModel.Undo();
-        Assert.Equal(15, viewModel.Tiles.Count);
-        viewModel.Undo();
-        Assert.Equal(16, viewModel.Tiles.Count);
-        Assert.False(viewModel.CanUndo);
+        viewModel.Editor.Undo();
+        Assert.Equal(15, viewModel.Editor.Tiles.Count);
+        viewModel.Editor.Undo();
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
+        Assert.False(viewModel.Editor.CanUndo);
 
-        viewModel.Redo();
-        viewModel.Redo();
-        Assert.Equal(14, viewModel.Tiles.Count);
-        Assert.False(viewModel.CanRedo);
+        viewModel.Editor.Redo();
+        viewModel.Editor.Redo();
+        Assert.Equal(14, viewModel.Editor.Tiles.Count);
+        Assert.False(viewModel.Editor.CanRedo);
     }
 
     [Fact]
     public void NewEditAfterUndoDiscardsTheRedoSteps()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
-        Assert.True(viewModel.CanRedo);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
+        Assert.True(viewModel.Editor.CanRedo);
 
-        viewModel.HandleCanvasClick(17, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        Assert.False(viewModel.CanRedo);
+        Assert.False(viewModel.Editor.CanRedo);
     }
 
     [Fact]
     public void SelectionAfterUndoOmitsTilesThatNoLongerExist()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.HandleCanvasClick(17, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        viewModel.Undo();
-        viewModel.Undo();
-        viewModel.Redo();
+        viewModel.Editor.Undo();
+        viewModel.Editor.Undo();
+        viewModel.Editor.Redo();
 
-        Assert.Empty(viewModel.SelectedTiles);
+        Assert.Empty(viewModel.Editor.SelectedTiles);
     }
 
     [Fact]
     public void OpeningAnImageClearsTheHistory()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
 
         viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
-        Assert.False(viewModel.CanUndo);
-        Assert.False(viewModel.CanRedo);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.False(viewModel.Editor.CanRedo);
     }
 
     [Fact]
@@ -177,109 +177,109 @@ public class UndoRedoTests : IDisposable
     {
         var project = SaveProject(OpenImage());
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
         viewModel.OpenProject(project);
 
-        Assert.False(viewModel.CanUndo);
-        Assert.False(viewModel.CanRedo);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.False(viewModel.Editor.CanRedo);
     }
 
     [Fact]
     public void SavingAndExportingKeepTheHistory()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
 
         viewModel.SaveImage(Path.Combine(_directory, "out.png"));
         SaveProject(viewModel);
         viewModel.ExportXml(Path.Combine(_directory, "out.xml"));
 
-        Assert.True(viewModel.CanRedo);
+        Assert.True(viewModel.Editor.CanRedo);
     }
 
     [Fact]
     public void UndoingEveryEditClearsTheEdits()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        Assert.True(viewModel.HasEdits);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        Assert.True(viewModel.Editor.HasEdits);
 
-        viewModel.Undo();
+        viewModel.Editor.Undo();
 
-        Assert.False(viewModel.HasEdits);
+        Assert.False(viewModel.Editor.HasEdits);
 
-        viewModel.Redo();
+        viewModel.Editor.Redo();
 
-        Assert.True(viewModel.HasEdits);
+        Assert.True(viewModel.Editor.HasEdits);
     }
 
     [Fact]
     public void ProjectOpenedWithEditsStaysEditedAfterUndoingEveryStep()
     {
         var edited = OpenImage();
-        edited.HandleCanvasClick(1, 1, addToSelection: false);
-        edited.IsMoveToolActive = true;
-        edited.BeginMoveDrag(1, 1);
-        edited.UpdateMoveDrag(1 + edited.TileWidth, 1);
-        edited.CommitMoveDrag();
+        edited.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        edited.Editor.IsMoveToolActive = true;
+        edited.Editor.BeginMoveDrag(1, 1);
+        edited.Editor.UpdateMoveDrag(1 + edited.Editor.TileWidth, 1);
+        edited.Editor.CommitMoveDrag();
         var viewModel = new MainViewModel();
         viewModel.OpenProject(SaveProject(edited));
-        viewModel.HandleCanvasClick(17, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
 
-        viewModel.Undo();
+        viewModel.Editor.Undo();
 
-        Assert.False(viewModel.CanUndo);
-        Assert.True(viewModel.HasEdits);
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.True(viewModel.Editor.HasEdits);
     }
 
     [Fact]
     public void ChangingTheTileSizeAfterUndoDiscardsTheRedoSteps()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.Undo();
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.Undo();
 
-        viewModel.ChangeTileSize(32, 16);
+        viewModel.Editor.ChangeTileSize(32, 16);
 
-        Assert.False(viewModel.CanRedo);
+        Assert.False(viewModel.Editor.CanRedo);
     }
 
     [Fact]
     public void UndoAndRedoAreIgnoredWhileADragIsInProgress()
     {
         var viewModel = OpenImage();
-        viewModel.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.DeleteSelectedTiles();
-        viewModel.HandleCanvasClick(17, 1, addToSelection: false);
-        viewModel.IsMoveToolActive = true;
-        viewModel.BeginMoveDrag(17, 1);
+        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor.BeginMoveDrag(17, 1);
 
-        viewModel.Undo();
+        viewModel.Editor.Undo();
 
-        Assert.Equal(15, viewModel.Tiles.Count);
-        Assert.True(viewModel.CanUndo);
+        Assert.Equal(15, viewModel.Editor.Tiles.Count);
+        Assert.True(viewModel.Editor.CanUndo);
 
-        viewModel.EndMoveDrag();
-        viewModel.Undo();
-        viewModel.BeginSelectionDrag(1, 1, addToSelection: false);
+        viewModel.Editor.EndMoveDrag();
+        viewModel.Editor.Undo();
+        viewModel.Editor.BeginSelectionDrag(1, 1, addToSelection: false);
 
-        viewModel.Redo();
+        viewModel.Editor.Redo();
 
-        Assert.Equal(16, viewModel.Tiles.Count);
-        Assert.True(viewModel.CanRedo);
+        Assert.Equal(16, viewModel.Editor.Tiles.Count);
+        Assert.True(viewModel.Editor.CanRedo);
     }
 
     private static void SelectRow(MainViewModel viewModel, int row)
     {
         for (var x = 0; x < 4; x++)
-            viewModel.HandleCanvasClick(x * 16 + 1, row * 16 + 1, addToSelection: true);
+            viewModel.Editor.HandleCanvasClick(x * 16 + 1, row * 16 + 1, addToSelection: true);
     }
 
     private static void SelectAll(MainViewModel viewModel)
@@ -287,7 +287,7 @@ public class UndoRedoTests : IDisposable
         for (var y = 0; y < 4; y++)
         {
             for (var x = 0; x < 4; x++)
-                viewModel.HandleCanvasClick(x * 16 + 1, y * 16 + 1, addToSelection: true);
+                viewModel.Editor.HandleCanvasClick(x * 16 + 1, y * 16 + 1, addToSelection: true);
         }
     }
 

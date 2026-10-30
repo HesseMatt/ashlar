@@ -15,10 +15,10 @@ public class PipetteToolTests : IDisposable
     public void PickingIsIgnoredUnlessThePipetteToolIsActive()
     {
         var viewModel = OpenImage();
-        viewModel.IsPipetteToolActive = false;
+        viewModel.Editor.IsPipetteToolActive = false;
 
-        Assert.False(viewModel.PickColor(1, 1));
-        Assert.Equal(Colors.Black, viewModel.DrawColor);
+        Assert.False(viewModel.Editor.PickColor(1, 1));
+        Assert.Equal(Colors.Black, viewModel.Editor.DrawColor);
     }
 
     [AvaloniaFact]
@@ -26,9 +26,9 @@ public class PipetteToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        Assert.True(viewModel.PickColor(1, 1));
+        Assert.True(viewModel.Editor.PickColor(1, 1));
 
-        Assert.Equal(Color.FromArgb(128, 10, 20, 30), viewModel.DrawColor);
+        Assert.Equal(Color.FromArgb(128, 10, 20, 30), viewModel.Editor.DrawColor);
     }
 
     [AvaloniaFact]
@@ -36,9 +36,9 @@ public class PipetteToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.PickColor(40, 40);
+        viewModel.Editor.PickColor(40, 40);
 
-        Assert.Equal(0, viewModel.DrawColor.A);
+        Assert.Equal(0, viewModel.Editor.DrawColor.A);
     }
 
     [AvaloniaFact]
@@ -46,10 +46,10 @@ public class PipetteToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.PickColor(1, 1);
-        viewModel.PickColor(2, 2);
+        viewModel.Editor.PickColor(1, 1);
+        viewModel.Editor.PickColor(2, 2);
 
-        Assert.Equal(Color.FromArgb(255, 200, 100, 50), viewModel.DrawColor);
+        Assert.Equal(Color.FromArgb(255, 200, 100, 50), viewModel.Editor.DrawColor);
     }
 
     [AvaloniaTheory]
@@ -60,33 +60,33 @@ public class PipetteToolTests : IDisposable
     public void PositionsOutsideTheImageKeepTheLastPickedColor(int x, int y)
     {
         var viewModel = OpenImage();
-        viewModel.PickColor(1, 1);
+        viewModel.Editor.PickColor(1, 1);
 
-        Assert.False(viewModel.PickColor(x, y));
+        Assert.False(viewModel.Editor.PickColor(x, y));
 
-        Assert.Equal(Color.FromArgb(128, 10, 20, 30), viewModel.DrawColor);
+        Assert.Equal(Color.FromArgb(128, 10, 20, 30), viewModel.Editor.DrawColor);
     }
 
     [AvaloniaFact]
     public void PickingReadsInProgressEditsAndAddsNoUndoStep()
     {
         var viewModel = OpenImage();
-        viewModel.IsDrawToolActive = true;
-        viewModel.DrawColor = Color.FromArgb(255, 1, 2, 3);
-        viewModel.BeginStroke(40, 40);
-        viewModel.CommitStroke();
-        viewModel.IsPipetteToolActive = true;
-        var tileCount = viewModel.Tiles.Count;
+        viewModel.Editor.IsDrawToolActive = true;
+        viewModel.Editor.DrawColor = Color.FromArgb(255, 1, 2, 3);
+        viewModel.Editor.BeginStroke(40, 40);
+        viewModel.Editor.CommitStroke();
+        viewModel.Editor.IsPipetteToolActive = true;
+        var tileCount = viewModel.Editor.Tiles.Count;
 
-        viewModel.PickColor(40, 40);
+        viewModel.Editor.PickColor(40, 40);
 
-        Assert.Equal(Color.FromArgb(255, 1, 2, 3), viewModel.DrawColor);
-        Assert.Equal(tileCount, viewModel.Tiles.Count);
-        viewModel.Undo();
-        Assert.False(viewModel.CanUndo);
-        Assert.Equal(0, viewModel.Tiles.Count(t => t.X == 32 && t.Y == 32));
-        viewModel.PickColor(40, 40);
-        Assert.Equal(0, viewModel.DrawColor.A);
+        Assert.Equal(Color.FromArgb(255, 1, 2, 3), viewModel.Editor.DrawColor);
+        Assert.Equal(tileCount, viewModel.Editor.Tiles.Count);
+        viewModel.Editor.Undo();
+        Assert.False(viewModel.Editor.CanUndo);
+        Assert.Equal(0, viewModel.Editor.Tiles.Count(t => t.X == 32 && t.Y == 32));
+        viewModel.Editor.PickColor(40, 40);
+        Assert.Equal(0, viewModel.Editor.DrawColor.A);
     }
 
     [AvaloniaFact]
@@ -94,10 +94,10 @@ public class PipetteToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.PickColor(1, 1);
+        viewModel.Editor.PickColor(1, 1);
 
-        Assert.False(viewModel.HasEdits);
-        Assert.False(viewModel.CanUndo);
+        Assert.False(viewModel.Editor.HasEdits);
+        Assert.False(viewModel.Editor.CanUndo);
     }
 
     [AvaloniaFact]
@@ -105,22 +105,22 @@ public class PipetteToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.IsDrawToolActive = true;
-        Assert.False(viewModel.IsPipetteToolActive);
+        viewModel.Editor.IsDrawToolActive = true;
+        Assert.False(viewModel.Editor.IsPipetteToolActive);
 
-        viewModel.IsPipetteToolActive = true;
-        Assert.False(viewModel.IsDrawToolActive);
-        Assert.Equal(CanvasTool.Pipette, viewModel.ActiveTool);
+        viewModel.Editor.IsPipetteToolActive = true;
+        Assert.False(viewModel.Editor.IsDrawToolActive);
+        Assert.Equal(CanvasTool.Pipette, viewModel.Editor.ActiveTool);
 
-        viewModel.IsPipetteToolActive = false;
-        Assert.Equal(CanvasTool.Select, viewModel.ActiveTool);
+        viewModel.Editor.IsPipetteToolActive = false;
+        Assert.Equal(CanvasTool.Select, viewModel.Editor.ActiveTool);
     }
 
     private MainViewModel OpenImage()
     {
         var viewModel = new MainViewModel();
         viewModel.LoadTileset(WriteImage(), 16, 16);
-        viewModel.IsPipetteToolActive = true;
+        viewModel.Editor.IsPipetteToolActive = true;
         return viewModel;
     }
 
