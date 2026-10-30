@@ -4,10 +4,11 @@
 
 # Ashlar
 
-Lightweight, local desktop application for managing tilesets for game
-development. Ashlar detects the tile grid of a tileset image, lets you edit
-it, and exports the image together with a `TextureAtlas` XML file that
-describes every tile.
+Lightweight, local desktop application for managing tilesets and tile maps
+for game development. Ashlar detects the tile grid of a tileset image, lets
+you edit it, and exports the image together with a `TextureAtlas` XML file
+that describes every tile. Tiles can then be laid out on maps that export as
+an image and a `Tilemap` XML file.
 
 The name comes from masonry: an *ashlar* is a precisely cut, rectangular
 stone block laid in a regular grid, much like the tiles of a tileset.
@@ -16,10 +17,58 @@ stone block laid in a regular grid, much like the tiles of a tileset.
 
 ## Features
 
-### Import and export
+### Projects
 
-Import a tileset image and export the edited image together with an XML
-file describing every tile by name and position:
+A project is the working document. It holds any number of tilesets and maps
+and is saved as a single self-contained file (`*.ashlar`, embeds the images).
+The window has a **Tilesets** tab and a **Maps** tab. In the Tilesets tab, a
+list on the left lets you switch between, add, rename, and remove tilesets.
+
+- **File > New project** (Ctrl+N), **Open project...** (Ctrl+Shift+O),
+  **Save project** (Ctrl+S), **Save project as...** (Ctrl+Shift+S),
+  **Close project** (Ctrl+W)
+- **File > Open tileset...** (Ctrl+O) imports an image as a new tileset
+- Images are only ever imported to start a new tileset; the export files are
+  outputs and cannot be reopened.
+- Projects saved with the older `.ashlar.json` extension need to be renamed
+  to `.ashlar` to be opened.
+
+### Tileset editor
+
+Importing an image suggests a tile size, which you confirm or change. Tiles
+get stable names such as `dungeon_0001` that do not change when a tile moves.
+The tile size can be changed later via **Edit > Change tile size...**.
+
+- Rectangle select (Ctrl+R) and move (M) tools; moving shifts the selected
+  tiles by whole cells
+- Delete tiles (Del)
+- Draw (B) tool for painting single pixels with an RGBA color
+- Bucket (G) tool for filling an area with the draw color
+- Pipette (I) tool for picking the draw color from the image
+- Tile groups
+- Undo (Ctrl+Z) and redo (Ctrl+Y or Ctrl+Shift+Z)
+- Zoom (**View** menu: Zoom In, Zoom Out, Reset Zoom)
+
+### Map editor
+
+A map is a grid of tiles from exactly one tileset of the project. The tileset
+is chosen when the map is created and cannot be changed afterwards. In the
+Maps tab you can create, rename, delete, and resize maps from the list on the
+left. A tileset has to be added to the project before a map can be created.
+
+- Tile palette on the right showing every tile of the map's tileset
+- Draw tool paints the selected palette tile into cells
+- Rectangle select and move tools; moving shifts the selected cells
+- Delete (Del) clears the selected cells
+- Undo (Ctrl+Z) and redo (Ctrl+Y or Ctrl+Shift+Z)
+- Cells of a tile are cleared when that tile is deleted from its tileset
+
+### Export
+
+All exports are in the **File** menu.
+
+**Export XML...** (Ctrl+E on the Tilesets tab) writes the tileset
+metadata in the `TextureAtlas` format, with a texture path of your choice:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -33,23 +82,25 @@ file describing every tile by name and position:
 </TextureAtlas>
 ```
 
-### Editing
+**Save image...** writes the edited tileset image as a PNG.
 
-- Select, rectangle select, and move tools
-- Delete tiles
-- Draw tool for painting single pixels with an RGBA color
-- Pipette tool for picking the draw color from the image
-- Tile groups
-- Undo and redo
-- Zoom
+**Export map...** (Ctrl+E on the Maps tab) writes the selected map as a
+`Tilemap` XML file, a PNG image of the map, or both. The XML names the
+tileset's tile size and texture path and lists one map row per line. Each
+cell is the index of its tile in the tileset's tile list, zero-padded to the
+width of the largest index. Empty cells, and cells whose tile no longer
+exists, are written as `-1`:
 
-### Project files
-
-- Save and reopen a tileset as a self-contained project file
-  (`*.ashlar`, embeds the image) to resume editing later. Projects saved with the older `.ashlar.json`
-  extension need to be renamed to `.ashlar` to be opened.
-- Images are only ever imported to start a new tileset; the export XML is
-  an output and cannot be reopened.
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Tilemap>
+    <Tileset tileWidth="20" tileHeight="20">images/atlas</Tileset>
+    <Tiles>
+        00 01 02 -1
+        04 05 -1 07
+    </Tiles>
+</Tilemap>
+```
 
 ## Tech stack
 
