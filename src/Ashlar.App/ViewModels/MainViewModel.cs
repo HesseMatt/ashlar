@@ -37,11 +37,12 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveToolBar))]
+    [NotifyPropertyChangedFor(nameof(IsTilesetsTabActive))]
     private int _selectedTabIndex;
 
-    // The editor whose tool bar is shown; the window picks the tool bar view by its type.
     public bool IsTilesetsTabActive => SelectedTabIndex == TilesetsTabIndex;
 
+    // The editor whose tool bar is shown; the window picks the tool bar view by its type.
     public ViewModelBase ActiveToolBar => SelectedTabIndex == MapsTabIndex ? MapEditor : Editor;
 
     public bool IsProjectEmpty => IsProjectOpen && !Editor.HasImage;

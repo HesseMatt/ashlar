@@ -43,28 +43,23 @@
                 <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+W" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding Editor.CanUndo}" InputGesture="Ctrl+Z" />
-                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding Editor.CanRedo}" InputGesture="Ctrl+Y" />
+                <MenuItem Header="Undo" Click="OnUndoClick" InputGesture="Ctrl+Z"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.CanUndo" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Redo" Click="OnRedoClick" InputGesture="Ctrl+Y"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.CanRedo" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
                 <Separator />
-                <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick" IsEnabled="{Binding Editor.HasImage}" />
+                <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
                 <Separator />
-                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" IsEnabled="{Binding Editor.HasSelectedTiles}" InputGesture="Delete" />
+                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" InputGesture="Delete"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasSelectedTiles" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
                 <Separator />
-                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding Editor.IsRectangleToolActive}"
-                          IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+R" />
-                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding Editor.IsMoveToolActive}"
-                          IsEnabled="{Binding Editor.HasImage}" InputGesture="M" />
-                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding Editor.IsDrawToolActive}"
-                          IsEnabled="{Binding Editor.HasImage}" InputGesture="B" />
-                <MenuItem Header="Bucket" ToggleType="CheckBox" IsChecked="{Binding Editor.IsBucketToolActive}"
-                          IsEnabled="{Binding Editor.HasImage}" InputGesture="G" />
-                <MenuItem Header="Pipette" ToggleType="CheckBox" IsChecked="{Binding Editor.IsPipetteToolActive}"
-                          IsEnabled="{Binding Editor.HasImage}" InputGesture="I" />
+                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding Editor.IsRectangleToolActive}" InputGesture="Ctrl+R"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding Editor.IsMoveToolActive}" InputGesture="M"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding Editor.IsDrawToolActive}" InputGesture="B"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Bucket" ToggleType="CheckBox" IsChecked="{Binding Editor.IsBucketToolActive}" InputGesture="G"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Pipette" ToggleType="CheckBox" IsChecked="{Binding Editor.IsPipetteToolActive}" InputGesture="I"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="Zoom In" Click="OnZoomInClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+OemPlus" />
-                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+OemMinus" />
-                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+D0" />
+                <MenuItem Header="Zoom In" Click="OnZoomInClick" InputGesture="Ctrl+OemPlus"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" InputGesture="Ctrl+OemMinus"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" InputGesture="Ctrl+D0"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
             </MenuItem>
         </Menu>
 

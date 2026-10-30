@@ -3,6 +3,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
@@ -94,6 +95,34 @@ public class EditorTabsTests : IDisposable
         _window.KeyPressQwerty(PhysicalKey.Delete, RawInputModifiers.None);
 
         Assert.True(_viewModel.Editor.HasSelectedTiles);
+    }
+
+    [AvaloniaFact]
+    public void EditAndViewMenuItemsAreEnabledOnlyOnTheTilesetsTab()
+    {
+        _viewModel.LoadTileset(_imagePath, 16, 16);
+        _viewModel.Editor.HandleCanvasClick(5, 5, addToSelection: false);
+        _viewModel.Editor.DeleteSelectedTiles();
+        _viewModel.Editor.HandleCanvasClick(20, 5, addToSelection: false);
+        var headers = new[]
+        {
+            "Undo", "Change tile size...", "Delete", "Rectangle selection", "Move", "Draw", "Bucket", "Pipette",
+            "Zoom In", "Zoom Out", "Reset Zoom",
+        };
+        var items = _window.GetLogicalDescendants().OfType<MenuItem>()
+            .Where(m => m.Header is string header && headers.Contains(header))
+            .DistinctBy(m => m.Header)
+            .ToList();
+        Assert.Equal(headers.Length, items.Count);
+        Assert.All(items, item => Assert.True(item.IsEnabled, (string)item.Header!));
+
+        _viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+
+        Assert.All(items, item => Assert.False(item.IsEnabled, (string)item.Header!));
+
+        _viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+
+        Assert.All(items, item => Assert.True(item.IsEnabled, (string)item.Header!));
     }
 
     private static string CreateSampleImage()
