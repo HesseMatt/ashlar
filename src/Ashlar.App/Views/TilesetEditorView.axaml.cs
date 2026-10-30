@@ -6,14 +6,14 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using Ashlar.App.Controls;
 using Ashlar.App.ViewModels;
 
 namespace Ashlar.App.Views;
 
 public partial class TilesetEditorView : UserControl
 {
-    private Point? _panStartViewportPosition;
-    private Vector _panStartOffset;
+    private readonly CanvasViewport _viewport;
     private Point? _rectangleDragOrigin;
     private (int X, int Y) _rectangleDragStartPixel;
     private bool _rectangleDragAddsToSelection;
@@ -37,6 +37,7 @@ public partial class TilesetEditorView : UserControl
     public TilesetEditorView()
     {
         InitializeComponent();
+        _viewport = new CanvasViewport(TileCanvasScrollViewer, TileCanvasPadding, TileCanvasContent);
 
         TileCanvasScrollViewer.PropertyChanged += OnScrollViewerPropertyChanged;
         DataContextChanged += OnDataContextChanged;
@@ -96,35 +97,23 @@ public partial class TilesetEditorView : UserControl
         TileOverlay.VisibleArea = topLeft is { } start && bottomRight is { } end ? new Rect(start, end) : null;
     }
 
-    // Lets the view be panned past the tileset's edges, but never so far that the
-    // tileset leaves the viewport: at maximum pan, exactly one tile row/column
-    // stays visible at the opposite edge. Only applies on an axis where the
-    // zoomed tileset overflows the viewport; otherwise it stays centered.
     private void UpdateOverscrollPadding()
     {
         if (DataContext is not TilesetEditorViewModel editor || !editor.HasImage)
             return;
 
-        var viewport = TileCanvasScrollViewer.Viewport;
-        var horizontal = OverscrollPadding(viewport.Width, editor.ScaledImageWidth, editor.TileWidth * editor.ZoomLevel);
-        var vertical = OverscrollPadding(viewport.Height, editor.ScaledImageHeight, editor.TileHeight * editor.ZoomLevel);
-        TileCanvasPadding.Padding = new Thickness(horizontal, vertical);
+        _viewport.UpdateOverscrollPadding(editor.ScaledImageWidth, editor.ScaledImageHeight,
+            editor.TileWidth * editor.ZoomLevel, editor.TileHeight * editor.ZoomLevel);
     }
 
-    // Scrolls so the tileset's top-left corner sits at the viewport's top-left
-    // corner, which is where the overscroll padding ends. An axis that fits into
-    // the viewport has no padding and no scroll range, so it stays centered.
     private void ScrollToTilesetStart()
     {
-        UpdateOverscrollPadding();
-        TileCanvasScrollViewer.GetLayoutManager()?.ExecuteLayoutPass();
+        if (DataContext is not TilesetEditorViewModel editor)
+            return;
 
-        var padding = TileCanvasPadding.Padding;
-        TileCanvasScrollViewer.Offset = ClampOffset(new Vector(padding.Left, padding.Top));
+        _viewport.ScrollToStart(editor.ScaledImageWidth, editor.ScaledImageHeight,
+            editor.TileWidth * editor.ZoomLevel, editor.TileHeight * editor.ZoomLevel);
     }
-
-    private static double OverscrollPadding(double viewportSize, double scaledImageSize, double scaledTileSize) =>
-        scaledImageSize > viewportSize ? Math.Max(0, viewportSize - scaledTileSize) : 0;
 
     // Handles the editing shortcuts.
     public void HandleKeyDown(KeyEventArgs e)
@@ -213,10 +202,7 @@ public partial class TilesetEditorView : UserControl
 
         if (e.GetCurrentPoint(canvas).Properties.IsRightButtonPressed)
         {
-            _panStartViewportPosition = e.GetPosition(TileCanvasScrollViewer);
-            _panStartOffset = TileCanvasScrollViewer.Offset;
-            e.Pointer.Capture(canvas);
-            e.Handled = true;
+            _viewport.BeginPan(e, canvas);
             return;
         }
 
@@ -375,11 +361,7 @@ public partial class TilesetEditorView : UserControl
             return;
         }
 
-        if (_panStartViewportPosition is not { } startPosition)
-            return;
-
-        var currentPosition = e.GetPosition(TileCanvasScrollViewer);
-        TileCanvasScrollViewer.Offset = ClampOffset(_panStartOffset + (startPosition - currentPosition));
+        _viewport.Pan(e);
     }
 
     private void OnTileCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -416,11 +398,8 @@ public partial class TilesetEditorView : UserControl
             return;
         }
 
-        if (_panStartViewportPosition is null)
-            return;
-
-        _panStartViewportPosition = null;
-        e.Pointer.Capture(null);
+        if (_viewport.IsPanning)
+            _viewport.EndPan(e.Pointer);
     }
 
     private void OnTileCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
@@ -445,7 +424,7 @@ public partial class TilesetEditorView : UserControl
         _rectangleDragOrigin = null;
         _isRectangleDragging = false;
         _rectangleDragPointer = null;
-        _panStartViewportPosition = null;
+        _viewport.CancelPan();
     }
 
     private void OnTileCanvasPointerWheelChanged(object? sender, PointerWheelEventArgs e)
@@ -457,7 +436,7 @@ public partial class TilesetEditorView : UserControl
 
         var anchorPosition = e.GetPosition(TileCanvasScrollViewer);
         var zoomIn = e.Delta.Y > 0;
-        AnchoredZoom(anchorPosition, () =>
+        _viewport.AnchoredZoom(anchorPosition, () =>
         {
             if (zoomIn) editor.ZoomIn(); else editor.ZoomOut();
         });
@@ -468,7 +447,7 @@ public partial class TilesetEditorView : UserControl
         if (DataContext is not TilesetEditorViewModel editor)
             return;
 
-        AnchoredZoom(ViewportCenter(), () => editor.ZoomIn());
+        _viewport.AnchoredZoom(_viewport.ViewportCenter(), () => editor.ZoomIn());
     }
 
     public void ZoomOut()
@@ -476,7 +455,7 @@ public partial class TilesetEditorView : UserControl
         if (DataContext is not TilesetEditorViewModel editor)
             return;
 
-        AnchoredZoom(ViewportCenter(), () => editor.ZoomOut());
+        _viewport.AnchoredZoom(_viewport.ViewportCenter(), () => editor.ZoomOut());
     }
 
     public void ResetZoom()
@@ -486,41 +465,6 @@ public partial class TilesetEditorView : UserControl
 
         editor.ResetZoom();
         ScrollToTilesetStart();
-    }
-
-    private Point ViewportCenter() =>
-        new(TileCanvasScrollViewer.Viewport.Width / 2, TileCanvasScrollViewer.Viewport.Height / 2);
-
-    // Keeps the image pixel under anchorViewportPosition at that same screen
-    // position across a zoom change. This goes through Avalonia's own
-    // coordinate-transform APIs (TranslatePoint) rather than reconstructing
-    // the Offset/RenderTransform math by hand, because the canvas is
-    // center-aligned by the ScrollViewer whenever it's smaller than the
-    // viewport (i.e. at low zoom) - a hand-rolled "offset + position" formula
-    // silently ignores that alignment and anchors to the wrong image pixel.
-    private void AnchoredZoom(Point anchorViewportPosition, Action applyZoomChange)
-    {
-        var imagePoint = TileCanvasScrollViewer.TranslatePoint(anchorViewportPosition, TileCanvasContent);
-
-        applyZoomChange();
-        TileCanvasScrollViewer.GetLayoutManager()?.ExecuteLayoutPass();
-
-        if (imagePoint is not { } anchorImagePoint)
-            return;
-
-        var renderedAt = TileCanvasContent.TranslatePoint(anchorImagePoint, TileCanvasScrollViewer);
-        if (renderedAt is not { } actualPosition)
-            return;
-
-        var drift = anchorViewportPosition - actualPosition;
-        TileCanvasScrollViewer.Offset = ClampOffset(TileCanvasScrollViewer.Offset - drift);
-    }
-
-    private Vector ClampOffset(Vector offset)
-    {
-        var maxX = Math.Max(0, TileCanvasScrollViewer.Extent.Width - TileCanvasScrollViewer.Viewport.Width);
-        var maxY = Math.Max(0, TileCanvasScrollViewer.Extent.Height - TileCanvasScrollViewer.Viewport.Height);
-        return new Vector(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
     }
 
     private void OnGroupNameInputKeyDown(object? sender, KeyEventArgs e)
