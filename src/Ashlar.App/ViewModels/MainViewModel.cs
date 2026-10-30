@@ -42,6 +42,12 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsTilesetsTabActive))]
     private int _selectedTabIndex;
 
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        if (value == MapsTabIndex)
+            MapEditor.RefreshTileset();
+    }
+
     public bool IsTilesetsTabActive => SelectedTabIndex == TilesetsTabIndex;
 
     // The editor whose tool bar is shown; the window picks the tool bar view by its type.
@@ -54,7 +60,7 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel()
     {
-        MapEditor = new MapEditorViewModel(TilesetNames);
+        MapEditor = new MapEditorViewModel(TilesetNames, FindTileset);
         Editor.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TilesetEditorViewModel.HasImage))
@@ -142,8 +148,9 @@ public partial class MainViewModel : ViewModelBase
 
         var oldName = TilesetNames[_selectedIndex];
         _tilesets[_selectedIndex] = _tilesets[_selectedIndex] with { Name = newName };
-        MapEditor.RenameTileset(oldName, newName);
+        // The names are updated first so the maps can find their renamed tileset.
         TilesetNames[_selectedIndex] = newName;
+        MapEditor.RenameTileset(oldName, newName);
         SelectedTilesetName = newName;
         Editor.HasUnsavedChanges = true;
         ReportStatus($"Renamed the tileset to '{newName}'.");
@@ -159,6 +166,8 @@ public partial class MainViewModel : ViewModelBase
         var removedIndex = _selectedIndex;
         _tilesets.RemoveAt(removedIndex);
         TilesetNames.RemoveAt(removedIndex);
+        // The editor still holds the removed tileset; maps must not look it up as the live one.
+        _selectedIndex = -1;
         MapEditor.DeleteMapsUsing(removedName);
 
         if (_tilesets.Count == 0)
@@ -319,6 +328,16 @@ public partial class MainViewModel : ViewModelBase
     {
         if (_selectedIndex >= 0)
             _tilesets[_selectedIndex] = CreateSnapshot(_tilesets[_selectedIndex].Name);
+    }
+
+    // The selected tileset is edited live, so its list entry can be stale.
+    private ProjectTileset? FindTileset(string name)
+    {
+        var index = TilesetNames.IndexOf(name);
+        if (index < 0)
+            return null;
+
+        return index == _selectedIndex ? CreateSnapshot(name) : _tilesets[index];
     }
 
     private ProjectTileset CreateSnapshot(string name)

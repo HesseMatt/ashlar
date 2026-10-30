@@ -160,8 +160,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
 
     public double ScaledImageHeight => ImageHeight * ZoomLevel;
 
-    public BitmapInterpolationMode PreviewInterpolation =>
-        ZoomLevel >= CrispPixelsZoom ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality;
+    public BitmapInterpolationMode PreviewInterpolation => InterpolationAt(ZoomLevel);
 
     public bool ShowPixelGrid => ZoomLevel >= PixelGridZoom;
 
@@ -305,12 +304,19 @@ public partial class TilesetEditorViewModel : ViewModelBase
         ZoomLevel = 1.0;
     }
 
-    public double ZoomIn() => ZoomLevel = Math.Clamp(ZoomLevel + CurrentZoomStep(), MinZoom, MaxZoom);
+    public double ZoomIn() => ZoomLevel = NextZoomIn(ZoomLevel);
 
-    public double ZoomOut() => ZoomLevel = Math.Clamp(ZoomLevel - CurrentZoomStep(), MinZoom, MaxZoom);
+    public double ZoomOut() => ZoomLevel = NextZoomOut(ZoomLevel);
+
+    public static double NextZoomIn(double zoomLevel) => Math.Clamp(zoomLevel + ZoomStepAt(zoomLevel), MinZoom, MaxZoom);
+
+    public static double NextZoomOut(double zoomLevel) => Math.Clamp(zoomLevel - ZoomStepAt(zoomLevel), MinZoom, MaxZoom);
 
     // A fixed step would take dozens of clicks to get from 100% to 3200%.
-    private double CurrentZoomStep() => ZoomStep * Math.Max(1.0, ZoomLevel);
+    private static double ZoomStepAt(double zoomLevel) => ZoomStep * Math.Max(1.0, zoomLevel);
+
+    public static BitmapInterpolationMode InterpolationAt(double zoomLevel) =>
+        zoomLevel >= CrispPixelsZoom ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality;
 
     public void ResetZoom() => ZoomLevel = 1.0;
 

@@ -36,4 +36,14 @@ public class TileMap
         get => Cells[y * Width + x];
         set => Cells[y * Width + x] = value;
     }
+
+    // The source region of every cell, row-major. Cells that are empty or whose
+    // tile no longer exists in the tileset resolve to null.
+    public TileRegion?[] ResolveRegions(IEnumerable<TileRegion> tiles)
+    {
+        var regionsByName = tiles.ToDictionary(tile => tile.Name);
+        return Cells
+            .Select(name => name is not null && regionsByName.TryGetValue(name, out var region) ? region : null)
+            .ToArray();
+    }
 }

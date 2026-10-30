@@ -37,4 +37,27 @@ public class TileMapTests
         Assert.Equal("t_0001", map.Cells[5]);
         Assert.Null(map[1, 1]);
     }
+
+    [Fact]
+    public void ResolveRegions_MapsCellsToTheirTilesRegions()
+    {
+        var floor = new TileRegion("t_0001", 0, 0, 16, 16);
+        var wall = new TileRegion("t_0002", 16, 0, 16, 16);
+        var map = new TileMap("m", "t", 2, 2, ["t_0002", null, "t_0001", "t_0002"]);
+
+        var regions = map.ResolveRegions([floor, wall]);
+
+        Assert.Equal(new TileRegion?[] { wall, null, floor, wall }, regions);
+    }
+
+    [Fact]
+    public void ResolveRegions_TreatsCellsWithADeletedTileAsEmpty()
+    {
+        var floor = new TileRegion("t_0001", 0, 0, 16, 16);
+        var map = new TileMap("m", "t", 2, 1, ["t_0001", "t_0002"]);
+
+        var regions = map.ResolveRegions([floor]);
+
+        Assert.Equal(new TileRegion?[] { floor, null }, regions);
+    }
 }

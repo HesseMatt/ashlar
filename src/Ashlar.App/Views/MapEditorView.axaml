@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ashlar.App.ViewModels"
+             xmlns:controls="using:Ashlar.App.Controls"
              xmlns:model="using:Ashlar.Core.Model"
              x:Class="Ashlar.App.Views.MapEditorView"
              x:DataType="vm:MapEditorViewModel">
@@ -29,16 +30,68 @@
             </DockPanel>
         </Border>
 
+        <Border Classes="panel" DockPanel.Dock="Right" Width="220" Margin="0,6,6,6" ClipToBounds="True"
+                IsVisible="{Binding HasSelectedMap}">
+            <DockPanel>
+                <Border Classes="panelHeader" DockPanel.Dock="Top">
+                    <TextBlock Classes="panelHeaderText" Text="PALETTE" />
+                </Border>
+                <TextBlock Name="SelectedTileText" DockPanel.Dock="Bottom" Classes="secondary" Margin="8"
+                           Text="{Binding SelectedPaletteTile.Name, FallbackValue='No tile selected'}" />
+                <ListBox Name="PaletteList" ItemsSource="{Binding PaletteTiles}" SelectedItem="{Binding SelectedPaletteTile}"
+                         Margin="4" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PaletteTile">
+                            <controls:TileThumbnail Width="40" Height="40" Region="{Binding Region}" Image="{Binding Image}"
+                                                    RenderOptions.BitmapInterpolationMode="None"
+                                                    ToolTip.Tip="{Binding Name}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
         <Border Classes="canvas" Margin="6">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-                <StackPanel Name="MapInfoPanel" Spacing="6" IsVisible="{Binding HasSelectedMap}">
-                    <TextBlock Name="MapTitleText" Text="{Binding SelectedMap.Name}" FontSize="18" HorizontalAlignment="Center" />
-                    <TextBlock Name="MapSizeText" Classes="secondary" Text="{Binding SelectedMapSizeText}" HorizontalAlignment="Center" />
-                    <TextBlock Name="MapTilesetText" Classes="secondary" Text="{Binding SelectedMapTilesetText}" HorizontalAlignment="Center" />
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="8,4" IsVisible="{Binding HasSelectedMap}">
+                    <TextBlock Name="MapTitleText" Text="{Binding SelectedMap.Name}" FontWeight="SemiBold" />
+                    <TextBlock Name="MapSizeText" Classes="secondary" Text="{Binding SelectedMapSizeText}" />
+                    <TextBlock Name="MapTilesetText" Classes="secondary" Text="{Binding SelectedMapTilesetText}" />
                 </StackPanel>
-                <TextBlock Name="NoMapText" Text="No map selected" FontSize="18" HorizontalAlignment="Center"
+                <TextBlock Name="NoMapText" Text="No map selected" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"
                            IsVisible="{Binding !HasSelectedMap}" />
-            </StackPanel>
+                <ScrollViewer x:Name="MapCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding HasSelectedMap}">
+                    <!-- Same structure as the tileset canvas: the padding is the overscroll margin and
+                         is set from code; Left/Top alignment keeps the scaled content anchored to the wrapper. -->
+                    <Border x:Name="MapCanvasPadding" Background="Transparent"
+                            PointerPressed="OnMapCanvasPointerPressed" PointerMoved="OnMapCanvasPointerMoved"
+                            PointerReleased="OnMapCanvasPointerReleased" PointerCaptureLost="OnMapCanvasPointerCaptureLost"
+                            PointerWheelChanged="OnMapCanvasPointerWheelChanged">
+                        <Panel Width="{Binding ScaledMapWidth}" Height="{Binding ScaledMapHeight}">
+                            <Panel x:Name="MapCanvasContent" Width="{Binding MapPixelWidth}" Height="{Binding MapPixelHeight}"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0,0">
+                                <Panel.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
+                                </Panel.RenderTransform>
+                                <controls:TransparencyCheckerboard ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
+                                                                   TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
+                                <controls:TileMapCanvas x:Name="MapCells" Image="{Binding TilesetImage}" CellRegions="{Binding CellRegions}"
+                                                        MapWidth="{Binding SelectedMap.Width, FallbackValue=0}"
+                                                        TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
+                                <controls:TileGridOverlay x:Name="MapGrid" ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
+                                                          TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
+                                                          ZoomLevel="{Binding ZoomLevel}" />
+                            </Panel>
+                        </Panel>
+                    </Border>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
     </DockPanel>
 
