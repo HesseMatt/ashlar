@@ -205,6 +205,17 @@ public partial class TilesetEditorViewModel : ViewModelBase
         _ => $"{SelectedTiles.Count} tiles selected",
     };
 
+    // Raised with the names of tiles that no longer exist after an edit, so maps can drop their references.
+    public event EventHandler<IReadOnlySet<string>>? TilesDeleted;
+
+    private void RaiseTilesDeleted(IEnumerable<TileRegion> tilesBefore)
+    {
+        var remaining = Tiles.Select(t => t.Name).ToHashSet();
+        var deleted = tilesBefore.Select(t => t.Name).Where(name => !remaining.Contains(name)).ToHashSet();
+        if (deleted.Count > 0)
+            TilesDeleted?.Invoke(this, deleted);
+    }
+
     public string? SourceFileName => _sourceFileName;
 
     public EditableTilesetImage? Image => _editableImage;
@@ -227,9 +238,12 @@ public partial class TilesetEditorViewModel : ViewModelBase
         if (_editableImage is null || !IsDifferentTileSize(tileWidth, tileHeight))
             return;
 
+        var tilesBefore = Tiles.ToList();
         TileWidth = tileWidth;
         TileHeight = tileHeight;
         RebuildGrid();
+        // The new grid reuses the sequential names for different regions, so no old reference stays valid.
+        TilesDeleted?.Invoke(this, tilesBefore.Select(t => t.Name).ToHashSet());
         HasUnsavedChanges = true;
         StatusMessage = $"Changed the tile size to {TileSizeText} ({Tiles.Count} tiles).";
     }
@@ -392,6 +406,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
         SelectedTiles = Array.Empty<TileRegion>();
         RefreshPreviewBitmap(deletedTiles);
         RefreshGroupNames();
+        RaiseTilesDeleted(deletedTiles);
         RecordEdit($"Delete {deletedTiles.Count} {(deletedTiles.Count == 1 ? "tile" : "tiles")}", before, selectionBefore);
 
         StatusMessage = deletedTiles.Count == 1
@@ -435,6 +450,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
         var movingCount = SelectedTiles.Count;
         var before = CaptureState();
         var selectionBefore = SelectedNames();
+        var tilesBefore = Tiles.ToList();
         var result = TileMover.Move(Tiles, SelectedTiles, offsetX, offsetY, ImageWidth, ImageHeight);
 
         _editableImage.MoveRegions(SelectedTiles, offsetX, offsetY);
@@ -442,6 +458,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
         SelectedTiles = result.Moved;
         RefreshPreviewBitmap();
         RefreshGroupNames();
+        RaiseTilesDeleted(tilesBefore);
         RecordEdit($"Move {movingCount} {(movingCount == 1 ? "tile" : "tiles")}", before, selectionBefore);
 
         var deletedOutside = movingCount - result.Moved.Count;
@@ -703,8 +720,11 @@ public partial class TilesetEditorViewModel : ViewModelBase
         HasEdits = _startedWithEdits || _history.CanUndo;
     }
 
+    // Undo restores deleted tiles but never the map cells that were cleared for them
+    // (accepted limitation). Redoing a deletion clears the cells again.
     private void Restore(TilesetState state, IReadOnlyList<string> selectedNames)
     {
+        var tilesBefore = Tiles.ToList();
         ReplaceImage(EditableTilesetImage.Load(state.ImagePng));
 
         // Same guard as in ConfirmGroupNameInput: restoring the selection and
@@ -720,6 +740,8 @@ public partial class TilesetEditorViewModel : ViewModelBase
         {
             _isConfirmingGroupNameInput = false;
         }
+
+        RaiseTilesDeleted(tilesBefore);
     }
 
     private void SelectTileAt(int pixelX, int pixelY, bool addToSelection)
