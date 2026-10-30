@@ -24,7 +24,7 @@ public partial class MainWindow : Window
     {
         base.OnClosing(e);
 
-        if (_canCloseWindow || DataContext is not MainViewModel viewModel || !viewModel.Editor.HasImage || !viewModel.Editor.HasUnsavedChanges)
+        if (_canCloseWindow || DataContext is not MainViewModel viewModel || !viewModel.Editor.HasUnsavedChanges)
             return;
 
         e.Cancel = true;
@@ -39,7 +39,7 @@ public partial class MainWindow : Window
     // tileset. Saving counts as settling the question only if it succeeded.
     private async Task<bool> ConfirmDiscardingUnsavedChangesAsync(MainViewModel viewModel)
     {
-        if (!viewModel.Editor.HasImage || !viewModel.Editor.HasUnsavedChanges)
+        if (!viewModel.Editor.HasUnsavedChanges)
             return true;
 
         return await new UnsavedChangesDialog().ShowDialog<UnsavedChangesChoice>(this) switch
@@ -81,6 +81,12 @@ public partial class MainWindow : Window
             return;
 
         viewModel.LoadTileset(path, tileWidth, tileHeight);
+    }
+
+    private async void OnNewProjectClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && await ConfirmDiscardingUnsavedChangesAsync(viewModel))
+            viewModel.NewProject();
     }
 
     private async void OnCloseProjectClick(object? sender, RoutedEventArgs e)
@@ -174,6 +180,10 @@ public partial class MainWindow : Window
 
         switch (e.Key)
         {
+            case Key.N when ctrl:
+                e.Handled = true;
+                OnNewProjectClick(this, new RoutedEventArgs());
+                break;
             case Key.O when ctrl && shift:
                 e.Handled = true;
                 OnOpenProjectClick(this, new RoutedEventArgs());
@@ -182,7 +192,7 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnOpenTilesetClick(this, new RoutedEventArgs());
                 break;
-            case Key.W when ctrl && viewModel.Editor.HasImage:
+            case Key.W when ctrl && viewModel.IsProjectOpen:
                 e.Handled = true;
                 OnCloseProjectClick(this, new RoutedEventArgs());
                 break;
@@ -190,11 +200,11 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnExportXmlClick(this, new RoutedEventArgs());
                 break;
-            case Key.S when ctrl && shift && viewModel.Editor.HasImage:
+            case Key.S when ctrl && shift && viewModel.IsProjectOpen:
                 e.Handled = true;
                 OnSaveProjectAsClick(this, new RoutedEventArgs());
                 break;
-            case Key.S when ctrl && viewModel.Editor.HasImage:
+            case Key.S when ctrl && viewModel.IsProjectOpen:
                 e.Handled = true;
                 OnSaveProjectClick(this, new RoutedEventArgs());
                 break;

@@ -21,15 +21,16 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="Open tileset..." Click="OnOpenTilesetClick" InputGesture="Ctrl+O" />
+                <MenuItem Header="New project" Click="OnNewProjectClick" InputGesture="Ctrl+N" />
                 <MenuItem Header="Open project..." Click="OnOpenProjectClick" InputGesture="Ctrl+Shift+O" />
+                <MenuItem Header="Open tileset..." Click="OnOpenTilesetClick" InputGesture="Ctrl+O" />
                 <Separator />
                 <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+E" />
                 <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding Editor.HasImage}" />
-                <MenuItem Header="Save project" Click="OnSaveProjectClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+S" />
-                <MenuItem Header="Save project as..." Click="OnSaveProjectAsClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+Shift+S" />
+                <MenuItem Header="Save project" Click="OnSaveProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+S" />
+                <MenuItem Header="Save project as..." Click="OnSaveProjectAsClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+Shift+S" />
                 <Separator />
-                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+W" />
+                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+W" />
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding Editor.CanUndo}" InputGesture="Ctrl+Z" />
@@ -65,7 +66,15 @@
             </StackPanel>
         </Border>
 
-        <views:TilesetEditorView x:Name="EditorView" DataContext="{Binding Editor}" />
+        <Panel>
+            <views:TilesetEditorView x:Name="EditorView" DataContext="{Binding Editor}" />
+            <Border x:Name="EmptyProjectPanel" Classes="canvas" Margin="6" IsVisible="{Binding IsProjectEmpty}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                    <TextBlock Text="This project has no tileset yet" FontSize="18" HorizontalAlignment="Center" />
+                    <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Panel>
     </DockPanel>
 
 </Window>
