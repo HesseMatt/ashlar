@@ -24,6 +24,15 @@ public sealed class EditableTilesetImage : IDisposable
     // Unpremultiplied RGBA bytes, RowBytes apart. Only valid until the image is disposed.
     public ReadOnlySpan<byte> GetPixels() => _bitmap.GetPixelSpan();
 
+    // Fully transparent.
+    public static EditableTilesetImage CreateBlank(int width, int height)
+    {
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        var bitmap = new SKBitmap(info);
+        bitmap.GetPixelSpan().Clear();
+        return new EditableTilesetImage(bitmap);
+    }
+
     public static EditableTilesetImage Load(string filePath) => new(Decode(File.ReadAllBytes(filePath)));
 
     public static EditableTilesetImage Load(byte[] encodedImageBytes) => new(Decode(encodedImageBytes));
@@ -52,6 +61,19 @@ public sealed class EditableTilesetImage : IDisposable
         }
 
         return copy;
+    }
+
+    // Writes tightly packed RGBA bytes (as returned by CopyRegion) at the given position, which must lie inside the image.
+    public void PasteRegion(byte[] pixelBytes, int x, int y, int width, int height)
+    {
+        var pixels = _bitmap.GetPixelSpan();
+        var rowByteWidth = width * BytesPerPixel;
+
+        for (var row = 0; row < height; row++)
+        {
+            var targetRow = pixels.Slice((y + row) * _bitmap.RowBytes + x * BytesPerPixel, rowByteWidth);
+            pixelBytes.AsSpan(row * rowByteWidth, rowByteWidth).CopyTo(targetRow);
+        }
     }
 
     // Pixels are RGBA, so every fourth byte (starting at offset 3) is an alpha value.

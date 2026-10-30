@@ -34,8 +34,9 @@
                 <MenuItem Header="Open project..." Click="OnOpenProjectClick" InputGesture="Ctrl+Shift+O" />
                 <MenuItem Header="Open tileset..." Click="OnOpenTilesetClick" InputGesture="Ctrl+O" />
                 <Separator />
-                <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding Editor.HasImage}" InputGesture="Ctrl+E" />
-                <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding Editor.HasImage}" />
+                <MenuItem Header="Export XML..." Click="OnExportXmlClick" InputGesture="Ctrl+E"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Save image..." Click="OnSaveImageClick"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Export map..." Click="OnExportMapClick" InputGesture="Ctrl+E"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="!IsTilesetsTabActive" /><Binding Path="MapEditor.HasSelectedMap" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
                 <MenuItem Header="Save project" Click="OnSaveProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+S" />
                 <MenuItem Header="Save project as..." Click="OnSaveProjectAsClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+Shift+S" />
                 <Separator />

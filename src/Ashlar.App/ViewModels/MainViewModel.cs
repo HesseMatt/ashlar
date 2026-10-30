@@ -6,6 +6,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Ashlar.Core;
 using Ashlar.Core.Model;
+using Ashlar.Core.Rendering;
 using Ashlar.Core.Serialization;
 
 namespace Ashlar.App.ViewModels;
@@ -307,6 +308,45 @@ public partial class MainViewModel : ViewModelBase
             ReportStatus($"Could not export to '{Path.GetFileName(outputPath)}': {ex.Message}");
         }
     }
+
+    // Null when no map is selected or its tileset no longer exists.
+    public ExportMapDialogViewModel? CreateExportMapDialogViewModel()
+    {
+        if (MapEditor.SelectedMap is not { } map || FindTileset(map.TilesetName) is not { } tileset)
+            return null;
+
+        return new ExportMapDialogViewModel(map, ToTileset(tileset));
+    }
+
+    // Either path may be null to skip that file. The tileset is read live, so edits not yet saved to the project are included.
+    public void ExportMap(string? xmlPath, string? imagePath)
+    {
+        if (MapEditor.SelectedMap is not { } map || FindTileset(map.TilesetName) is not { } tileset)
+            return;
+
+        try
+        {
+            if (xmlPath is not null)
+                TilemapXmlWriter.Write(map, ToTileset(tileset), xmlPath);
+
+            if (imagePath is not null)
+            {
+                using var tilesetImage = EditableTilesetImage.Load(tileset.ImagePng);
+                using var mapImage = TileMapImageRenderer.Render(map, tileset.Tiles, tilesetImage, tileset.TileWidth, tileset.TileHeight);
+                mapImage.SaveAsPng(imagePath);
+            }
+
+            var fileNames = new[] { xmlPath, imagePath }.OfType<string>().Select(Path.GetFileName);
+            ReportStatus($"Exported map '{map.Name}' to {string.Join(" and ", fileNames)}.");
+        }
+        catch (Exception ex)
+        {
+            ReportStatus($"Could not export map '{map.Name}': {ex.Message}");
+        }
+    }
+
+    private static Tileset ToTileset(ProjectTileset tileset) =>
+        new(tileset.TexturePath, tileset.TileWidth, tileset.TileHeight, tileset.Tiles);
 
     public void SaveImage(string outputPath)
     {
