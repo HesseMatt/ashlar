@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Ashlar.App.ViewModels"
+        x:Class="Ashlar.App.Views.ExportMapDialog"
+        x:DataType="vm:ExportMapDialogViewModel"
+        Title="Export map"
+        Width="560" Height="420"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                    HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Name="OkButton" Content="OK" IsDefault="True" Click="OnOkClick" MinWidth="80"
+                    IsEnabled="{Binding CanExport}" />
+            <Button Name="CancelButton" Content="Cancel" IsCancel="True" Click="OnCancelClick" MinWidth="80" />
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top" Spacing="4">
+            <CheckBox Name="ExportXmlBox" Content="Tilemap XML" IsChecked="{Binding ExportXml, Mode=TwoWay}" />
+            <CheckBox Name="ExportImageBox" Content="Map image (PNG)" IsChecked="{Binding ExportImage, Mode=TwoWay}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4" Margin="0,12,0,0">
+            <TextBlock Classes="secondary" Text="XML preview" FontWeight="SemiBold" />
+            <TextBox Name="PreviewBox" Text="{Binding PreviewXml}" IsReadOnly="True" AcceptsReturn="True"
+                     FontFamily="Consolas,Menlo,DejaVu Sans Mono,monospace" Height="250"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+        </StackPanel>
+    </DockPanel>
+</Window>

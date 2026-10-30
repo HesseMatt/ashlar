@@ -198,6 +198,49 @@ public partial class MainWindow : Window
         viewModel.ExportXml(path);
     }
 
+    private async void OnExportMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel || viewModel.IsTilesetsTabActive)
+            return;
+
+        if (viewModel.CreateExportMapDialogViewModel() is not { } dialogViewModel)
+            return;
+
+        if (await new ExportMapDialog(dialogViewModel).ShowDialog<ExportMapDialogViewModel?>(this) is not { } choice)
+            return;
+
+        string? xmlPath = null;
+        if (choice.ExportXml)
+        {
+            xmlPath = await PickSavePathAsync("Export map XML", choice.MapName, "xml", new FilePickerFileType("XML file") { Patterns = ["*.xml"] });
+            if (xmlPath is null)
+                return;
+        }
+
+        string? imagePath = null;
+        if (choice.ExportImage)
+        {
+            imagePath = await PickSavePathAsync("Export map image", choice.MapName, "png", FilePickerFileTypes.ImagePng);
+            if (imagePath is null)
+                return;
+        }
+
+        viewModel.ExportMap(xmlPath, imagePath);
+    }
+
+    private async Task<string?> PickSavePathAsync(string title, string suggestedName, string extension, FilePickerFileType fileType)
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            DefaultExtension = extension,
+            FileTypeChoices = [fileType],
+        });
+
+        return file?.TryGetLocalPath();
+    }
+
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not MainViewModel viewModel)
@@ -227,6 +270,10 @@ public partial class MainWindow : Window
             case Key.E when ctrl && viewModel.Editor.HasImage && viewModel.IsTilesetsTabActive:
                 e.Handled = true;
                 OnExportXmlClick(this, new RoutedEventArgs());
+                break;
+            case Key.E when ctrl && viewModel.MapEditor.HasSelectedMap && !viewModel.IsTilesetsTabActive:
+                e.Handled = true;
+                OnExportMapClick(this, new RoutedEventArgs());
                 break;
             case Key.S when ctrl && shift && viewModel.IsProjectOpen:
                 e.Handled = true;
