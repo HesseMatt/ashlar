@@ -16,6 +16,7 @@ public partial class MapEditorView : UserControl
 {
     private readonly CanvasViewport _viewport;
     private bool _scrollToStartPending;
+    private string? _lastScrolledMapName;
     private MapEditorViewModel? _viewModel;
 
     public MapEditorView()
@@ -43,7 +44,8 @@ public partial class MapEditorView : UserControl
         UpdateInterpolation(viewModel);
         UpdateOverscrollPadding();
         // The tab content is created lazily, so a map selected before that was never scrolled to its start.
-        _scrollToStartPending = viewModel.HasSelectedMap;
+        // Coming back to the same map keeps the position the user panned to.
+        _scrollToStartPending = viewModel.HasSelectedMap && viewModel.SelectedMap?.Name != _lastScrolledMapName;
         ScrollToMapStartIfPending();
     }
 
@@ -120,6 +122,7 @@ public partial class MapEditorView : UserControl
         if (_scrollToStartPending)
             return;
 
+        _lastScrolledMapName = viewModel.SelectedMap?.Name;
         _viewport.ScrollToStart(viewModel.ScaledMapWidth, viewModel.ScaledMapHeight,
             viewModel.TileWidth * viewModel.ZoomLevel, viewModel.TileHeight * viewModel.ZoomLevel);
     }

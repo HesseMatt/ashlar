@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -167,6 +168,26 @@ public class MapCanvasTests : IDisposable
         var padding = view.FindControl<Border>("MapCanvasPadding")!.Padding;
         Assert.True(padding.Left > 0);
         Assert.Equal((padding.Left, padding.Top), (scroll.Offset.X, scroll.Offset.Y));
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void APannedMapKeepsItsOffsetAcrossATilesetsToMapsRoundTrip()
+    {
+        var viewModel = ProjectWithForestMap(width: 200, height: 200);
+        var window = OpenMapsTab(viewModel);
+        Dispatcher.UIThread.RunJobs();
+        var scroll = MapView(window).FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
+        scroll.Offset = new Vector(scroll.Offset.X + 500, scroll.Offset.Y + 400);
+        Dispatcher.UIThread.RunJobs();
+        var panned = scroll.Offset;
+
+        viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+        Dispatcher.UIThread.RunJobs();
+        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(panned, MapView(window).FindControl<ScrollViewer>("MapCanvasScrollViewer")!.Offset);
         window.Close();
     }
 
