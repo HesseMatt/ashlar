@@ -52,10 +52,13 @@ public partial class MainViewModel : ViewModelBase
 
     public void OpenProject(string filePath)
     {
-        TilesetProject project;
+        ProjectTileset tileset;
         try
         {
-            project = TilesetProjectFile.Load(filePath);
+            var project = ProjectFile.Load(filePath);
+            tileset = project.Tilesets.Count == 1
+                ? project.Tilesets[0]
+                : throw new InvalidDataException($"Expected exactly one tileset but found {project.Tilesets.Count}.");
         }
         catch (Exception ex)
         {
@@ -66,7 +69,7 @@ public partial class MainViewModel : ViewModelBase
         EditableTilesetImage image;
         try
         {
-            image = EditableTilesetImage.Load(project.ImagePng);
+            image = EditableTilesetImage.Load(tileset.ImagePng);
         }
         catch (Exception ex)
         {
@@ -74,9 +77,9 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        Editor.LoadProject(project, image);
+        Editor.LoadProject(tileset, image);
         ProjectPath = filePath;
-        TexturePath = project.TexturePath;
+        TexturePath = tileset.TexturePath;
         Editor.StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Editor.Tiles.Count} tiles).";
     }
 
@@ -131,12 +134,13 @@ public partial class MainViewModel : ViewModelBase
             return false;
 
         var drawColor = Editor.DrawColor;
-        var project = new TilesetProject(sourceFileName, image.EncodeToPng(), TexturePath, Editor.TileWidth, Editor.TileHeight, Editor.Tiles,
-            new PixelColor(drawColor.R, drawColor.G, drawColor.B, drawColor.A));
+        var tileset = new ProjectTileset(Path.GetFileNameWithoutExtension(sourceFileName), sourceFileName, image.EncodeToPng(), TexturePath,
+            Editor.TileWidth, Editor.TileHeight, Editor.Tiles, new PixelColor(drawColor.R, drawColor.G, drawColor.B, drawColor.A));
+        var project = new Project([tileset], []);
 
         try
         {
-            TilesetProjectFile.Save(project, outputPath);
+            ProjectFile.Save(project, outputPath);
             ProjectPath = outputPath;
             Editor.HasUnsavedChanges = false;
             Editor.StatusMessage = $"Saved project to {Path.GetFileName(outputPath)}.";
