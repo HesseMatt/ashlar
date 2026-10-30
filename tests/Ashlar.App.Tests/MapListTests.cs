@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
@@ -284,6 +285,101 @@ public class MapListTests : IDisposable
 
         Assert.True(dialog.IsValid);
         Assert.Equal(new NewMapSettings("fresh", 5, 15, "dungeon"), dialog.ToSettings());
+    }
+
+    [AvaloniaFact]
+    public void ResizingKeepsTheOverlapMarksTheProjectChangedAndKeepsTheSelectedMap()
+    {
+        var viewModel = TwoTilesets();
+        viewModel.MapEditor.CreateMap("level1", 3, 2, "forest");
+        var editor = viewModel.MapEditor;
+        editor.SelectedMap![2, 1] = "forest_0001";
+        editor.SelectedMap![0, 0] = "forest_0002";
+        editor.SelectedCells = [(0, 0), (2, 1)];
+        viewModel.Editor.HasUnsavedChanges = false;
+
+        editor.ResizeSelectedMap(5, 2);
+
+        var map = Assert.Single(editor.Maps);
+        Assert.Same(map, editor.SelectedMap);
+        Assert.Equal((5, 2), (map.Width, map.Height));
+        Assert.Equal("forest_0002", map[0, 0]);
+        Assert.Equal("forest_0001", map[2, 1]);
+        Assert.Equal(2, map.Cells.Count(cell => cell is not null));
+        Assert.Equal("5 x 2 cells", editor.SelectedMapSizeText);
+        Assert.Equal(10, editor.CellRegions.Length);
+        Assert.True(viewModel.Editor.HasUnsavedChanges);
+    }
+
+    [AvaloniaFact]
+    public void ShrinkingCropsTheMapAndDropsSelectedCellsOutsideIt()
+    {
+        var viewModel = TwoTilesets();
+        var editor = viewModel.MapEditor;
+        editor.CreateMap("level1", 3, 2, "forest");
+        editor.SelectedCells = [(0, 0), (2, 1)];
+
+        editor.ResizeSelectedMap(2, 2);
+
+        Assert.Equal((2, 2), (editor.SelectedMap!.Width, editor.SelectedMap.Height));
+        Assert.Equal([(0, 0)], editor.SelectedCells);
+    }
+
+    [AvaloniaFact]
+    public void OnlyTilesInTheCroppedAreaCountAsLost()
+    {
+        var viewModel = TwoTilesets();
+        var editor = viewModel.MapEditor;
+        editor.CreateMap("level1", 3, 2, "forest");
+        editor.SelectedMap![0, 0] = "forest_0001";
+
+        Assert.Equal(0, editor.CountTilesLostByResize(1, 1));
+        editor.SelectedMap![2, 0] = "forest_0001";
+        Assert.Equal(1, editor.CountTilesLostByResize(2, 2));
+    }
+
+    [AvaloniaFact]
+    public void ResizingToTheSameSizeDoesNotMarkTheProjectChanged()
+    {
+        var viewModel = TwoTilesets();
+        viewModel.MapEditor.CreateMap("level1", 3, 2, "forest");
+        viewModel.Editor.HasUnsavedChanges = false;
+
+        viewModel.MapEditor.ResizeSelectedMap(3, 2);
+
+        Assert.False(viewModel.Editor.HasUnsavedChanges);
+    }
+
+    [AvaloniaFact]
+    public void TheResizeDialogValidatesTheSize()
+    {
+        var dialog = new ResizeMapDialogViewModel(4, 3);
+        Assert.True(dialog.IsValid);
+
+        dialog.Width = 0;
+        Assert.False(dialog.IsValid);
+        dialog.Width = 5;
+        dialog.Height = CreateMapDialogViewModel.MaxMapSize + 1;
+        Assert.False(dialog.IsValid);
+        dialog.Height = 1;
+        Assert.True(dialog.IsValid);
+    }
+
+    [AvaloniaFact]
+    public async Task TheResizeDialogReturnsTheEnteredSizeAndCancelReturnsNothing()
+    {
+        var owner = new Window();
+        owner.Show();
+        var dialog = new ResizeMapDialog(new ResizeMapDialogViewModel(4, 3));
+        var result = dialog.ShowDialog<(int Width, int Height)?>(owner);
+        ((ResizeMapDialogViewModel)dialog.DataContext!).Width = 7;
+        dialog.FindControl<Button>("OkButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal((7, 3), await result);
+
+        var cancelled = new ResizeMapDialog(new ResizeMapDialogViewModel(4, 3));
+        var cancelResult = cancelled.ShowDialog<(int Width, int Height)?>(owner);
+        cancelled.FindControl<Button>("CancelButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Null(await cancelResult);
     }
 
     private MainViewModel TwoTilesets()
