@@ -19,4 +19,12 @@ public class ProjectTests
 
         Assert.Equal(2, project.Tilesets.Count);
     }
+
+    [Fact]
+    public void Constructor_RejectsDuplicateMapNames()
+    {
+        TileMap[] maps = [TileMap.CreateEmpty("m", "a", 1, 1), TileMap.CreateEmpty("m", "a", 2, 2)];
+
+        Assert.Throws<ArgumentException>(() => new Project([CreateTileset("a")], maps));
+    }
 }
