@@ -10,7 +10,7 @@ public class EditHistoryTests
     [Fact]
     public void NewHistoryCanNeitherUndoNorRedo()
     {
-        var history = new EditHistory();
+        var history = new EditHistory<EditStep>();
 
         Assert.False(history.CanUndo);
         Assert.False(history.CanRedo);
@@ -19,7 +19,7 @@ public class EditHistoryTests
     [Fact]
     public void UndoWalksBackThroughStepsInReverseOrder()
     {
-        var history = new EditHistory();
+        var history = new EditHistory<EditStep>();
         history.Record(Step("first"));
         history.Record(Step("second"));
 
@@ -31,7 +31,7 @@ public class EditHistoryTests
     [Fact]
     public void RedoReappliesUndoneStepsInOriginalOrder()
     {
-        var history = new EditHistory();
+        var history = new EditHistory<EditStep>();
         history.Record(Step("first"));
         history.Record(Step("second"));
         history.Undo();
@@ -45,7 +45,7 @@ public class EditHistoryTests
     [Fact]
     public void RecordingAfterUndoDiscardsTheUndoneSteps()
     {
-        var history = new EditHistory();
+        var history = new EditHistory<EditStep>();
         history.Record(Step("first"));
         history.Record(Step("second"));
         history.Undo();
@@ -60,7 +60,7 @@ public class EditHistoryTests
     [Fact]
     public void ClearRemovesAppliedAndUndoneSteps()
     {
-        var history = new EditHistory();
+        var history = new EditHistory<EditStep>();
         history.Record(Step("first"));
         history.Record(Step("second"));
         history.Undo();
@@ -74,15 +74,26 @@ public class EditHistoryTests
     [Fact]
     public void UndoWithoutStepsThrows()
     {
-        Assert.Throws<InvalidOperationException>(() => new EditHistory().Undo());
+        Assert.Throws<InvalidOperationException>(() => new EditHistory<EditStep>().Undo());
     }
 
     [Fact]
     public void RedoWithoutUndoneStepsThrows()
     {
-        var history = new EditHistory();
+        var history = new EditHistory<EditStep>();
         history.Record(Step("first"));
 
         Assert.Throws<InvalidOperationException>(() => history.Redo());
+    }
+
+    [Fact]
+    public void HistoryWorksWithAnyStepType()
+    {
+        var history = new EditHistory<string>();
+        history.Record("a");
+        history.Record("b");
+
+        Assert.Equal("b", history.Undo());
+        Assert.Equal("b", history.Redo());
     }
 }

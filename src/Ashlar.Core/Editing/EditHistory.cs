@@ -15,23 +15,24 @@ public record EditStep(
     IReadOnlyList<string> SelectionAfter);
 
 // Linear history: recording a new step drops every step that was undone.
-public class EditHistory
+// Generic so the tileset editor and the map editor can each record their own kind of step.
+public class EditHistory<TStep>
 {
-    private readonly List<EditStep> _steps = new();
+    private readonly List<TStep> _steps = new();
     private int _appliedCount;
 
     public bool CanUndo => _appliedCount > 0;
 
     public bool CanRedo => _appliedCount < _steps.Count;
 
-    public void Record(EditStep step)
+    public void Record(TStep step)
     {
         _steps.RemoveRange(_appliedCount, _steps.Count - _appliedCount);
         _steps.Add(step);
         _appliedCount++;
     }
 
-    public EditStep Undo()
+    public TStep Undo()
     {
         if (!CanUndo)
             throw new InvalidOperationException("There is no step to undo.");
@@ -40,7 +41,7 @@ public class EditHistory
         return _steps[_appliedCount];
     }
 
-    public EditStep Redo()
+    public TStep Redo()
     {
         if (!CanRedo)
             throw new InvalidOperationException("There is no step to redo.");

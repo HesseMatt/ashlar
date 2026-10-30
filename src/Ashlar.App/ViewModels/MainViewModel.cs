@@ -39,7 +39,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveToolBar))]
-    [NotifyPropertyChangedFor(nameof(IsTilesetsTabActive))]
+    [NotifyPropertyChangedFor(nameof(IsTilesetsTabActive), nameof(CanUndo), nameof(CanRedo))]
     private int _selectedTabIndex;
 
     partial void OnSelectedTabIndexChanged(int value)
@@ -53,6 +53,27 @@ public partial class MainViewModel : ViewModelBase
     // The editor whose tool bar is shown; the window picks the tool bar view by its type.
     public ViewModelBase ActiveToolBar => SelectedTabIndex == MapsTabIndex ? MapEditor : Editor;
 
+    // Undo and redo act on the editor of the active tab.
+    public bool CanUndo => IsTilesetsTabActive ? Editor.CanUndo : MapEditor.CanUndo;
+
+    public bool CanRedo => IsTilesetsTabActive ? Editor.CanRedo : MapEditor.CanRedo;
+
+    public void Undo()
+    {
+        if (IsTilesetsTabActive)
+            Editor.Undo();
+        else
+            MapEditor.Undo();
+    }
+
+    public void Redo()
+    {
+        if (IsTilesetsTabActive)
+            Editor.Redo();
+        else
+            MapEditor.Redo();
+    }
+
     public bool IsProjectEmpty => IsProjectOpen && !Editor.HasImage;
 
     private readonly List<ProjectTileset> _tilesets = new();
@@ -65,6 +86,17 @@ public partial class MainViewModel : ViewModelBase
         {
             if (e.PropertyName == nameof(TilesetEditorViewModel.HasImage))
                 OnPropertyChanged(nameof(IsProjectEmpty));
+            else if (e.PropertyName == nameof(TilesetEditorViewModel.CanUndo))
+                OnPropertyChanged(nameof(CanUndo));
+            else if (e.PropertyName == nameof(TilesetEditorViewModel.CanRedo))
+                OnPropertyChanged(nameof(CanRedo));
+        };
+        MapEditor.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MapEditorViewModel.CanUndo))
+                OnPropertyChanged(nameof(CanUndo));
+            else if (e.PropertyName == nameof(MapEditorViewModel.CanRedo))
+                OnPropertyChanged(nameof(CanRedo));
         };
         Editor.TilesDeleted += (_, names) =>
         {

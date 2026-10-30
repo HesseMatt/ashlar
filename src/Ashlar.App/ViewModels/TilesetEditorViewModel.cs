@@ -106,7 +106,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
     private SelectionDrag? _selectionDrag;
     private MoveDrag? _moveDrag;
     private DrawStroke? _drawStroke;
-    private readonly EditHistory _history = new();
+    private readonly EditHistory<EditStep> _history = new();
     private bool _startedWithEdits;
 
     private record SelectionDrag(int StartX, int StartY, IReadOnlyList<TileRegion> SelectionBefore, bool AddToSelection);

@@ -267,13 +267,13 @@ public partial class MainWindow : Window
     private void OnUndoClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.Editor.Undo();
+            viewModel.Undo();
     }
 
     private void OnRedoClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
-            viewModel.Editor.Redo();
+            viewModel.Redo();
     }
 
     private void OnDeleteSelectedTilesClick(object? sender, RoutedEventArgs e)

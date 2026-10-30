@@ -39,8 +39,9 @@ public partial class MapEditorViewModel : ViewModelBase
 
     partial void OnSelectedMapChanged(TileMap? value)
     {
-        _strokeCell = null;
+        EndStroke();
         RefreshTileset();
+        UpdateHistoryState();
         if (_isReplacingMap)
             return;
 
@@ -83,7 +84,7 @@ public partial class MapEditorViewModel : ViewModelBase
 
     partial void OnActiveToolChanged(CanvasTool value)
     {
-        _strokeCell = null;
+        EndStroke();
         EndSelectionDrag();
         EndMoveDrag();
     }
@@ -143,6 +144,30 @@ public partial class MapEditorViewModel : ViewModelBase
 
     // The cell the current draw stroke reached last; null while no stroke is in progress.
     private (int X, int Y)? _strokeCell;
+
+    private sealed class DrawStroke(TileMap map, MapState before)
+    {
+        public TileMap Map { get; } = map;
+
+        public MapState Before { get; } = before;
+
+        public bool PaintedAnything { get; set; }
+    }
+
+    private DrawStroke? _stroke;
+
+    // Every map has its own history, found by the map's name (names are unique in
+    // a project). Switching maps or tabs keeps it. The history of a map is dropped
+    // when the map is deleted or closed with the project, and when tiles are
+    // cleared from it because they were deleted from its tileset: those changes
+    // cannot be undone, so the older steps no longer describe the map's cells.
+    private readonly Dictionary<string, EditHistory<MapEditStep>> _histories = new();
+
+    [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ScaledMapWidth), nameof(ScaledMapHeight), nameof(PreviewInterpolation))]
@@ -222,6 +247,7 @@ public partial class MapEditorViewModel : ViewModelBase
             return false;
 
         _strokeCell = (cellX, cellY);
+        _stroke = new DrawStroke(SelectedMap, MapState.Capture(SelectedMap));
         Paint(cellX, cellY);
         return true;
     }
@@ -235,7 +261,15 @@ public partial class MapEditorViewModel : ViewModelBase
         Paint(last.X, last.Y, cellX, cellY);
     }
 
-    public void EndStroke() => _strokeCell = null;
+    // The whole stroke is one undo step.
+    public void EndStroke()
+    {
+        _strokeCell = null;
+        var stroke = _stroke;
+        _stroke = null;
+        if (stroke is { PaintedAnything: true })
+            RecordEdit(stroke.Map, "Draw", stroke.Before, SelectedCells);
+    }
 
     private void Paint(int fromX, int fromY) => Paint(fromX, fromY, fromX, fromY);
 
@@ -248,6 +282,7 @@ public partial class MapEditorViewModel : ViewModelBase
         if (changed.Count == 0)
             return;
 
+        _stroke!.PaintedAnything = true;
         foreach (var (x, y) in changed)
             CellRegions[y * map.Width + x] = tile.Region;
         CellsPainted?.Invoke(this, EventArgs.Empty);
@@ -321,6 +356,8 @@ public partial class MapEditorViewModel : ViewModelBase
         if (SelectedMap is not { } map || !HasSelectedCells || IsDragInProgress)
             return;
 
+        var before = MapState.Capture(map);
+        var selectionBefore = SelectedCells;
         var cleared = MapEraser.Clear(map, SelectedCells);
         SelectedCells = [];
         StatusMessage = $"Cleared {cleared.Count} {(cleared.Count == 1 ? "cell" : "cells")}.";
@@ -328,6 +365,7 @@ public partial class MapEditorViewModel : ViewModelBase
             return;
 
         RefreshCellRegions();
+        RecordEdit(map, $"Delete {cleared.Count} {(cleared.Count == 1 ? "cell" : "cells")}", before, selectionBefore);
         MapsChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -361,13 +399,15 @@ public partial class MapEditorViewModel : ViewModelBase
             return;
 
         var count = SelectedCells.Count;
-        var cellsBefore = map.Cells.ToArray();
+        var before = MapState.Capture(map);
+        var selectionBefore = SelectedCells;
         var moved = MapMover.Move(map, SelectedCells, offsetX, offsetY);
         var dropped = count - moved.Count;
         SelectedCells = moved;
-        if (!map.Cells.SequenceEqual(cellsBefore))
+        if (!map.Cells.SequenceEqual(before.Cells))
         {
             RefreshCellRegions();
+            RecordEdit(map, $"Move {count} {(count == 1 ? "cell" : "cells")}", before, selectionBefore);
             MapsChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -414,7 +454,8 @@ public partial class MapEditorViewModel : ViewModelBase
     {
         Maps.Clear();
         SelectedMap = null;
-        _strokeCell = null;
+        _histories.Clear();
+        UpdateHistoryState();
         StatusMessage = string.Empty;
     }
 
@@ -450,6 +491,8 @@ public partial class MapEditorViewModel : ViewModelBase
             return false;
         }
 
+        if (_histories.Remove(map.Name, out var history))
+            _histories[newName] = history;
         Replace(map, new TileMap(newName, map.TilesetName, map.Width, map.Height, map.Cells));
         StatusMessage = $"Renamed the map to '{newName}'.";
         MapsChanged?.Invoke(this, EventArgs.Empty);
@@ -467,9 +510,12 @@ public partial class MapEditorViewModel : ViewModelBase
         // Replace() skips the cleanup of a map change, but a drag in progress refers to the old size.
         EndSelectionDrag();
         EndMoveDrag();
-        var selection = SelectedCells.Where(cell => cell.X < width && cell.Y < height).ToList();
-        Replace(map, MapResizer.Resize(map, width, height));
-        SelectedCells = selection;
+        var before = MapState.Capture(map);
+        var selectionBefore = SelectedCells;
+        var resized = MapResizer.Resize(map, width, height);
+        Replace(map, resized);
+        SelectedCells = selectionBefore.Where(cell => cell.X < width && cell.Y < height).ToList();
+        RecordEdit(resized, "Resize map", before, selectionBefore);
         StatusMessage = $"Resized the map to {width} x {height} cells.";
         MapsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -482,6 +528,8 @@ public partial class MapEditorViewModel : ViewModelBase
         var index = Maps.IndexOf(map);
         Maps.RemoveAt(index);
         SelectedMap = Maps.Count == 0 ? null : Maps[Math.Min(index, Maps.Count - 1)];
+        // After the selection moved on, which ends a stroke that was still open on the deleted map.
+        _histories.Remove(map.Name);
         StatusMessage = $"Deleted the map '{map.Name}'.";
         MapsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -499,7 +547,14 @@ public partial class MapEditorViewModel : ViewModelBase
     // deletion in the tileset editor restores the tile but not these cells.
     public void ClearDeletedTiles(string tilesetName, IReadOnlySet<string> deletedTileNames)
     {
-        if (MapTileCleaner.ClearTiles(Maps, tilesetName, deletedTileNames) == 0)
+        var clearedCells = MapTileCleaner.ClearTiles(Maps, tilesetName, deletedTileNames);
+
+        // Older and redo steps of any map of the tileset may still hold the deleted tiles, even if no current cell does.
+        foreach (var map in Maps.Where(map => map.TilesetName == tilesetName))
+            _histories.Remove(map.Name);
+        UpdateHistoryState();
+
+        if (clearedCells == 0)
             return;
 
         RefreshCellRegions();
@@ -513,10 +568,58 @@ public partial class MapEditorViewModel : ViewModelBase
         {
             if (SelectedMap == map)
                 SelectedMap = null;
+            _histories.Remove(map.Name);
             Maps.Remove(map);
         }
 
         SelectedMap ??= Maps.FirstOrDefault();
+    }
+
+    // Ignored mid-drag: the drag's own state would be stale after the cells changed underneath it.
+    public void Undo()
+    {
+        if (SelectedMap is not { } map || !CanUndo || IsDragInProgress || _stroke is not null)
+            return;
+
+        var step = _histories[map.Name].Undo();
+        Restore(map, step.Before, step.SelectionBefore);
+        StatusMessage = $"Undid: {step.Description}.";
+    }
+
+    public void Redo()
+    {
+        if (SelectedMap is not { } map || !CanRedo || IsDragInProgress || _stroke is not null)
+            return;
+
+        var step = _histories[map.Name].Redo();
+        Restore(map, step.After, step.SelectionAfter);
+        StatusMessage = $"Redid: {step.Description}.";
+    }
+
+    // Like the tileset editor, undoing back to the saved state still counts as a
+    // change, because MapsChanged marks the project as unsaved.
+    private void Restore(TileMap map, MapState state, IReadOnlyList<(int X, int Y)> selection)
+    {
+        Replace(map, state.ToMap(map.Name, map.TilesetName));
+        SelectedCells = selection.Where(cell => cell.X < state.Width && cell.Y < state.Height).ToList();
+        UpdateHistoryState();
+        MapsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RecordEdit(TileMap map, string description, MapState before, IReadOnlyList<(int X, int Y)> selectionBefore)
+    {
+        if (!_histories.TryGetValue(map.Name, out var history))
+            _histories[map.Name] = history = new EditHistory<MapEditStep>();
+
+        history.Record(new MapEditStep(description, before, MapState.Capture(map), selectionBefore, SelectedCells));
+        UpdateHistoryState();
+    }
+
+    private void UpdateHistoryState()
+    {
+        var history = SelectedMap is { } map && _histories.TryGetValue(map.Name, out var found) ? found : null;
+        CanUndo = history?.CanUndo ?? false;
+        CanRedo = history?.CanRedo ?? false;
     }
 
     private void Replace(TileMap oldMap, TileMap newMap)
