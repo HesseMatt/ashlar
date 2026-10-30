@@ -18,7 +18,14 @@ public partial class MapEditorView : UserControl
     private bool _scrollToStartPending;
     private string? _lastScrolledMapName;
     private MapEditorViewModel? _viewModel;
+    private const double DragThreshold = 4;
     private bool _isDrawing;
+    private bool _isMoveDragging;
+    private bool _isRectangleDragging;
+    private Point? _rectangleDragOrigin;
+    private (int X, int Y) _rectangleDragStartCell;
+    private bool _rectangleDragAddsToSelection;
+    private IPointer? _dragPointer;
 
     public MapEditorView()
     {
@@ -132,9 +139,39 @@ public partial class MapEditorView : UserControl
             viewModel.TileWidth * viewModel.ZoomLevel, viewModel.TileHeight * viewModel.ZoomLevel);
     }
 
+    // Handles the editing shortcuts.
+    public void HandleKeyDown(KeyEventArgs e)
+    {
+        if (DataContext is not MapEditorViewModel viewModel)
+            return;
+
+        switch (e.Key)
+        {
+            case Key.Escape when _rectangleDragOrigin is not null:
+                e.Handled = true;
+                viewModel.CancelSelectionDrag();
+                ResetDrag();
+                break;
+            case Key.Escape when _isMoveDragging:
+                e.Handled = true;
+                viewModel.EndMoveDrag();
+                ResetDrag();
+                break;
+            // Only with the canvas focused, so Delete in the map list or name box never clears cells.
+            case Key.Delete when e.Source == MapCanvasPadding && viewModel.HasSelectedCells:
+                e.Handled = true;
+                viewModel.DeleteSelectedCells();
+                break;
+        }
+    }
+
+    // A rectangle press is pending before the drag threshold is crossed, which
+    // is why it counts as a drag here already.
+    private bool IsPointerDragPending => _rectangleDragOrigin is not null || _isMoveDragging || _isDrawing;
+
     private void OnMapCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is not Control canvas)
+        if (sender is not Control canvas || IsPointerDragPending || _viewport.IsPanning)
             return;
 
         var properties = e.GetCurrentPoint(canvas).Properties;
@@ -144,10 +181,31 @@ public partial class MapEditorView : UserControl
         }
         else if (properties.IsLeftButtonPressed && DataContext is MapEditorViewModel viewModel)
         {
+            canvas.Focus();
             var (cellX, cellY) = CellAt(e, viewModel);
-            if (viewModel.BeginStroke(cellX, cellY))
+            if (viewModel.IsMoveToolActive)
+            {
+                if (viewModel.BeginMoveDrag(cellX, cellY))
+                {
+                    _isMoveDragging = true;
+                    _dragPointer = e.Pointer;
+                    e.Pointer.Capture(canvas);
+                }
+            }
+            else if (viewModel.IsRectangleToolActive)
+            {
+                // Whether this becomes a click or a drag is only known once the pointer
+                // has moved (or has been released), so selection is deferred until then.
+                _rectangleDragOrigin = e.GetPosition(canvas);
+                _rectangleDragStartCell = (cellX, cellY);
+                _rectangleDragAddsToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+                _dragPointer = e.Pointer;
+                e.Pointer.Capture(canvas);
+            }
+            else if (viewModel.BeginStroke(cellX, cellY))
             {
                 _isDrawing = true;
+                _dragPointer = e.Pointer;
                 e.Pointer.Capture(canvas);
             }
         }
@@ -155,11 +213,38 @@ public partial class MapEditorView : UserControl
 
     private void OnMapCanvasPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_isDrawing && DataContext is MapEditorViewModel viewModel)
+        if (DataContext is MapEditorViewModel viewModel)
         {
-            var (cellX, cellY) = CellAt(e, viewModel);
-            viewModel.ContinueStroke(cellX, cellY);
-            return;
+            if (_isDrawing)
+            {
+                var (cellX, cellY) = CellAt(e, viewModel);
+                viewModel.ContinueStroke(cellX, cellY);
+                return;
+            }
+
+            if (_isMoveDragging)
+            {
+                var (cellX, cellY) = CellAt(e, viewModel);
+                viewModel.UpdateMoveDrag(cellX, cellY);
+                return;
+            }
+
+            if (_rectangleDragOrigin is { } origin && sender is Control canvas)
+            {
+                if (!_isRectangleDragging)
+                {
+                    var travelled = e.GetPosition(canvas) - origin;
+                    if (Math.Abs(travelled.X) < DragThreshold && Math.Abs(travelled.Y) < DragThreshold)
+                        return;
+
+                    _isRectangleDragging = true;
+                    viewModel.BeginSelectionDrag(_rectangleDragStartCell.X, _rectangleDragStartCell.Y, _rectangleDragAddsToSelection);
+                }
+
+                var (cellX, cellY) = CellAt(e, viewModel);
+                viewModel.UpdateSelectionDrag(cellX, cellY);
+                return;
+            }
         }
 
         _viewport.Pan(e);
@@ -167,10 +252,34 @@ public partial class MapEditorView : UserControl
 
     private void OnMapCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_isDrawing && e.InitialPressMouseButton == MouseButton.Left)
+        if (e.InitialPressMouseButton == MouseButton.Left && DataContext is MapEditorViewModel viewModel)
         {
-            EndDrawing(e.Pointer);
-            return;
+            if (_isDrawing)
+            {
+                viewModel.EndStroke();
+                ResetDrag();
+                return;
+            }
+
+            if (_isMoveDragging)
+            {
+                var (cellX, cellY) = CellAt(e, viewModel);
+                viewModel.UpdateMoveDrag(cellX, cellY);
+                viewModel.CommitMoveDrag();
+                ResetDrag();
+                return;
+            }
+
+            if (_rectangleDragOrigin is not null)
+            {
+                if (_isRectangleDragging)
+                    viewModel.EndSelectionDrag();
+                else
+                    viewModel.HandleCanvasClick(_rectangleDragStartCell.X, _rectangleDragStartCell.Y, _rectangleDragAddsToSelection);
+
+                ResetDrag();
+                return;
+            }
         }
 
         if (_viewport.IsPanning)
@@ -179,19 +288,37 @@ public partial class MapEditorView : UserControl
 
     private void OnMapCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        if (_isDrawing)
-            EndDrawing(null);
+        if (DataContext is MapEditorViewModel viewModel)
+        {
+            if (_isDrawing)
+                viewModel.EndStroke();
+            if (_isMoveDragging)
+                viewModel.EndMoveDrag();
+            if (_isRectangleDragging)
+                viewModel.EndSelectionDrag();
+        }
+
+        ClearDragState();
         _viewport.CancelPan();
     }
 
-    private void EndDrawing(IPointer? pointer)
+    private void ResetDrag()
     {
-        _isDrawing = false;
-        (DataContext as MapEditorViewModel)?.EndStroke();
+        var pointer = _dragPointer;
+        ClearDragState();
         pointer?.Capture(null);
     }
 
-    // Cells outside the map come out negative or too large; painting ignores them.
+    private void ClearDragState()
+    {
+        _isDrawing = false;
+        _isMoveDragging = false;
+        _isRectangleDragging = false;
+        _rectangleDragOrigin = null;
+        _dragPointer = null;
+    }
+
+    // Cells outside the map come out negative or too large; the tools ignore them.
     private (int X, int Y) CellAt(PointerEventArgs e, MapEditorViewModel viewModel)
     {
         var position = e.GetPosition(MapCanvasContent);
