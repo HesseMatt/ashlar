@@ -456,6 +456,24 @@ public partial class MapEditorViewModel : ViewModelBase
         return true;
     }
 
+    public int CountTilesLostByResize(int width, int height) =>
+        SelectedMap is { } map ? MapResizer.CountLostTiles(map, width, height) : 0;
+
+    public void ResizeSelectedMap(int width, int height)
+    {
+        if (SelectedMap is not { } map || (width == map.Width && height == map.Height))
+            return;
+
+        // Replace() skips the cleanup of a map change, but a drag in progress refers to the old size.
+        EndSelectionDrag();
+        EndMoveDrag();
+        var selection = SelectedCells.Where(cell => cell.X < width && cell.Y < height).ToList();
+        Replace(map, MapResizer.Resize(map, width, height));
+        SelectedCells = selection;
+        StatusMessage = $"Resized the map to {width} x {height} cells.";
+        MapsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void DeleteSelectedMap()
     {
         if (SelectedMap is not { } map)

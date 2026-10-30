@@ -362,6 +362,29 @@ public partial class MapEditorView : UserControl
             MapNameBox.Text = viewModel.SelectedMap?.Name;
     }
 
+    private async void OnResizeMapClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MapEditorViewModel { SelectedMap: { } map } viewModel || TopLevel.GetTopLevel(this) is not Window owner)
+            return;
+
+        var dialog = new ResizeMapDialog(new ResizeMapDialogViewModel(map.Width, map.Height));
+        if (await dialog.ShowDialog<(int Width, int Height)?>(owner) is not { } size)
+            return;
+
+        var lostTiles = viewModel.CountTilesLostByResize(size.Width, size.Height);
+        if (lostTiles > 0)
+        {
+            var confirmed = await new ConfirmDialog(
+                "Resize map",
+                $"Shrinking the map '{map.Name}' removes {lostTiles} {(lostTiles == 1 ? "tile" : "tiles")}. Resize anyway?",
+                "Resize").ShowDialog<bool>(owner);
+            if (!confirmed)
+                return;
+        }
+
+        viewModel.ResizeSelectedMap(size.Width, size.Height);
+    }
+
     private async void OnDeleteMapClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MapEditorViewModel { SelectedMap: { } map } viewModel || TopLevel.GetTopLevel(this) is not Window owner)

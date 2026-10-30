@@ -16,6 +16,7 @@
                                IsVisible="{Binding !CanCreateMap}" />
                     <TextBox Name="MapNameBox" PlaceholderText="Map name" IsEnabled="{Binding HasSelectedMap}" />
                     <Button Name="RenameMapButton" Content="Rename" Click="OnRenameMapClick" IsEnabled="{Binding HasSelectedMap}" />
+                    <Button Name="ResizeMapButton" Content="Resize..." Click="OnResizeMapClick" IsEnabled="{Binding HasSelectedMap}" />
                     <Button Name="DeleteMapButton" Content="Delete" Click="OnDeleteMapClick" IsEnabled="{Binding HasSelectedMap}" />
                     <Button Name="CreateMapButton" Content="Create map..." Click="OnCreateMapClick" IsEnabled="{Binding CanCreateMap}" />
                 </StackPanel>
