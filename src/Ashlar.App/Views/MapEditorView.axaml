@@ -1,11 +1,45 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Ashlar.App.ViewModels"
+             xmlns:model="using:Ashlar.Core.Model"
              x:Class="Ashlar.App.Views.MapEditorView"
              x:DataType="vm:MapEditorViewModel">
 
-    <Border Classes="canvas" Margin="6">
-        <TextBlock Text="Map editor coming soon" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
-    </Border>
+    <DockPanel>
+        <Border Classes="panelHeader" DockPanel.Dock="Left" Width="200" Margin="0" BorderThickness="0,0,1,0" Padding="8">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Maps" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,6,0,0">
+                    <TextBlock Name="NoTilesetText" Classes="secondary" TextWrapping="Wrap"
+                               Text="Add a tileset to the project before creating a map."
+                               IsVisible="{Binding !CanCreateMap}" />
+                    <TextBox Name="MapNameBox" PlaceholderText="Map name" IsEnabled="{Binding HasSelectedMap}" />
+                    <Button Name="RenameMapButton" Content="Rename" Click="OnRenameMapClick" IsEnabled="{Binding HasSelectedMap}" />
+                    <Button Name="DeleteMapButton" Content="Delete" Click="OnDeleteMapClick" IsEnabled="{Binding HasSelectedMap}" />
+                    <Button Name="CreateMapButton" Content="Create map..." Click="OnCreateMapClick" IsEnabled="{Binding CanCreateMap}" />
+                </StackPanel>
+                <ListBox Name="MapList" ItemsSource="{Binding Maps}" SelectedItem="{Binding SelectedMap}"
+                         SelectionChanged="OnMapSelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="model:TileMap">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <Border Classes="canvas" Margin="6">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                <StackPanel Name="MapInfoPanel" Spacing="6" IsVisible="{Binding HasSelectedMap}">
+                    <TextBlock Name="MapTitleText" Text="{Binding SelectedMap.Name}" FontSize="18" HorizontalAlignment="Center" />
+                    <TextBlock Name="MapSizeText" Classes="secondary" Text="{Binding SelectedMapSizeText}" HorizontalAlignment="Center" />
+                    <TextBlock Name="MapTilesetText" Classes="secondary" Text="{Binding SelectedMapTilesetText}" HorizontalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Name="NoMapText" Text="No map selected" FontSize="18" HorizontalAlignment="Center"
+                           IsVisible="{Binding !HasSelectedMap}" />
+            </StackPanel>
+        </Border>
+    </DockPanel>
 
 </UserControl>

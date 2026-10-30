@@ -65,7 +65,8 @@
 
         <Border Classes="panelHeader" DockPanel.Dock="Bottom" Margin="0" BorderThickness="0,1,0,0" Padding="12,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Classes="secondary" Text="{Binding Editor.StatusMessage}" />
+                <TextBlock x:Name="TilesetStatusText" Classes="secondary" Text="{Binding Editor.StatusMessage}" IsVisible="{Binding IsTilesetsTabActive}" />
+                <TextBlock x:Name="MapStatusText" Classes="secondary" Text="{Binding MapEditor.StatusMessage}" IsVisible="{Binding !IsTilesetsTabActive}" />
                 <TextBlock Classes="secondary" Text="{Binding Editor.ZoomPercentageText}" IsVisible="{Binding Editor.HasImage}" />
                 <TextBlock Classes="secondary" Text="{Binding Editor.TileSizeText}" IsVisible="{Binding Editor.HasImage}" />
             </StackPanel>
