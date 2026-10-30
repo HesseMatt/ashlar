@@ -249,7 +249,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
-    public void LoadProject(TilesetProject project, EditableTilesetImage image)
+    public void LoadProject(ProjectTileset project, EditableTilesetImage image)
     {
         ReplaceImage(image);
         _sourceFileName = project.ImageFileName;
