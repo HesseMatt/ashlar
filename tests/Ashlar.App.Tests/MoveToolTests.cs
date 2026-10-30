@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using Avalonia;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
@@ -14,7 +15,7 @@ public class MoveToolTests : IDisposable
     private static string[] Names(IEnumerable<TileRegion> tiles) =>
         tiles.Select(t => t.Name).ToArray();
 
-    [Fact]
+    [AvaloniaFact]
     public void DraggingMovesTheWholeSelectionByTheSameWholeCellOffset()
     {
         var viewModel = OpenImage();
@@ -29,7 +30,7 @@ public class MoveToolTests : IDisposable
         Assert.Equal("Moved 2 tiles.", viewModel.Editor.StatusMessage);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PreviewSnapsToTheGridAndTheTilesStayPutUntilRelease()
     {
         var viewModel = OpenImage();
@@ -44,7 +45,7 @@ public class MoveToolTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void PressingOnAnUnselectedTileOrEmptySpaceDoesNotStartAMove()
     {
         var viewModel = OpenImage();
@@ -60,7 +61,7 @@ public class MoveToolTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancellingTheDragChangesNothing()
     {
         var viewModel = OpenImage();
@@ -77,7 +78,7 @@ public class MoveToolTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MovingOntoUnselectedTilesOverwritesThemInsteadOfSwapping()
     {
         var viewModel = OpenImage();
@@ -93,7 +94,7 @@ public class MoveToolTests : IDisposable
         Assert.Equal(16, viewModel.Editor.Tiles.Single(t => t.Name == "tiles_0001").X);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MovingPartlyOutsideTheTilesetDeletesOnlyThoseTiles()
     {
         var viewModel = OpenImage();
@@ -109,7 +110,7 @@ public class MoveToolTests : IDisposable
         Assert.Contains("2 moved outside the tileset and were deleted", viewModel.Editor.StatusMessage);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MoveToolStaysActiveAfterAMove()
     {
         var viewModel = OpenImage();
@@ -123,7 +124,7 @@ public class MoveToolTests : IDisposable
         Assert.True(viewModel.Editor.IsMoveToolActive);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ActivatingAnotherToolDeactivatesTheMoveTool()
     {
         var viewModel = OpenImage();
@@ -135,7 +136,7 @@ public class MoveToolTests : IDisposable
         Assert.True(viewModel.Editor.IsRectangleToolActive);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MoveToolResetsWhenANewTilesetIsOpened()
     {
         var viewModel = OpenImage();

@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
 
@@ -9,7 +10,7 @@ public class ChangeTileSizeTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void LoadingATilesetUsesTheChosenTileSize()
     {
         var viewModel = new MainViewModel();
@@ -20,7 +21,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.Equal(8, viewModel.Editor.Tiles.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ReadingAnImageLeavesTheOpenTilesetUntouched()
     {
         var viewModel = OpenImage();
@@ -32,7 +33,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.Equal("16x16", viewModel.Editor.TileSizeText);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ReadingAnUnreadableImageReportsItAndKeepsTheOpenTileset()
     {
         var viewModel = OpenImage();
@@ -46,7 +47,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.Equal(16, viewModel.Editor.Tiles.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ChangingTheSizeRebuildsTheGridWithoutAnEditsWarning()
     {
         var viewModel = OpenImage();
@@ -58,7 +59,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.Equal("32x32", viewModel.Editor.TileSizeText);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ChangingTheSizeOfAnEditedTilesetNeedsConfirmation()
     {
         var viewModel = OpenImage();
@@ -68,7 +69,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.True(viewModel.Editor.NeedsTileSizeConfirmation(32, 32));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ConfirmingTheSameSizeChangesNothingAndNeedsNoConfirmation()
     {
         var viewModel = OpenImage();
@@ -82,7 +83,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.True(viewModel.Editor.CanUndo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AcceptedChangeClearsTheUndoHistoryAndTheEditedState()
     {
         var viewModel = OpenImage();
@@ -96,7 +97,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ChangingTheSizeOfAProjectOpenedWithEditsClearsTheEditedState()
     {
         var edited = OpenImage();
@@ -115,7 +116,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.False(reopened.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ChangingTheSizeKeepsTheImagePixels()
     {
         var viewModel = OpenImage();
@@ -128,7 +129,7 @@ public class ChangeTileSizeTests : IDisposable
         Assert.Equal(60, viewModel.Editor.Tiles.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OpeningAProjectUsesTheSavedTileSize()
     {
         var saved = new MainViewModel();

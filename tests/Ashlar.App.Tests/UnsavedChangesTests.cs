@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
 
@@ -9,19 +10,19 @@ public class UnsavedChangesTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void NothingIsUnsavedBeforeAnythingIsOpened()
     {
         Assert.False(new MainViewModel().Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void FreshlyImportedTilesetCountsAsUnsaved()
     {
         Assert.True(OpenImage().Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void FreshlyOpenedProjectCountsAsSaved()
     {
         var projectPath = SaveProject(OpenImage());
@@ -32,7 +33,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.False(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SavingTheProjectMarksTheStateAsSaved()
     {
         var viewModel = OpenImage();
@@ -43,7 +44,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.False(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void FailedSaveKeepsTheStateUnsaved()
     {
         var viewModel = OpenImage();
@@ -54,7 +55,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SavingImageOrExportingXmlDoesNotCountAsSaving()
     {
         var viewModel = OpenImage();
@@ -69,7 +70,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void EditsMarkTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
@@ -80,7 +81,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DrawingMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
@@ -92,7 +93,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MovingMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
@@ -106,7 +107,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AssigningAGroupMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
@@ -118,7 +119,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UndoAndRedoMarkTheSavedStateAsUnsaved()
     {
         var viewModel = OpenImage();
@@ -134,7 +135,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ChangingTheTileSizeMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
@@ -144,7 +145,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ClosingTheProjectReturnsToTheStartupState()
     {
         var viewModel = OpenImage();
@@ -170,7 +171,7 @@ public class UnsavedChangesTests : IDisposable
         Assert.Equal(string.Empty, viewModel.TexturePath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ATilesetCanBeImportedAgainAfterClosing()
     {
         var viewModel = OpenImage();

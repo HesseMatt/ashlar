@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
 
@@ -9,7 +10,7 @@ public class HasEditsTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void NoEditsAfterImportingAnImage()
     {
         var viewModel = OpenImage();
@@ -17,7 +18,7 @@ public class HasEditsTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DeletingATileCountsAsAnEdit()
     {
         var viewModel = OpenImage();
@@ -28,7 +29,7 @@ public class HasEditsTests : IDisposable
         Assert.True(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MovingATileCountsAsAnEdit()
     {
         var viewModel = OpenImage();
@@ -42,7 +43,7 @@ public class HasEditsTests : IDisposable
         Assert.True(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void MoveWithoutNetOffsetIsNotAnEdit()
     {
         var viewModel = OpenImage();
@@ -57,7 +58,7 @@ public class HasEditsTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void TilesetStaysEditedAfterFurtherEdits()
     {
         var viewModel = OpenImage();
@@ -70,7 +71,7 @@ public class HasEditsTests : IDisposable
         Assert.True(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImportingANewImageClearsTheEdits()
     {
         var viewModel = OpenImage();
@@ -82,7 +83,7 @@ public class HasEditsTests : IDisposable
         Assert.False(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProjectWithoutEditsOpensWithoutEdits()
     {
         var projectPath = SaveProject(OpenImage());
@@ -93,7 +94,7 @@ public class HasEditsTests : IDisposable
         Assert.False(reopened.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UneditedProjectWithEmptyCellsOpensWithoutEdits()
     {
         var path = Path.Combine(_directory, "sparse.png");
@@ -114,7 +115,7 @@ public class HasEditsTests : IDisposable
         Assert.False(reopened.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProjectWithEditsOpensWithEdits()
     {
         var viewModel = OpenImage();
@@ -127,7 +128,7 @@ public class HasEditsTests : IDisposable
         Assert.True(reopened.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OpeningAnUneditedProjectClearsTheEdits()
     {
         var unedited = SaveProject(OpenImage());

@@ -16,7 +16,7 @@ public class NewProjectTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void NoProjectIsOpenAtStartup()
     {
         var viewModel = new MainViewModel();
@@ -25,7 +25,7 @@ public class NewProjectTests : IDisposable
         Assert.False(viewModel.IsProjectEmpty);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void NewProjectIsOpenAndEmpty()
     {
         var viewModel = new MainViewModel();
@@ -38,7 +38,7 @@ public class NewProjectTests : IDisposable
         Assert.Null(viewModel.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void NewProjectDiscardsTheOpenTileset()
     {
         var viewModel = OpenImage();
@@ -51,7 +51,7 @@ public class NewProjectTests : IDisposable
         Assert.Null(viewModel.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AnEmptyProjectCanBeSavedAndReopened()
     {
         var path = Path.Combine(_directory, "empty.ashlar");
@@ -69,7 +69,7 @@ public class NewProjectTests : IDisposable
         Assert.Equal(path, reopened.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OpeningAnEmptyProjectReplacesTheOpenTileset()
     {
         var path = Path.Combine(_directory, "empty.ashlar");
@@ -84,7 +84,7 @@ public class NewProjectTests : IDisposable
         Assert.Empty(viewModel.Editor.Tiles);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImportingIntoAnEmptyProjectKeepsItsPath()
     {
         var path = Path.Combine(_directory, "empty.ashlar");
@@ -99,7 +99,7 @@ public class NewProjectTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ClosingTheProjectLeavesNoProjectOpen()
     {
         var viewModel = new MainViewModel();
@@ -111,7 +111,7 @@ public class NewProjectTests : IDisposable
         Assert.False(viewModel.IsProjectEmpty);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SavingWithoutAnOpenProjectDoesNothing()
     {
         var path = Path.Combine(_directory, "none.ashlar");
@@ -120,7 +120,7 @@ public class NewProjectTests : IDisposable
         Assert.False(File.Exists(path));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ExportAndImageCommandsDoNothingOnAnEmptyProject()
     {
         var viewModel = new MainViewModel();

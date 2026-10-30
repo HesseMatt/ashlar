@@ -11,7 +11,7 @@ public class PreviewBitmapTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void ZoomingInStopsAtThirtyTwoTimes()
     {
         var viewModel = new MainViewModel();
@@ -23,7 +23,7 @@ public class PreviewBitmapTests : IDisposable
         Assert.Equal("3,200%", viewModel.Editor.ZoomPercentageText.Replace(" ", ""));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ZoomingOutStopsAtAQuarter()
     {
         var viewModel = new MainViewModel();
@@ -34,7 +34,7 @@ public class PreviewBitmapTests : IDisposable
         Assert.Equal(0.25, viewModel.Editor.ZoomLevel);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ZoomStepGrowsWithTheZoomLevel()
     {
         var viewModel = new MainViewModel { Editor = { ZoomLevel = 10.0 } };

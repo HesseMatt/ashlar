@@ -14,7 +14,7 @@ public class MultipleTilesetsTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void ImportingAddsTilesetsNamedAfterTheirFilesAndSelectsTheLatest()
     {
         var viewModel = TwoTilesets();
@@ -25,7 +25,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.StartsWith("forest_", viewModel.Editor.Tiles[0].Name);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImportingTheSameFileNameTwiceKeepsNamesUnique()
     {
         var viewModel = new MainViewModel();
@@ -37,7 +37,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Equal(["dungeon", "dungeon 2"], viewModel.TilesetNames);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectingATilesetShowsItAndKeepsItsEditsWhileAwayFromIt()
     {
         var viewModel = TwoTilesets();
@@ -56,7 +56,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Equal(3, tileCount);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectingATilesetResetsTheUndoHistoryButKeepsUnsavedChanges()
     {
         var viewModel = TwoTilesets();
@@ -70,7 +70,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RenamingChangesTheNameButNotTheTileNames()
     {
         var viewModel = TwoTilesets();
@@ -84,7 +84,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Equal(firstTileName, viewModel.Editor.Tiles[0].Name);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RenamingToAnExistingNameIsRefusedWithAMessage()
     {
         var viewModel = TwoTilesets();
@@ -96,7 +96,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Contains("already exists", viewModel.Editor.StatusMessage);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RenamingToAnEmptyNameIsRefused()
     {
         var viewModel = TwoTilesets();
@@ -105,7 +105,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Equal("forest", viewModel.SelectedTilesetName);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RemovingSelectsANeighbourAndRemovingTheLastLeavesAnEmptyProject()
     {
         var viewModel = TwoTilesets();
@@ -121,7 +121,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Null(viewModel.SelectedTilesetName);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ExportsActOnTheSelectedTileset()
     {
         var viewModel = TwoTilesets();
@@ -140,7 +140,7 @@ public class MultipleTilesetsTests : IDisposable
         Assert.Equal(32, saved.Width);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SavingAndReopeningRestoresAllTilesetsWithTheirEdits()
     {
         var path = Path.Combine(_directory, "p.ashlar");

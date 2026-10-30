@@ -15,19 +15,19 @@ public class SaveProjectTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void NoPathIsKnownForAFreshlyImportedTileset()
     {
         Assert.Null(OpenImage().ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SuggestedProjectFileNameIsTheImportedImageName()
     {
         Assert.Equal("tiles", OpenImage().SuggestedProjectFileName);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SuggestedProjectFileNameSurvivesReopeningAProject()
     {
         var path = Path.Combine(_directory, "a.ashlar");
@@ -39,7 +39,7 @@ public class SaveProjectTests : IDisposable
         Assert.Equal("tiles", viewModel.SuggestedProjectFileName);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SavingRemembersThePath()
     {
         var viewModel = OpenImage();
@@ -50,7 +50,7 @@ public class SaveProjectTests : IDisposable
         Assert.Equal(path, viewModel.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OpeningAProjectRemembersItsPath()
     {
         var path = Path.Combine(_directory, "a.ashlar");
@@ -62,7 +62,7 @@ public class SaveProjectTests : IDisposable
         Assert.Equal(path, viewModel.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ImportingAnotherTilesetKeepsThePath()
     {
         var viewModel = OpenImage();
@@ -74,7 +74,7 @@ public class SaveProjectTests : IDisposable
         Assert.Equal(path, viewModel.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ClosingTheProjectForgetsThePath()
     {
         var viewModel = OpenImage();
@@ -85,7 +85,7 @@ public class SaveProjectTests : IDisposable
         Assert.Null(viewModel.ProjectPath);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AFailedSaveKeepsThePreviousPathAndTheUnsavedFlag()
     {
         var viewModel = OpenImage();
@@ -100,7 +100,7 @@ public class SaveProjectTests : IDisposable
         Assert.True(viewModel.Editor.HasUnsavedChanges);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void AFailedFirstSaveLeavesNoPath()
     {
         var viewModel = OpenImage();
