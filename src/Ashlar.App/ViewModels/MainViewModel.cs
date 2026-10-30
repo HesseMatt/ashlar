@@ -66,6 +66,11 @@ public partial class MainViewModel : ViewModelBase
             if (e.PropertyName == nameof(TilesetEditorViewModel.HasImage))
                 OnPropertyChanged(nameof(IsProjectEmpty));
         };
+        Editor.TilesDeleted += (_, names) =>
+        {
+            if (SelectedTilesetName is { } tilesetName)
+                MapEditor.ClearDeletedTiles(tilesetName, names);
+        };
         MapEditor.MapsChanged += (_, _) => Editor.HasUnsavedChanges = true;
     }
 

@@ -495,6 +495,17 @@ public partial class MapEditorViewModel : ViewModelBase
             Replace(map, new TileMap(map.Name, newName, map.Width, map.Height, map.Cells));
     }
 
+    // Cells whose tile was deleted from the tileset become empty. Undoing that
+    // deletion in the tileset editor restores the tile but not these cells.
+    public void ClearDeletedTiles(string tilesetName, IReadOnlySet<string> deletedTileNames)
+    {
+        if (MapTileCleaner.ClearTiles(Maps, tilesetName, deletedTileNames) == 0)
+            return;
+
+        RefreshCellRegions();
+        MapsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     // Maps cannot outlive their tileset.
     public void DeleteMapsUsing(string tilesetName)
     {
