@@ -232,12 +232,17 @@ public partial class MapEditorViewModel : ViewModelBase
     private void Replace(TileMap oldMap, TileMap newMap)
     {
         var wasSelected = SelectedMap == oldMap;
+        // The map list briefly deselects the map while it is replaced, which resets the brush.
+        var brushName = SelectedPaletteTile?.Name;
         _isReplacingMap = true;
         try
         {
             Maps[Maps.IndexOf(oldMap)] = newMap;
             if (wasSelected)
+            {
                 SelectedMap = newMap;
+                SelectedPaletteTile = PaletteTiles.FirstOrDefault(tile => tile.Name == brushName);
+            }
         }
         finally
         {

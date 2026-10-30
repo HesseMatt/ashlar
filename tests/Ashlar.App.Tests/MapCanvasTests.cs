@@ -149,6 +149,64 @@ public class MapCanvasTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void AMapSelectedWhileAwayStartsAtTheTopLeftWhenTheMapsTabIsShownAgain()
+    {
+        var viewModel = ProjectWithForestMap(width: 200, height: 200);
+        viewModel.MapEditor.CreateMap("small", 2, 2, "forest");
+        var window = OpenMapsTab(viewModel);
+        Dispatcher.UIThread.RunJobs();
+
+        viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps.Single(map => map.Name == "level1");
+        Dispatcher.UIThread.RunJobs();
+        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        Dispatcher.UIThread.RunJobs();
+
+        var view = MapView(window);
+        var scroll = view.FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
+        var padding = view.FindControl<Border>("MapCanvasPadding")!.Padding;
+        Assert.True(padding.Left > 0);
+        Assert.Equal((padding.Left, padding.Top), (scroll.Offset.X, scroll.Offset.Y));
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void VisitingTheMapsTabSeveralTimesLeavesOneHandlerOnTheViewModel()
+    {
+        var viewModel = ProjectWithForestMap(width: 2, height: 2);
+        var window = OpenMapsTab(viewModel);
+        for (var visit = 0; visit < 3; visit++)
+        {
+            viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+            Dispatcher.UIThread.RunJobs();
+            viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        var field = typeof(MapEditorViewModel).GetField(nameof(MapEditorViewModel.MapShown),
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var handlers = ((Delegate?)field.GetValue(viewModel.MapEditor))!.GetInvocationList();
+        Assert.Single(handlers);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void RenamingTheSelectedMapKeepsThePaletteBrush()
+    {
+        var viewModel = ProjectWithForestMap(width: 2, height: 2);
+        var window = OpenMapsTab(viewModel);
+        Dispatcher.UIThread.RunJobs();
+        viewModel.MapEditor.SelectedPaletteTile = viewModel.MapEditor.PaletteTiles[5];
+
+        viewModel.MapEditor.RenameSelectedMap("renamed");
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("renamed", viewModel.MapEditor.SelectedMap!.Name);
+        Assert.Equal("forest_0006", viewModel.MapEditor.SelectedPaletteTile?.Name);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void ZoomingStaysWithinTheLimitsOfTheTilesetEditor()
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 2);

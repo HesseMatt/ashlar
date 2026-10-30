@@ -16,6 +16,7 @@ public partial class MapEditorView : UserControl
 {
     private readonly CanvasViewport _viewport;
     private bool _scrollToStartPending;
+    private MapEditorViewModel? _viewModel;
 
     public MapEditorView()
     {
@@ -27,17 +28,28 @@ public partial class MapEditorView : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (DataContext is not MapEditorViewModel viewModel)
+        if (_viewModel is not null)
+        {
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.MapShown -= OnMapShown;
+        }
+
+        _viewModel = DataContext as MapEditorViewModel;
+        if (_viewModel is not { } viewModel)
             return;
 
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        // The canvas is still hidden or laid out for the previous map when the event is raised.
-        viewModel.MapShown += (_, _) => Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
+        viewModel.MapShown += OnMapShown;
         UpdateInterpolation(viewModel);
         UpdateOverscrollPadding();
         // The tab content is created lazily, so a map selected before that was never scrolled to its start.
         _scrollToStartPending = viewModel.HasSelectedMap;
+        ScrollToMapStartIfPending();
     }
+
+    // The canvas is still hidden or laid out for the previous map when the event is raised.
+    private void OnMapShown(object? sender, EventArgs e) =>
+        Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -64,8 +76,7 @@ public partial class MapEditorView : UserControl
         if (e.Property == ScrollViewer.ViewportProperty)
         {
             UpdateOverscrollPadding();
-            if (_scrollToStartPending && MapCanvasScrollViewer.IsEffectivelyVisible)
-                Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
+            ScrollToMapStartIfPending();
         }
 
         if (e.Property == ScrollViewer.ViewportProperty || e.Property == ScrollViewer.OffsetProperty
@@ -73,6 +84,12 @@ public partial class MapEditorView : UserControl
         {
             UpdateVisibleArea();
         }
+    }
+
+    private void ScrollToMapStartIfPending()
+    {
+        if (_scrollToStartPending)
+            Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
     }
 
     // Only the cells in view are drawn, so large maps stay cheap to render.
