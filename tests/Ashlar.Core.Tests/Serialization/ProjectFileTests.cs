@@ -15,9 +15,11 @@ public class ProjectFileTests
     [Fact]
     public void SaveThenLoad_RoundTripsAllTilesets()
     {
+        var map = TileMap.CreateEmpty("level1", "dungeon", 3, 2);
+        map[1, 0] = "dungeon_0002";
         var project = new Project(
             [CreateTileset("dungeon", new PixelColor(10, 20, 30, 40)), CreateTileset("forest")],
-            []);
+            [map]);
 
         var filePath = Path.GetTempFileName();
         try
@@ -39,7 +41,13 @@ public class ProjectFileTests
                 Assert.Equal(expected.Tiles, actual.Tiles);
                 Assert.Equal(expected.DrawColor, actual.DrawColor);
             }
-            Assert.Empty(loaded.Maps);
+
+            var loadedMap = Assert.Single(loaded.Maps);
+            Assert.Equal("level1", loadedMap.Name);
+            Assert.Equal("dungeon", loadedMap.TilesetName);
+            Assert.Equal(3, loadedMap.Width);
+            Assert.Equal(2, loadedMap.Height);
+            Assert.Equal(map.Cells, loadedMap.Cells);
         }
         finally
         {
@@ -59,6 +67,28 @@ public class ProjectFileTests
                   {"Name":"a","ImageFileName":"a.png","ImagePng":"AQID","TexturePath":"a","TileWidth":16,"TileHeight":16,"Tiles":[]},
                   {"Name":"a","ImageFileName":"b.png","ImagePng":"AQID","TexturePath":"b","TileWidth":16,"TileHeight":16,"Tiles":[]}
                 ],"Maps":[]}
+                """);
+
+            Assert.Throws<ArgumentException>(() => ProjectFile.Load(filePath));
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void Load_RejectsDuplicateMapNames()
+    {
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath,
+                """
+                {"Tilesets":[],"Maps":[
+                  {"Name":"m","TilesetName":"a","Width":1,"Height":1,"Cells":[null]},
+                  {"Name":"m","TilesetName":"a","Width":1,"Height":1,"Cells":[null]}
+                ]}
                 """);
 
             Assert.Throws<ArgumentException>(() => ProjectFile.Load(filePath));
