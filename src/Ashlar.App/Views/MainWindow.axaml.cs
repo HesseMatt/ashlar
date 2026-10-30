@@ -222,7 +222,7 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 OnCloseProjectClick(this, new RoutedEventArgs());
                 break;
-            case Key.E when ctrl && viewModel.Editor.HasImage:
+            case Key.E when ctrl && viewModel.Editor.HasImage && viewModel.IsTilesetsTabActive:
                 e.Handled = true;
                 OnExportXmlClick(this, new RoutedEventArgs());
                 break;
@@ -235,16 +235,30 @@ public partial class MainWindow : Window
                 OnSaveProjectClick(this, new RoutedEventArgs());
                 break;
             default:
-                EditorView.HandleKeyDown(e);
+                if (viewModel.IsTilesetsTabActive)
+                    EditorView.HandleKeyDown(e);
                 break;
         }
     }
 
-    private void OnZoomInClick(object? sender, RoutedEventArgs e) => EditorView.ZoomIn();
+    // The tileset editor view is detached while another tab is shown, so zooming it then would do nothing useful.
+    private void OnZoomInClick(object? sender, RoutedEventArgs e)
+    {
+        if (((MainViewModel)DataContext!).IsTilesetsTabActive)
+            EditorView.ZoomIn();
+    }
 
-    private void OnZoomOutClick(object? sender, RoutedEventArgs e) => EditorView.ZoomOut();
+    private void OnZoomOutClick(object? sender, RoutedEventArgs e)
+    {
+        if (((MainViewModel)DataContext!).IsTilesetsTabActive)
+            EditorView.ZoomOut();
+    }
 
-    private void OnResetZoomClick(object? sender, RoutedEventArgs e) => EditorView.ResetZoom();
+    private void OnResetZoomClick(object? sender, RoutedEventArgs e)
+    {
+        if (((MainViewModel)DataContext!).IsTilesetsTabActive)
+            EditorView.ResetZoom();
+    }
 
     private void OnUndoClick(object? sender, RoutedEventArgs e)
     {

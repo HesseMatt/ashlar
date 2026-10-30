@@ -18,6 +18,16 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:TilesetEditorViewModel">
+            <views:TilesetToolBar />
+        </DataTemplate>
+        <!-- The map editor has no tools yet. -->
+        <DataTemplate DataType="vm:MapEditorViewModel">
+            <Panel />
+        </DataTemplate>
+    </Window.DataTemplates>
+
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
@@ -81,15 +91,24 @@
             </DockPanel>
         </Border>
 
-        <Panel>
-            <views:TilesetEditorView x:Name="EditorView" DataContext="{Binding Editor}" />
-            <Border x:Name="EmptyProjectPanel" Classes="canvas" Margin="6" IsVisible="{Binding IsProjectEmpty}">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                    <TextBlock Text="This project has no tileset yet" FontSize="18" HorizontalAlignment="Center" />
-                    <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center" />
-                </StackPanel>
-            </Border>
-        </Panel>
+        <ContentControl x:Name="ToolBarHost" DockPanel.Dock="Left" VerticalAlignment="Top" Content="{Binding ActiveToolBar}" />
+
+        <TabControl x:Name="EditorTabs" SelectedIndex="{Binding SelectedTabIndex}">
+            <TabItem x:Name="TilesetsTab" Header="Tilesets">
+                <Panel>
+                    <views:TilesetEditorView x:Name="EditorView" DataContext="{Binding Editor}" />
+                    <Border x:Name="EmptyProjectPanel" Classes="canvas" Margin="6" IsVisible="{Binding IsProjectEmpty}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                            <TextBlock Text="This project has no tileset yet" FontSize="18" HorizontalAlignment="Center" />
+                            <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </Panel>
+            </TabItem>
+            <TabItem x:Name="MapsTab" Header="Maps">
+                <views:MapEditorView x:Name="MapView" DataContext="{Binding MapEditor}" />
+            </TabItem>
+        </TabControl>
     </DockPanel>
 
 </Window>
