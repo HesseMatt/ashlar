@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Ashlar.Core;
@@ -18,9 +21,19 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsProjectEmpty))]
     private bool _isProjectOpen;
 
+    [ObservableProperty]
+    private string? _selectedTilesetName;
+
+    public ObservableCollection<string> TilesetNames { get; } = new();
+
+    public bool HasTilesets => _tilesets.Count > 0;
+
     public TilesetEditorViewModel Editor { get; } = new() { StatusMessage = InitialStatusMessage };
 
     public bool IsProjectEmpty => IsProjectOpen && !Editor.HasImage;
+
+    private readonly List<ProjectTileset> _tilesets = new();
+    private int _selectedIndex = -1;
 
     public MainViewModel()
     {
@@ -52,20 +65,95 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    // Adds the image as a new tileset and selects it. The undo history is
+    // per editor session, so it is reset whenever another tileset is selected.
     public void LoadTileset(string filePath, int tileWidth, int tileHeight)
     {
         var image = ReadImage(filePath);
         if (image is null)
             return;
 
+        CaptureSelectedTileset();
         var fileName = Path.GetFileName(filePath);
-        // Importing into an empty project adds its first tileset; otherwise it replaces the open one.
-        if (Editor.HasImage)
-            ProjectPath = null;
-        Editor.LoadNewTileset(image, fileName, tileWidth, tileHeight);
+        var name = CreateUniqueName(Path.GetFileNameWithoutExtension(filePath));
+        // Opened first so the tileset list is already laid out when the canvas positions the new image.
         IsProjectOpen = true;
+        Editor.LoadNewTileset(image, fileName, tileWidth, tileHeight);
         TexturePath = Path.GetFileNameWithoutExtension(filePath);
+        _tilesets.Add(CreateSnapshot(name));
+        TilesetNames.Add(name);
+        _selectedIndex = _tilesets.Count - 1;
+        SelectedTilesetName = name;
+        OnPropertyChanged(nameof(HasTilesets));
         Editor.StatusMessage = $"{fileName} ({image.Width}x{image.Height}) - tile size {Editor.TileSizeText}.";
+    }
+
+    public void SelectTileset(string name)
+    {
+        var index = TilesetNames.IndexOf(name);
+        if (index < 0 || index == _selectedIndex)
+            return;
+
+        CaptureSelectedTileset();
+        ActivateTileset(index);
+    }
+
+    // Names must stay unique because they identify tilesets in the project file.
+    public bool RenameSelectedTileset(string newName)
+    {
+        if (_selectedIndex < 0)
+            return false;
+
+        newName = newName.Trim();
+        if (newName.Length == 0)
+        {
+            Editor.StatusMessage = "A tileset name cannot be empty.";
+            return false;
+        }
+
+        var existingIndex = TilesetNames.IndexOf(newName);
+        if (existingIndex >= 0 && existingIndex != _selectedIndex)
+        {
+            Editor.StatusMessage = $"A tileset named '{newName}' already exists in this project.";
+            return false;
+        }
+
+        if (newName == TilesetNames[_selectedIndex])
+            return true;
+
+        _tilesets[_selectedIndex] = _tilesets[_selectedIndex] with { Name = newName };
+        TilesetNames[_selectedIndex] = newName;
+        SelectedTilesetName = newName;
+        Editor.HasUnsavedChanges = true;
+        Editor.StatusMessage = $"Renamed the tileset to '{newName}'.";
+        return true;
+    }
+
+    public void RemoveSelectedTileset()
+    {
+        if (_selectedIndex < 0)
+            return;
+
+        var removedName = TilesetNames[_selectedIndex];
+        var removedIndex = _selectedIndex;
+        _tilesets.RemoveAt(removedIndex);
+        TilesetNames.RemoveAt(removedIndex);
+
+        if (_tilesets.Count == 0)
+        {
+            Editor.Close();
+            TexturePath = string.Empty;
+            _selectedIndex = -1;
+            SelectedTilesetName = null;
+        }
+        else
+        {
+            ActivateTileset(Math.Min(removedIndex, _tilesets.Count - 1));
+        }
+
+        OnPropertyChanged(nameof(HasTilesets));
+        Editor.HasUnsavedChanges = true;
+        Editor.StatusMessage = $"Removed the tileset '{removedName}'.";
     }
 
     public void NewProject()
@@ -76,16 +164,12 @@ public partial class MainViewModel : ViewModelBase
 
     public void OpenProject(string filePath)
     {
-        ProjectTileset? tileset;
+        Project project;
         try
         {
-            var project = ProjectFile.Load(filePath);
-            tileset = project.Tilesets.Count switch
-            {
-                0 => null,
-                1 => project.Tilesets[0],
-                _ => throw new InvalidDataException($"Expected at most one tileset but found {project.Tilesets.Count}."),
-            };
+            project = ProjectFile.Load(filePath);
+            foreach (var tileset in project.Tilesets)
+                EditableTilesetImage.Load(tileset.ImagePng).Dispose();
         }
         catch (Exception ex)
         {
@@ -93,30 +177,23 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        if (tileset is null)
+        ResetProject(isOpen: true);
+        ProjectPath = filePath;
+        foreach (var tileset in project.Tilesets)
         {
-            ResetProject(isOpen: true);
-            ProjectPath = filePath;
+            _tilesets.Add(tileset);
+            TilesetNames.Add(tileset.Name);
+        }
+
+        OnPropertyChanged(nameof(HasTilesets));
+        if (_tilesets.Count == 0)
+        {
             Editor.StatusMessage = $"Resumed project {Path.GetFileName(filePath)} (no tilesets).";
             return;
         }
 
-        EditableTilesetImage image;
-        try
-        {
-            image = EditableTilesetImage.Load(tileset.ImagePng);
-        }
-        catch (Exception ex)
-        {
-            Editor.StatusMessage = $"Could not load the image stored in '{Path.GetFileName(filePath)}': {ex.Message}";
-            return;
-        }
-
-        Editor.LoadProject(tileset, image);
-        IsProjectOpen = true;
-        ProjectPath = filePath;
-        TexturePath = tileset.TexturePath;
-        Editor.StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({Editor.Tiles.Count} tiles).";
+        ActivateTileset(0);
+        Editor.StatusMessage = $"Resumed project {Path.GetFileName(filePath)} ({_tilesets.Count} tilesets).";
     }
 
     public void CloseProject()
@@ -128,6 +205,11 @@ public partial class MainViewModel : ViewModelBase
     private void ResetProject(bool isOpen)
     {
         Editor.Close();
+        _tilesets.Clear();
+        TilesetNames.Clear();
+        _selectedIndex = -1;
+        SelectedTilesetName = null;
+        OnPropertyChanged(nameof(HasTilesets));
         ProjectPath = null;
         TexturePath = string.Empty;
         IsProjectOpen = isOpen;
@@ -192,12 +274,42 @@ public partial class MainViewModel : ViewModelBase
 
     private Project BuildProject()
     {
-        if (Editor.SourceFileName is not { } sourceFileName || Editor.Image is not { } image)
-            return new Project([], []);
+        CaptureSelectedTileset();
+        return new Project(_tilesets.ToList(), []);
+    }
 
+    // The editor holds the live state of the selected tileset; the list entry
+    // is only brought up to date when it is needed.
+    private void CaptureSelectedTileset()
+    {
+        if (_selectedIndex >= 0)
+            _tilesets[_selectedIndex] = CreateSnapshot(_tilesets[_selectedIndex].Name);
+    }
+
+    private ProjectTileset CreateSnapshot(string name)
+    {
         var drawColor = Editor.DrawColor;
-        var tileset = new ProjectTileset(Path.GetFileNameWithoutExtension(sourceFileName), sourceFileName, image.EncodeToPng(), TexturePath,
-            Editor.TileWidth, Editor.TileHeight, Editor.Tiles, new PixelColor(drawColor.R, drawColor.G, drawColor.B, drawColor.A));
-        return new Project([tileset], []);
+        return new ProjectTileset(name, Editor.SourceFileName!, Editor.Image!.EncodeToPng(), TexturePath,
+            Editor.TileWidth, Editor.TileHeight, Editor.Tiles.ToList(), new PixelColor(drawColor.R, drawColor.G, drawColor.B, drawColor.A));
+    }
+
+    private void ActivateTileset(int index)
+    {
+        var tileset = _tilesets[index];
+        var hadUnsavedChanges = Editor.HasUnsavedChanges;
+        Editor.LoadProject(tileset, EditableTilesetImage.Load(tileset.ImagePng));
+        Editor.HasUnsavedChanges = hadUnsavedChanges;
+        TexturePath = tileset.TexturePath;
+        _selectedIndex = index;
+        SelectedTilesetName = tileset.Name;
+        Editor.StatusMessage = $"{tileset.Name} ({Editor.Tiles.Count} tiles) - tile size {Editor.TileSizeText}.";
+    }
+
+    private string CreateUniqueName(string baseName)
+    {
+        var name = baseName;
+        for (var suffix = 2; TilesetNames.Contains(name); suffix++)
+            name = $"{baseName} {suffix}";
+        return name;
     }
 }

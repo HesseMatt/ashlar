@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
 
@@ -12,7 +13,7 @@ public class RectangleSelectionTests : IDisposable
     private static string[] SelectedNames(MainViewModel viewModel) =>
         viewModel.Editor.SelectedTiles.Select(t => t.Name).ToArray();
 
-    [Fact]
+    [AvaloniaFact]
     public void DraggingSelectsEveryTouchedTile()
     {
         var viewModel = OpenImage();
@@ -25,7 +26,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Equal("Selected 4 tiles.", viewModel.Editor.StatusMessage);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ShrinkingTheRectangleDeselectsTilesItNoLongerTouches()
     {
         var viewModel = OpenImage();
@@ -38,7 +39,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Equal(["tiles_0001", "tiles_0002"], SelectedNames(viewModel));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void WithoutCtrlTheRectangleReplacesThePreviousSelection()
     {
         var viewModel = OpenImage();
@@ -51,7 +52,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Equal(["tiles_0001", "tiles_0002"], SelectedNames(viewModel));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void WithCtrlTheRectangleAddsToThePreviousSelection()
     {
         var viewModel = OpenImage();
@@ -71,7 +72,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Equal(["tiles_0001", "tiles_0011"], SelectedNames(viewModel));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void CancellingTheDragRestoresTheSelectionFromBeforeIt()
     {
         var viewModel = OpenImage();
@@ -85,7 +86,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Null(viewModel.Editor.SelectionRectangle);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RectangleOutsideTheImageIsAllowedAndSelectsTheOverlappedTiles()
     {
         var viewModel = OpenImage();
@@ -97,7 +98,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Equal(["tiles_0001"], SelectedNames(viewModel));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DeleteRemovesAllTilesSelectedByRectangle()
     {
         var viewModel = OpenImage();
@@ -111,7 +112,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Empty(viewModel.Editor.SelectedTiles);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DeletingDuringADragEndsTheDragInsteadOfRestoringDeletedTiles()
     {
         var viewModel = OpenImage();
@@ -125,7 +126,7 @@ public class RectangleSelectionTests : IDisposable
         Assert.Null(viewModel.Editor.SelectionRectangle);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RectangleToolResetsWhenANewTilesetIsOpened()
     {
         var viewModel = OpenImage();

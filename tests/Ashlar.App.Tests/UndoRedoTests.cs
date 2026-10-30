@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
 using Ashlar.Core.Model;
@@ -10,7 +11,7 @@ public class UndoRedoTests : IDisposable
 
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
-    [Fact]
+    [AvaloniaFact]
     public void NothingToUndoOrRedoInitially()
     {
         var viewModel = OpenImage();
@@ -19,7 +20,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UndoingADeleteRestoresTilesPixelsAndSelection()
     {
         var viewModel = OpenImage();
@@ -36,7 +37,7 @@ public class UndoRedoTests : IDisposable
         Assert.Equal(SKColors.Red, PixelAt(viewModel, 1, 1));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void DeleteIsOneStepEvenForManyTiles()
     {
         var viewModel = OpenImage();
@@ -49,7 +50,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanUndo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void RedoReappliesTheDelete()
     {
         var viewModel = OpenImage();
@@ -65,7 +66,7 @@ public class UndoRedoTests : IDisposable
         Assert.Equal(SKColor.Empty, PixelAt(viewModel, 1, 1));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UndoingAMoveRestoresPositionsAndOverwrittenTiles()
     {
         var viewModel = OpenImage();
@@ -85,7 +86,7 @@ public class UndoRedoTests : IDisposable
         Assert.Equal((0, 0), (viewModel.Editor.SelectedTiles[0].X, viewModel.Editor.SelectedTiles[0].Y));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UndoingAGroupAssignmentRestoresNamesAndSelection()
     {
         var viewModel = OpenImage();
@@ -106,7 +107,7 @@ public class UndoRedoTests : IDisposable
         Assert.Equal(["enemies"], viewModel.Editor.GroupNames);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ConsecutiveUndosWalkBackThroughEveryStep()
     {
         var viewModel = OpenImage();
@@ -127,7 +128,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void NewEditAfterUndoDiscardsTheRedoSteps()
     {
         var viewModel = OpenImage();
@@ -142,7 +143,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SelectionAfterUndoOmitsTilesThatNoLongerExist()
     {
         var viewModel = OpenImage();
@@ -158,7 +159,7 @@ public class UndoRedoTests : IDisposable
         Assert.Empty(viewModel.Editor.SelectedTiles);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OpeningAnImageClearsTheHistory()
     {
         var viewModel = OpenImage();
@@ -172,7 +173,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void OpeningAProjectClearsTheHistory()
     {
         var project = SaveProject(OpenImage());
@@ -186,7 +187,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void SavingAndExportingKeepTheHistory()
     {
         var viewModel = OpenImage();
@@ -201,7 +202,7 @@ public class UndoRedoTests : IDisposable
         Assert.True(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UndoingEveryEditClearsTheEdits()
     {
         var viewModel = OpenImage();
@@ -218,7 +219,7 @@ public class UndoRedoTests : IDisposable
         Assert.True(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ProjectOpenedWithEditsStaysEditedAfterUndoingEveryStep()
     {
         var edited = OpenImage();
@@ -238,7 +239,7 @@ public class UndoRedoTests : IDisposable
         Assert.True(viewModel.Editor.HasEdits);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void ChangingTheTileSizeAfterUndoDiscardsTheRedoSteps()
     {
         var viewModel = OpenImage();
@@ -251,7 +252,7 @@ public class UndoRedoTests : IDisposable
         Assert.False(viewModel.Editor.CanRedo);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void UndoAndRedoAreIgnoredWhileADragIsInProgress()
     {
         var viewModel = OpenImage();

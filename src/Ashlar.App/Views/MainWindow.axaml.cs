@@ -77,10 +77,36 @@ public partial class MainWindow : Window
         if (size is not var (tileWidth, tileHeight))
             return;
 
-        if (!await ConfirmDiscardingUnsavedChangesAsync(viewModel))
+        viewModel.LoadTileset(path, tileWidth, tileHeight);
+    }
+
+    private void OnTilesetSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
             return;
 
-        viewModel.LoadTileset(path, tileWidth, tileHeight);
+        if (TilesetList.SelectedItem is string name)
+            viewModel.SelectTileset(name);
+        TilesetNameBox.Text = viewModel.SelectedTilesetName;
+    }
+
+    private void OnRenameTilesetClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel && viewModel.RenameSelectedTileset(TilesetNameBox.Text ?? string.Empty))
+            TilesetNameBox.Text = viewModel.SelectedTilesetName;
+    }
+
+    private async void OnRemoveTilesetClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel { SelectedTilesetName: { } name } viewModel)
+            return;
+
+        var confirmed = await new ConfirmDialog(
+            "Remove tileset",
+            $"Remove the tileset '{name}' from the project? Its image and all its edits are lost once the project is saved.",
+            "Remove").ShowDialog<bool>(this);
+        if (confirmed)
+            viewModel.RemoveSelectedTileset();
     }
 
     private async void OnNewProjectClick(object? sender, RoutedEventArgs e)
