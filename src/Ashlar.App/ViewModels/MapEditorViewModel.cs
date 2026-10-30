@@ -6,6 +6,7 @@ using System.Linq;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Ashlar.Core.Editing;
 using Ashlar.Core.Model;
 
 namespace Ashlar.App.ViewModels;
@@ -37,6 +38,7 @@ public partial class MapEditorViewModel : ViewModelBase
 
     partial void OnSelectedMapChanged(TileMap? value)
     {
+        _strokeCell = null;
         RefreshTileset();
         if (_isReplacingMap)
             return;
@@ -72,6 +74,14 @@ public partial class MapEditorViewModel : ViewModelBase
     private PaletteTile? _selectedPaletteTile;
 
     [ObservableProperty]
+    private bool _isDrawToolActive;
+
+    partial void OnIsDrawToolActiveChanged(bool value) => _strokeCell = null;
+
+    // The cell the current draw stroke reached last; null while no stroke is in progress.
+    private (int X, int Y)? _strokeCell;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ScaledMapWidth), nameof(ScaledMapHeight), nameof(PreviewInterpolation))]
     private double _zoomLevel = 1.0;
 
@@ -87,6 +97,9 @@ public partial class MapEditorViewModel : ViewModelBase
 
     // Raised when another map is selected, so the view can scroll to its start.
     public event EventHandler? MapShown;
+
+    // Raised when painting changed cells in place, so the view redraws them.
+    public event EventHandler? CellsPainted;
 
     public double ZoomIn() => ZoomLevel = TilesetEditorViewModel.NextZoomIn(ZoomLevel);
 
@@ -139,7 +152,46 @@ public partial class MapEditorViewModel : ViewModelBase
 
     public bool CanCreateMap => TilesetNames.Count > 0;
 
-    // Raised for create, rename and delete, so the project can be marked as changed.
+    // Starts a draw stroke at a cell. Returns false when there is nothing to paint with.
+    public bool BeginStroke(int cellX, int cellY)
+    {
+        if (!IsDrawToolActive || SelectedMap is null || SelectedPaletteTile is null)
+            return false;
+
+        _strokeCell = (cellX, cellY);
+        Paint(cellX, cellY);
+        return true;
+    }
+
+    public void ContinueStroke(int cellX, int cellY)
+    {
+        if (_strokeCell is not { } last)
+            return;
+
+        _strokeCell = (cellX, cellY);
+        Paint(last.X, last.Y, cellX, cellY);
+    }
+
+    public void EndStroke() => _strokeCell = null;
+
+    private void Paint(int fromX, int fromY) => Paint(fromX, fromY, fromX, fromY);
+
+    private void Paint(int fromX, int fromY, int toX, int toY)
+    {
+        if (SelectedMap is not { } map || SelectedPaletteTile is not { } tile)
+            return;
+
+        var changed = MapPainter.PaintLine(map, fromX, fromY, toX, toY, tile.Name);
+        if (changed.Count == 0)
+            return;
+
+        foreach (var (x, y) in changed)
+            CellRegions[y * map.Width + x] = tile.Region;
+        CellsPainted?.Invoke(this, EventArgs.Empty);
+        MapsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Raised for create, rename, delete and painting, so the project can be marked as changed.
     public event EventHandler? MapsChanged;
 
     public void Load(IEnumerable<TileMap> maps)
@@ -154,6 +206,7 @@ public partial class MapEditorViewModel : ViewModelBase
     {
         Maps.Clear();
         SelectedMap = null;
+        _strokeCell = null;
         StatusMessage = string.Empty;
     }
 

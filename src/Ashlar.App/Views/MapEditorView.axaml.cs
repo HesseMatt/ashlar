@@ -18,6 +18,7 @@ public partial class MapEditorView : UserControl
     private bool _scrollToStartPending;
     private string? _lastScrolledMapName;
     private MapEditorViewModel? _viewModel;
+    private bool _isDrawing;
 
     public MapEditorView()
     {
@@ -33,6 +34,7 @@ public partial class MapEditorView : UserControl
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _viewModel.MapShown -= OnMapShown;
+            _viewModel.CellsPainted -= OnCellsPainted;
         }
 
         _viewModel = DataContext as MapEditorViewModel;
@@ -41,6 +43,7 @@ public partial class MapEditorView : UserControl
 
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         viewModel.MapShown += OnMapShown;
+        viewModel.CellsPainted += OnCellsPainted;
         UpdateInterpolation(viewModel);
         UpdateOverscrollPadding();
         // The tab content is created lazily, so a map selected before that was never scrolled to its start.
@@ -52,6 +55,8 @@ public partial class MapEditorView : UserControl
     // The canvas is still hidden or laid out for the previous map when the event is raised.
     private void OnMapShown(object? sender, EventArgs e) =>
         Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
+
+    private void OnCellsPainted(object? sender, EventArgs e) => MapCells.InvalidateVisual();
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -129,19 +134,69 @@ public partial class MapEditorView : UserControl
 
     private void OnMapCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Control canvas && e.GetCurrentPoint(canvas).Properties.IsRightButtonPressed)
+        if (sender is not Control canvas)
+            return;
+
+        var properties = e.GetCurrentPoint(canvas).Properties;
+        if (properties.IsRightButtonPressed)
+        {
             _viewport.BeginPan(e, canvas);
+        }
+        else if (properties.IsLeftButtonPressed && DataContext is MapEditorViewModel viewModel)
+        {
+            var (cellX, cellY) = CellAt(e, viewModel);
+            if (viewModel.BeginStroke(cellX, cellY))
+            {
+                _isDrawing = true;
+                e.Pointer.Capture(canvas);
+            }
+        }
     }
 
-    private void OnMapCanvasPointerMoved(object? sender, PointerEventArgs e) => _viewport.Pan(e);
+    private void OnMapCanvasPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_isDrawing && DataContext is MapEditorViewModel viewModel)
+        {
+            var (cellX, cellY) = CellAt(e, viewModel);
+            viewModel.ContinueStroke(cellX, cellY);
+            return;
+        }
+
+        _viewport.Pan(e);
+    }
 
     private void OnMapCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (_isDrawing && e.InitialPressMouseButton == MouseButton.Left)
+        {
+            EndDrawing(e.Pointer);
+            return;
+        }
+
         if (_viewport.IsPanning)
             _viewport.EndPan(e.Pointer);
     }
 
-    private void OnMapCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) => _viewport.CancelPan();
+    private void OnMapCanvasPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (_isDrawing)
+            EndDrawing(null);
+        _viewport.CancelPan();
+    }
+
+    private void EndDrawing(IPointer? pointer)
+    {
+        _isDrawing = false;
+        (DataContext as MapEditorViewModel)?.EndStroke();
+        pointer?.Capture(null);
+    }
+
+    // Cells outside the map come out negative or too large; painting ignores them.
+    private (int X, int Y) CellAt(PointerEventArgs e, MapEditorViewModel viewModel)
+    {
+        var position = e.GetPosition(MapCanvasContent);
+        return ((int)Math.Floor(position.X / viewModel.TileWidth), (int)Math.Floor(position.Y / viewModel.TileHeight));
+    }
 
     private void OnMapCanvasPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
