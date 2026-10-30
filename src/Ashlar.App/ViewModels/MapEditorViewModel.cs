@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -43,6 +44,9 @@ public partial class MapEditorViewModel : ViewModelBase
         if (_isReplacingMap)
             return;
 
+        SelectedCells = [];
+        EndSelectionDrag();
+        EndMoveDrag();
         ZoomLevel = 1.0;
         MapShown?.Invoke(this, EventArgs.Empty);
     }
@@ -55,11 +59,11 @@ public partial class MapEditorViewModel : ViewModelBase
     private Bitmap? _tilesetImage;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(MapPixelWidth), nameof(ScaledMapWidth))]
+    [NotifyPropertyChangedFor(nameof(MapPixelWidth), nameof(ScaledMapWidth), nameof(SelectionOutlines))]
     private int _tileWidth;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(MapPixelHeight), nameof(ScaledMapHeight))]
+    [NotifyPropertyChangedFor(nameof(MapPixelHeight), nameof(ScaledMapHeight), nameof(SelectionOutlines))]
     private int _tileHeight;
 
     // Per cell of the selected map, row-major: the region to draw, or null for an empty cell.
@@ -74,9 +78,68 @@ public partial class MapEditorViewModel : ViewModelBase
     private PaletteTile? _selectedPaletteTile;
 
     [ObservableProperty]
-    private bool _isDrawToolActive;
+    [NotifyPropertyChangedFor(nameof(IsRectangleToolActive), nameof(IsMoveToolActive), nameof(IsDrawToolActive))]
+    private CanvasTool _activeTool;
 
-    partial void OnIsDrawToolActiveChanged(bool value) => _strokeCell = null;
+    partial void OnActiveToolChanged(CanvasTool value)
+    {
+        _strokeCell = null;
+        EndSelectionDrag();
+        EndMoveDrag();
+    }
+
+    public bool IsRectangleToolActive
+    {
+        get => ActiveTool == CanvasTool.Rectangle;
+        set => SetToolActive(CanvasTool.Rectangle, value);
+    }
+
+    public bool IsMoveToolActive
+    {
+        get => ActiveTool == CanvasTool.Move;
+        set => SetToolActive(CanvasTool.Move, value);
+    }
+
+    public bool IsDrawToolActive
+    {
+        get => ActiveTool == CanvasTool.Draw;
+        set => SetToolActive(CanvasTool.Draw, value);
+    }
+
+    private void SetToolActive(CanvasTool tool, bool active)
+    {
+        if (active)
+            ActiveTool = tool;
+        else if (ActiveTool == tool)
+            ActiveTool = CanvasTool.Select;
+    }
+
+    // The selected cells of the selected map, as (column, row).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedCells), nameof(SelectionOutlines))]
+    private IReadOnlyList<(int X, int Y)> _selectedCells = [];
+
+    public bool HasSelectedCells => SelectedCells.Count > 0;
+
+    // The selected cells as pixel rectangles on the map, for the overlay that highlights them.
+    public IReadOnlyList<TileRegion> SelectionOutlines =>
+        SelectedCells.Select(cell => new TileRegion(string.Empty, cell.X * TileWidth, cell.Y * TileHeight, TileWidth, TileHeight)).ToList();
+
+    // The rectangle being dragged with the rectangle tool, in map pixels.
+    [ObservableProperty]
+    private Rect? _selectionRectangle;
+
+    // How far the selection is dragged with the move tool, in map pixels; null while not dragging.
+    [ObservableProperty]
+    private Vector? _moveOffset;
+
+    private record SelectionDrag(int StartX, int StartY, IReadOnlyList<(int X, int Y)> SelectionBefore, bool AddToSelection);
+
+    private SelectionDrag? _selectionDrag;
+
+    // The cell the move drag started on, and how many cells the selection is dragged by.
+    private (int X, int Y)? _moveDragStart;
+    private (int X, int Y) _moveDragCells;
 
     // The cell the current draw stroke reached last; null while no stroke is in progress.
     private (int X, int Y)? _strokeCell;
@@ -189,6 +252,151 @@ public partial class MapEditorViewModel : ViewModelBase
             CellRegions[y * map.Width + x] = tile.Region;
         CellsPainted?.Invoke(this, EventArgs.Empty);
         MapsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Whether a drag with the rectangle or move tool is in progress.
+    public bool IsDragInProgress => _selectionDrag is not null || _moveDragStart is not null;
+
+    public void HandleCanvasClick(int cellX, int cellY, bool addToSelection)
+    {
+        if (!IsRectangleToolActive || SelectedMap is not { } map)
+            return;
+
+        var cell = (cellX, cellY);
+        var isInside = cellX >= 0 && cellX < map.Width && cellY >= 0 && cellY < map.Height;
+        if (!addToSelection)
+            SelectedCells = isInside ? [cell] : [];
+        else if (isInside)
+            SelectedCells = SelectedCells.Contains(cell)
+                ? SelectedCells.Where(c => c != cell).ToList()
+                : SelectedCells.Append(cell).ToList();
+
+        UpdateSelectionStatus();
+    }
+
+    public void BeginSelectionDrag(int cellX, int cellY, bool addToSelection)
+    {
+        _selectionDrag = new SelectionDrag(cellX, cellY, SelectedCells, addToSelection);
+        UpdateSelectionDrag(cellX, cellY);
+    }
+
+    public void UpdateSelectionDrag(int cellX, int cellY)
+    {
+        if (_selectionDrag is not { } drag || SelectedMap is not { } map)
+            return;
+
+        var touched = MapRectangleSelector.CellsIn(map, drag.StartX, drag.StartY, cellX, cellY);
+        SelectionRectangle = touched.Count == 0 ? null : new Rect(
+            touched[0].X * TileWidth, touched[0].Y * TileHeight,
+            (touched[^1].X - touched[0].X + 1) * TileWidth, (touched[^1].Y - touched[0].Y + 1) * TileHeight);
+
+        var selection = drag.AddToSelection
+            ? drag.SelectionBefore.Concat(touched.Except(drag.SelectionBefore)).ToList()
+            : touched;
+        if (selection.SequenceEqual(SelectedCells))
+            return;
+
+        SelectedCells = selection;
+        UpdateSelectionStatus();
+    }
+
+    public void EndSelectionDrag()
+    {
+        _selectionDrag = null;
+        SelectionRectangle = null;
+    }
+
+    public void CancelSelectionDrag()
+    {
+        if (_selectionDrag is not { } drag)
+            return;
+
+        SelectedCells = drag.SelectionBefore;
+        EndSelectionDrag();
+        UpdateSelectionStatus();
+    }
+
+    public void DeleteSelectedCells()
+    {
+        if (SelectedMap is not { } map || !HasSelectedCells || IsDragInProgress)
+            return;
+
+        var cleared = MapEraser.Clear(map, SelectedCells);
+        SelectedCells = [];
+        StatusMessage = $"Cleared {cleared.Count} {(cleared.Count == 1 ? "cell" : "cells")}.";
+        if (cleared.Count == 0)
+            return;
+
+        RefreshCellRegions();
+        MapsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Only a press on an already selected cell starts a move; anywhere else the
+    // press is ignored so the selection stays as it is.
+    public bool BeginMoveDrag(int cellX, int cellY)
+    {
+        if (!IsMoveToolActive || !SelectedCells.Contains((cellX, cellY)))
+            return false;
+
+        _moveDragStart = (cellX, cellY);
+        return true;
+    }
+
+    public void UpdateMoveDrag(int cellX, int cellY)
+    {
+        if (_moveDragStart is not { } start)
+            return;
+
+        _moveDragCells = (cellX - start.X, cellY - start.Y);
+        MoveOffset = _moveDragCells == (0, 0) ? null : new Vector(_moveDragCells.X * TileWidth, _moveDragCells.Y * TileHeight);
+    }
+
+    public void CommitMoveDrag()
+    {
+        var (offsetX, offsetY) = _moveDragCells;
+        var isDragged = MoveOffset is not null;
+        EndMoveDrag();
+
+        if (!isDragged || SelectedMap is not { } map)
+            return;
+
+        var count = SelectedCells.Count;
+        var cellsBefore = map.Cells.ToArray();
+        var moved = MapMover.Move(map, SelectedCells, offsetX, offsetY);
+        var dropped = count - moved.Count;
+        SelectedCells = moved;
+        if (!map.Cells.SequenceEqual(cellsBefore))
+        {
+            RefreshCellRegions();
+            MapsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        StatusMessage = dropped == 0
+            ? $"Moved {count} {(count == 1 ? "cell" : "cells")}."
+            : $"Moved {moved.Count} {(moved.Count == 1 ? "cell" : "cells")}; {dropped} moved outside the map and {(dropped == 1 ? "was" : "were")} dropped.";
+    }
+
+    public void EndMoveDrag()
+    {
+        _moveDragStart = null;
+        _moveDragCells = (0, 0);
+        MoveOffset = null;
+    }
+
+    private void UpdateSelectionStatus()
+    {
+        StatusMessage = SelectedCells.Count switch
+        {
+            0 => "Selection cleared.",
+            1 => "Selected 1 cell.",
+            _ => $"Selected {SelectedCells.Count} cells.",
+        };
+    }
+
+    private void RefreshCellRegions()
+    {
+        if (SelectedMap is { } map && _findTileset(map.TilesetName) is { } tileset)
+            CellRegions = map.ResolveRegions(tileset.Tiles);
     }
 
     // Raised for create, rename, delete and painting, so the project can be marked as changed.

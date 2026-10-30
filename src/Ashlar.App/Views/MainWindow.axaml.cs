@@ -239,6 +239,8 @@ public partial class MainWindow : Window
             default:
                 if (viewModel.IsTilesetsTabActive)
                     EditorView.HandleKeyDown(e);
+                else
+                    MapView.HandleKeyDown(e);
                 break;
         }
     }
