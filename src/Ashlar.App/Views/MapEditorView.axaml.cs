@@ -32,6 +32,7 @@ public partial class MapEditorView : UserControl
         InitializeComponent();
         _viewport = new CanvasViewport(MapCanvasScrollViewer, MapCanvasPadding, MapCanvasContent);
         MapCanvasScrollViewer.PropertyChanged += OnScrollViewerPropertyChanged;
+        MapCanvasScrollViewer.LayoutUpdated += (_, _) => UpdateVisibleArea();
         DataContextChanged += OnDataContextChanged;
     }
 
@@ -92,12 +93,6 @@ public partial class MapEditorView : UserControl
             UpdateOverscrollPadding();
             ScrollToMapStartIfPending();
         }
-
-        if (e.Property == ScrollViewer.ViewportProperty || e.Property == ScrollViewer.OffsetProperty
-            || e.Property == ScrollViewer.ExtentProperty)
-        {
-            UpdateVisibleArea();
-        }
     }
 
     private void ScrollToMapStartIfPending()
@@ -106,7 +101,9 @@ public partial class MapEditorView : UserControl
             Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
     }
 
-    // Only the cells in view are drawn, so large maps stay cheap to render.
+    // Only the cells in view are drawn, so large maps stay cheap to render. Runs after every layout pass
+    // because the canvas position also depends on the overscroll padding, which is applied after the
+    // scroll viewer's own properties change.
     private void UpdateVisibleArea()
     {
         var viewport = MapCanvasScrollViewer.Viewport;

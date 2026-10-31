@@ -40,6 +40,7 @@ public partial class TilesetEditorView : UserControl
         _viewport = new CanvasViewport(TileCanvasScrollViewer, TileCanvasPadding, TileCanvasContent);
 
         TileCanvasScrollViewer.PropertyChanged += OnScrollViewerPropertyChanged;
+        TileCanvasScrollViewer.LayoutUpdated += (_, _) => UpdateVisibleArea();
         DataContextChanged += OnDataContextChanged;
     }
 
@@ -81,14 +82,10 @@ public partial class TilesetEditorView : UserControl
     {
         if (e.Property == ScrollViewer.ViewportProperty)
             UpdateOverscrollPadding();
-
-        if (e.Property == ScrollViewer.ViewportProperty || e.Property == ScrollViewer.OffsetProperty
-            || e.Property == ScrollViewer.ExtentProperty)
-        {
-            UpdateVisibleArea();
-        }
     }
 
+    // Runs after every layout pass: the canvas position depends on the overscroll padding, which is
+    // applied after the scroll viewer's own properties change.
     private void UpdateVisibleArea()
     {
         var viewport = TileCanvasScrollViewer.Viewport;

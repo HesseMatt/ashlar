@@ -129,6 +129,92 @@ public class MapCanvasTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void TheVisibleAreaOfANewLargeMapMatchesTheViewport()
+    {
+        var viewModel = ProjectWithForestMap(width: 50, height: 50);
+        var window = OpenMapsTab(viewModel);
+        viewModel.MapEditor.CreateMap("big", 50, 50, "forest");
+        Dispatcher.UIThread.RunJobs();
+
+        AssertVisibleAreaMatchesViewport(window);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void TheVisibleAreaStaysCorrectAfterSwitchingMapsTabsZoomingResizingAndPanning()
+    {
+        var viewModel = ProjectWithForestMap(width: 50, height: 50);
+        viewModel.MapEditor.CreateMap("other", 80, 80, "forest");
+        var window = OpenMapsTab(viewModel);
+        Dispatcher.UIThread.RunJobs();
+        var scroll = MapView(window).FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
+
+        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps.Single(map => map.Name == "level1");
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+
+        viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+        Dispatcher.UIThread.RunJobs();
+        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+
+        viewModel.MapEditor.ZoomIn();
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+
+        viewModel.MapEditor.ZoomOut();
+        viewModel.MapEditor.ZoomOut();
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+
+        viewModel.MapEditor.ResizeSelectedMap(70, 60);
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+
+        scroll.Offset = new Vector(scroll.Offset.X + 300, scroll.Offset.Y + 200);
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void TheVisibleAreaOfTheTilesetCanvasMatchesTheViewport()
+    {
+        var viewModel = new MainViewModel();
+        viewModel.LoadTileset(WriteImage("huge", 1600, 1600), 16, 16);
+        var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var view = window.GetVisualDescendants().OfType<TilesetEditorView>().Single();
+        var scroll = view.FindControl<ScrollViewer>("TileCanvasScrollViewer")!;
+        var content = view.FindControl<Control>("TileCanvasContent")!;
+        var expected = ViewportInContent(scroll, content);
+        Assert.Equal(expected, view.FindControl<TileGridOverlay>("TileOverlay")!.VisibleArea);
+        window.Close();
+    }
+
+    private static void AssertVisibleAreaMatchesViewport(Window window)
+    {
+        var view = MapView(window);
+        var scroll = view.FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
+        var content = view.FindControl<Control>("MapCanvasContent")!;
+        var visible = view.FindControl<TileMapCanvas>("MapCells")!.VisibleArea;
+        Assert.Equal(ViewportInContent(scroll, content), visible);
+
+        var center = scroll.TranslatePoint(new Point(scroll.Viewport.Width / 2, scroll.Viewport.Height / 2), content)!.Value;
+        Assert.True(visible!.Value.Contains(center));
+    }
+
+    private static Rect? ViewportInContent(ScrollViewer scroll, Control content)
+    {
+        var topLeft = scroll.TranslatePoint(new Point(0, 0), content);
+        var bottomRight = scroll.TranslatePoint(new Point(scroll.Viewport.Width, scroll.Viewport.Height), content);
+        return new Rect(topLeft!.Value, bottomRight!.Value);
+    }
+
+    [AvaloniaFact]
     public void AMapSelectedWhileTheMapsTabIsHiddenStartsAtTheTopLeftOnceShown()
     {
         var viewModel = ProjectWithForestMap(width: 200, height: 200);
