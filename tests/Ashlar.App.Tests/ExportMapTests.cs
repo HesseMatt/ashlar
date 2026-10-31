@@ -74,7 +74,9 @@ public class ExportMapTests : IDisposable
     public void ExportWritesXmlWithTheStoredTexturePathAndAnImageOfTheRightSize()
     {
         var main = ProjectWithMap();
-        main.TexturePath = "atlas/dungeon";
+        main.OpenTileset("dungeon");
+        main.Editor().TexturePath = "atlas/dungeon";
+        main.SelectMap("m");
         var xmlPath = Path.Combine(_directory, "map.xml");
         var imagePath = Path.Combine(_directory, "map.png");
 
@@ -105,10 +107,12 @@ public class ExportMapTests : IDisposable
     public void ExportUsesTheLiveEditedTilesetImageAndTileList()
     {
         var main = ProjectWithMap();
+        main.OpenTileset("dungeon");
         // Unsaved edit: the first tile is repainted blue and the second tile is deleted.
-        main.Editor.Image!.SetPixel(0, 0, new PixelColor(0, 0, 255, 255));
-        main.Editor.HandleCanvasClick(20, 5, addToSelection: false);
-        main.Editor.DeleteSelectedTiles();
+        main.Editor().Image!.SetPixel(0, 0, new PixelColor(0, 0, 255, 255));
+        main.Editor().HandleCanvasClick(20, 5, addToSelection: false);
+        main.Editor().DeleteSelectedTiles();
+        main.SelectMap("m");
         var xmlPath = Path.Combine(_directory, "map.xml");
         var imagePath = Path.Combine(_directory, "map.png");
 
@@ -122,7 +126,7 @@ public class ExportMapTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void ExportMapMenuItemIsEnabledOnlyOnTheMapsTabWithASelectedMap_AndTilesetExportsOnlyOnTheTilesetsTab()
+    public void ExportMapMenuItemFollowsTheSelectedMap_AndTilesetExportsTheActiveTilesetTab()
     {
         var main = new MainViewModel();
         var window = new MainWindow { DataContext = main, Width = 800, Height = 600 };
@@ -135,16 +139,18 @@ public class ExportMapTests : IDisposable
         Assert.True(Item("Export XML...").IsEnabled);
         Assert.True(Item("Save image...").IsEnabled);
 
-        main.SelectedTabIndex = MainViewModel.MapsTabIndex;
-        Assert.False(Item("Export map...").IsEnabled);
+        main.CreateMap("m", 2, 2, "dungeon");
+        Assert.True(Item("Export map...").IsEnabled);
         Assert.False(Item("Export XML...").IsEnabled);
         Assert.False(Item("Save image...").IsEnabled);
 
-        main.MapEditor.CreateMap("m", 2, 2, "dungeon");
-        Assert.True(Item("Export map...").IsEnabled);
+        main.OpenTileset("dungeon");
+        Assert.True(Item("Export XML...").IsEnabled);
+        Assert.True(Item("Save image...").IsEnabled);
 
-        main.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
-        Assert.False(Item("Export map...").IsEnabled);
+        main.CloseTab(main.ActiveTab!);
+        main.CloseTab(main.ActiveTab!);
+        Assert.False(Item("Export XML...").IsEnabled);
         window.Close();
     }
 
@@ -152,10 +158,11 @@ public class ExportMapTests : IDisposable
     {
         var main = new MainViewModel();
         main.LoadTileset(WriteImage("dungeon"), 16, 16);
-        main.MapEditor.CreateMap("m", 2, 2, "dungeon");
-        var map = main.MapEditor.SelectedMap!;
-        map[0, 0] = main.Editor.Tiles[0].Name;
-        map[1, 0] = main.Editor.Tiles[1].Name;
+        var tiles = main.Editor().Tiles;
+        main.CreateMap("m", 2, 2, "dungeon");
+        var map = main.MapEditor().Map;
+        map[0, 0] = tiles[0].Name;
+        map[1, 0] = tiles[1].Name;
         return main;
     }
 

@@ -34,7 +34,7 @@ public class NewProjectTests : IDisposable
 
         Assert.True(viewModel.IsProjectOpen);
         Assert.True(viewModel.IsProjectEmpty);
-        Assert.False(viewModel.Editor.HasImage);
+        Assert.Empty(viewModel.OpenTabs);
         Assert.Null(viewModel.ProjectPath);
     }
 
@@ -45,9 +45,9 @@ public class NewProjectTests : IDisposable
 
         viewModel.NewProject();
 
-        Assert.False(viewModel.Editor.HasImage);
-        Assert.Empty(viewModel.Editor.Tiles);
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        Assert.Empty(viewModel.OpenTabs);
+        Assert.Empty(viewModel.TilesetNames);
+        Assert.False(viewModel.HasUnsavedChanges);
         Assert.Null(viewModel.ProjectPath);
     }
 
@@ -81,7 +81,7 @@ public class NewProjectTests : IDisposable
         viewModel.OpenProject(path);
 
         Assert.True(viewModel.IsProjectEmpty);
-        Assert.Empty(viewModel.Editor.Tiles);
+        Assert.Empty(viewModel.OpenTabs);
     }
 
     [AvaloniaFact]
@@ -96,7 +96,7 @@ public class NewProjectTests : IDisposable
 
         Assert.Equal(path, viewModel.ProjectPath);
         Assert.False(viewModel.IsProjectEmpty);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -136,14 +136,15 @@ public class NewProjectTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void EmptyStateIsShownOnlyForAnEmptyProject()
+    public void EmptyStateIsShownWhileNoTabIsOpen()
     {
         var viewModel = new MainViewModel();
         var window = new MainWindow { DataContext = viewModel, Width = 800, Height = 600 };
         window.Show();
         // The logical tree can yield the same control twice.
-        var panel = window.GetLogicalDescendants().OfType<Border>().Where(b => b.Name == "EmptyProjectPanel").Distinct().Single();
-        Assert.False(panel.IsVisible);
+        var panel = window.GetLogicalDescendants().OfType<Border>().Where(b => b.Name == "EmptyEditorPanel").Distinct().Single();
+        Assert.True(panel.IsVisible);
+        Assert.Contains(panel.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "No project open");
 
         viewModel.NewProject();
         Assert.True(panel.IsVisible);
@@ -152,8 +153,16 @@ public class NewProjectTests : IDisposable
         viewModel.LoadTileset(WriteImage(), 16, 16);
         Assert.False(panel.IsVisible);
 
-        viewModel.CloseProject();
+        viewModel.CloseTab(viewModel.ActiveTab!);
+        Assert.True(panel.IsVisible);
+        Assert.Contains(panel.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text?.StartsWith("Double-click") == true);
+
+        viewModel.LoadTileset(WriteImage(), 16, 16);
         Assert.False(panel.IsVisible);
+
+        viewModel.CloseProject();
+        Assert.True(panel.IsVisible);
+        Assert.Contains(panel.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "No project open");
         window.Close();
     }
 
@@ -210,7 +219,7 @@ public class NewProjectTests : IDisposable
 
         window.KeyPressQwerty(PhysicalKey.N, RawInputModifiers.Control);
 
-        Assert.True(viewModel.Editor.HasImage);
+        Assert.True(viewModel.Editor().HasImage);
         window.Close();
     }
 

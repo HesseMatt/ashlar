@@ -35,7 +35,7 @@ public class CloseProjectTests : IDisposable
         _viewModel.LoadTileset(WriteImage(), 16, 16);
 
         Assert.True(item.IsEnabled);
-        Assert.Equal("Ctrl+W", item.InputGesture!.ToString());
+        Assert.Equal("Ctrl+Shift+W", item.InputGesture!.ToString());
     }
 
     [AvaloniaFact]

@@ -36,6 +36,8 @@ public class SaveProjectTests : IDisposable
 
         viewModel.OpenProject(path);
 
+        viewModel.OpenFirstTileset();
+
         Assert.Equal("tiles", viewModel.SuggestedProjectFileName);
     }
 
@@ -58,6 +60,8 @@ public class SaveProjectTests : IDisposable
         var viewModel = new MainViewModel();
 
         viewModel.OpenProject(path);
+
+        viewModel.OpenFirstTileset();
 
         Assert.Equal(path, viewModel.ProjectPath);
     }
@@ -91,13 +95,13 @@ public class SaveProjectTests : IDisposable
         var viewModel = OpenImage();
         var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
-        viewModel.Editor.ChangeTileSize(8, 8);
+        viewModel.Editor().ChangeTileSize(8, 8);
 
         var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "b.ashlar"));
 
         Assert.False(saved);
         Assert.Equal(path, viewModel.ProjectPath);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -119,7 +123,7 @@ public class SaveProjectTests : IDisposable
         var items = window.GetLogicalDescendants().OfType<MenuItem>().ToList();
         var save = items.Single(m => m.Header as string == "Save project");
         var saveAs = items.Single(m => m.Header as string == "Save project as...");
-        var saveImage = items.Single(m => m.Header as string == "Save image...");
+        var saveImage = items.First(m => m.Header as string == "Save image...");
         Assert.False(save.IsEnabled);
         Assert.False(saveAs.IsEnabled);
 
@@ -141,14 +145,14 @@ public class SaveProjectTests : IDisposable
         var path = Path.Combine(_directory, "a.ashlar");
         viewModel.SaveProject(path);
         File.Delete(path);
-        viewModel.Editor.ChangeTileSize(8, 8);
+        viewModel.Editor().ChangeTileSize(8, 8);
         var window = new MainWindow { DataContext = viewModel, Width = 800, Height = 600 };
         window.Show();
 
         window.KeyPressQwerty(PhysicalKey.S, RawInputModifiers.Control);
 
         Assert.True(File.Exists(path));
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        Assert.False(viewModel.HasUnsavedChanges);
         window.Close();
     }
 

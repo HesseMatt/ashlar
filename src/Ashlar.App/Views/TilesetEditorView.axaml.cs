@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Ashlar.App.Controls;
 using Ashlar.App.ViewModels;
@@ -23,6 +24,7 @@ public partial class TilesetEditorView : UserControl
     private IPointer? _moveDragPointer;
     private bool _isDrawing;
     private IPointer? _drawPointer;
+    private bool _scrollToStartPending;
     private bool _isPicking;
     private IPointer? _pickPointer;
 
@@ -52,6 +54,9 @@ public partial class TilesetEditorView : UserControl
         editor.PropertyChanged += OnViewModelPropertyChanged;
         UpdateInterpolation(editor);
         editor.TilesetLoaded += (_, _) => ScrollToTilesetStart();
+        // The tab view is created after the tileset was loaded, and may not be shown yet.
+        _scrollToStartPending = true;
+        ScrollToStartIfPending();
         editor.PreviewPixelsChanged += (_, _) =>
         {
             TilesetImage.InvalidateVisual();
@@ -81,7 +86,16 @@ public partial class TilesetEditorView : UserControl
     private void OnScrollViewerPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.Property == ScrollViewer.ViewportProperty)
+        {
             UpdateOverscrollPadding();
+            ScrollToStartIfPending();
+        }
+    }
+
+    private void ScrollToStartIfPending()
+    {
+        if (_scrollToStartPending)
+            Dispatcher.UIThread.Post(ScrollToTilesetStart, DispatcherPriority.Loaded);
     }
 
     // Runs after every layout pass: the canvas position depends on the overscroll padding, which is
@@ -106,6 +120,11 @@ public partial class TilesetEditorView : UserControl
     private void ScrollToTilesetStart()
     {
         if (DataContext is not TilesetEditorViewModel editor)
+            return;
+
+        // A tab that is not shown has no viewport yet; scrolling now would be lost, so retry once it is shown.
+        _scrollToStartPending = !TileCanvasScrollViewer.IsEffectivelyVisible;
+        if (_scrollToStartPending)
             return;
 
         _viewport.ScrollToStart(editor.ScaledImageWidth, editor.ScaledImageHeight,

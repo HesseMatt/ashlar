@@ -15,8 +15,12 @@ using Ashlar.Core.Serialization;
 
 namespace Ashlar.App.ViewModels;
 
-public partial class TilesetEditorViewModel : ViewModelBase
+public partial class TilesetEditorViewModel : EditorTabViewModel
 {
+    public TilesetEditorViewModel(string name) : base(name)
+    {
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImage))]
     private WriteableBitmap? _previewBitmap;
@@ -38,9 +42,6 @@ public partial class TilesetEditorViewModel : ViewModelBase
     private double _zoomLevel = 1.0;
 
     [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    [ObservableProperty]
     private ObservableCollection<TileRegion> _tiles = new();
 
     [ObservableProperty]
@@ -50,17 +51,6 @@ public partial class TilesetEditorViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasEdits;
-
-    // Tracks whether the current state was saved as a project. Independent of
-    // HasEdits: a freshly imported tileset has no edits but was never saved.
-    [ObservableProperty]
-    private bool _hasUnsavedChanges;
-
-    [ObservableProperty]
-    private bool _canUndo;
-
-    [ObservableProperty]
-    private bool _canRedo;
 
     [ObservableProperty]
     private ObservableCollection<string> _groupNames = new();
@@ -127,6 +117,9 @@ public partial class TilesetEditorViewModel : ViewModelBase
     }
 
     public event EventHandler? TilesetLoaded;
+
+    // Raised whenever the tileset differs from what the project holds, so the project can be marked as unsaved.
+    public event EventHandler? Changed;
 
     // The preview bitmap is updated in place, so its property doesn't change
     // and the views have to be told to draw it again.
@@ -216,6 +209,10 @@ public partial class TilesetEditorViewModel : ViewModelBase
             TilesDeleted?.Invoke(this, deleted);
     }
 
+    // The texture name written to the export XML.
+    [ObservableProperty]
+    private string _texturePath = string.Empty;
+
     public string? SourceFileName => _sourceFileName;
 
     public EditableTilesetImage? Image => _editableImage;
@@ -244,7 +241,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
         RebuildGrid();
         // The new grid reuses the sequential names for different regions, so no old reference stays valid.
         TilesDeleted?.Invoke(this, tilesBefore.Select(t => t.Name).ToHashSet());
-        HasUnsavedChanges = true;
+        Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = $"Changed the tile size to {TileSizeText} ({Tiles.Count} tiles).";
     }
 
@@ -252,13 +249,14 @@ public partial class TilesetEditorViewModel : ViewModelBase
     {
         ReplaceImage(image);
         _sourceFileName = sourceFileName;
+        TexturePath = Path.GetFileNameWithoutExtension(sourceFileName);
         ResetHistory(startedWithEdits: false);
         ResetInteraction();
 
         TileWidth = tileWidth;
         TileHeight = tileHeight;
         RebuildGrid();
-        HasUnsavedChanges = true;
+        Changed?.Invoke(this, EventArgs.Empty);
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
@@ -266,6 +264,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
     {
         ReplaceImage(image);
         _sourceFileName = project.ImageFileName;
+        TexturePath = project.TexturePath;
         ResetInteraction();
 
         var projectColor = project.DrawColor ?? PixelColor.Black;
@@ -276,28 +275,20 @@ public partial class TilesetEditorViewModel : ViewModelBase
         ResetHistory(startedWithEdits: !project.Tiles.SequenceEqual(
             TilesetGridBuilder.Build(project.ImageFileName, image, project.TileWidth, project.TileHeight)));
         RefreshGroupNames();
-        HasUnsavedChanges = false;
         TilesetLoaded?.Invoke(this, EventArgs.Empty);
     }
 
+    // Releases the image once the tab is closed; the project keeps the tileset as a snapshot.
     public void Close()
     {
         ResetInteraction();
-
         _editableImage?.Dispose();
         _editableImage = null;
-        PreviewBitmap = null;
-        ImageWidth = 0;
-        ImageHeight = 0;
-        _sourceFileName = null;
-        Tiles = new ObservableCollection<TileRegion>();
-        GroupNames = new ObservableCollection<string>();
-        DrawColor = Colors.Black;
-        TileWidth = DefaultTileSize;
-        TileHeight = DefaultTileSize;
-        ResetHistory(startedWithEdits: false);
-        HasUnsavedChanges = false;
     }
+
+    public ProjectTileset ToProjectTileset() =>
+        new(Title, _sourceFileName!, _editableImage!.EncodeToPng(), TexturePath, TileWidth, TileHeight, Tiles.ToList(),
+            new PixelColor(DrawColor.R, DrawColor.G, DrawColor.B, DrawColor.A));
 
     private void ReplaceImage(EditableTilesetImage image)
     {
@@ -318,9 +309,9 @@ public partial class TilesetEditorViewModel : ViewModelBase
         ZoomLevel = 1.0;
     }
 
-    public double ZoomIn() => ZoomLevel = NextZoomIn(ZoomLevel);
+    public override double ZoomIn() => ZoomLevel = NextZoomIn(ZoomLevel);
 
-    public double ZoomOut() => ZoomLevel = NextZoomOut(ZoomLevel);
+    public override double ZoomOut() => ZoomLevel = NextZoomOut(ZoomLevel);
 
     public static double NextZoomIn(double zoomLevel) => Math.Clamp(zoomLevel + ZoomStepAt(zoomLevel), MinZoom, MaxZoom);
 
@@ -332,7 +323,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
     public static BitmapInterpolationMode InterpolationAt(double zoomLevel) =>
         zoomLevel >= CrispPixelsZoom ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality;
 
-    public void ResetZoom() => ZoomLevel = 1.0;
+    public override void ResetZoom() => ZoomLevel = 1.0;
 
     public void HandleCanvasClick(int pixelX, int pixelY, bool addToSelection)
     {
@@ -604,7 +595,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
 
     // Ignored mid-drag: the drag's own state (selection before, move origin)
     // would be stale after the document changed underneath it.
-    public void Undo()
+    public override void Undo()
     {
         if (!_history.CanUndo || IsDragInProgress)
             return;
@@ -612,11 +603,11 @@ public partial class TilesetEditorViewModel : ViewModelBase
         var step = _history.Undo();
         Restore(step.Before, step.SelectionBefore);
         UpdateHistoryState();
-        HasUnsavedChanges = true;
+        Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = $"Undid: {step.Description}.";
     }
 
-    public void Redo()
+    public override void Redo()
     {
         if (!_history.CanRedo || IsDragInProgress)
             return;
@@ -624,7 +615,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
         var step = _history.Redo();
         Restore(step.After, step.SelectionAfter);
         UpdateHistoryState();
-        HasUnsavedChanges = true;
+        Changed?.Invoke(this, EventArgs.Empty);
         StatusMessage = $"Redid: {step.Description}.";
     }
 
@@ -701,7 +692,7 @@ public partial class TilesetEditorViewModel : ViewModelBase
     {
         _history.Record(new EditStep(description, before, CaptureState(), selectionBefore, SelectedNames()));
         UpdateHistoryState();
-        HasUnsavedChanges = true;
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private void ResetHistory(bool startedWithEdits)

@@ -21,8 +21,8 @@ public class MultipleTilesetsTests : IDisposable
 
         Assert.Equal(["dungeon", "forest"], viewModel.TilesetNames);
         Assert.Equal("forest", viewModel.SelectedTilesetName);
-        Assert.Equal(64, viewModel.Editor.ImageWidth);
-        Assert.StartsWith("forest_", viewModel.Editor.Tiles[0].Name);
+        Assert.Equal(64, viewModel.Editor().ImageWidth);
+        Assert.StartsWith("forest_", viewModel.Editor().Tiles[0].Name);
     }
 
     [AvaloniaFact]
@@ -38,50 +38,54 @@ public class MultipleTilesetsTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void SelectingATilesetShowsItAndKeepsItsEditsWhileAwayFromIt()
+    public void ATilesetKeepsItsEditsWhileItsTabIsClosed()
     {
         var viewModel = TwoTilesets();
-        viewModel.SelectTileset("dungeon");
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
-        var tileCount = viewModel.Editor.Tiles.Count;
+        viewModel.OpenTileset("dungeon");
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
+        var tileCount = viewModel.Editor().Tiles.Count;
 
-        viewModel.SelectTileset("forest");
-        Assert.Equal(64, viewModel.Editor.ImageWidth);
-        Assert.Equal(16, viewModel.Editor.Tiles.Count);
+        viewModel.CloseTab(viewModel.ActiveTab!);
+        viewModel.OpenTileset("forest");
+        Assert.Equal(64, viewModel.Editor().ImageWidth);
+        Assert.Equal(16, viewModel.Editor().Tiles.Count);
 
-        viewModel.SelectTileset("dungeon");
-        Assert.Equal(32, viewModel.Editor.ImageWidth);
-        Assert.Equal(tileCount, viewModel.Editor.Tiles.Count);
+        viewModel.OpenTileset("dungeon");
+        Assert.Equal(32, viewModel.Editor().ImageWidth);
+        Assert.Equal(tileCount, viewModel.Editor().Tiles.Count);
         Assert.Equal(3, tileCount);
     }
 
     [AvaloniaFact]
-    public void SelectingATilesetResetsTheUndoHistoryButKeepsUnsavedChanges()
+    public void ClosingATabResetsItsUndoHistoryButKeepsUnsavedChanges()
     {
         var viewModel = TwoTilesets();
-        viewModel.SelectTileset("dungeon");
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.OpenTileset("dungeon");
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
+        Assert.True(viewModel.Editor().CanUndo);
 
-        viewModel.SelectTileset("forest");
+        viewModel.CloseTab(viewModel.ActiveTab!);
+        viewModel.OpenTileset("dungeon");
 
-        Assert.False(viewModel.Editor.CanUndo);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.False(viewModel.Editor().CanUndo);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void RenamingChangesTheNameButNotTheTileNames()
     {
         var viewModel = TwoTilesets();
-        var firstTileName = viewModel.Editor.Tiles[0].Name;
+        var firstTileName = viewModel.Editor().Tiles[0].Name;
 
-        var renamed = viewModel.RenameSelectedTileset("  woods ");
+        var renamed = viewModel.RenameTileset("forest", "  woods ");
 
         Assert.True(renamed);
         Assert.Equal(["dungeon", "woods"], viewModel.TilesetNames);
         Assert.Equal("woods", viewModel.SelectedTilesetName);
-        Assert.Equal(firstTileName, viewModel.Editor.Tiles[0].Name);
+        Assert.Equal("woods", viewModel.ActiveTab!.Title);
+        Assert.Equal(firstTileName, viewModel.Editor().Tiles[0].Name);
     }
 
     [AvaloniaFact]
@@ -89,11 +93,11 @@ public class MultipleTilesetsTests : IDisposable
     {
         var viewModel = TwoTilesets();
 
-        var renamed = viewModel.RenameSelectedTileset("dungeon");
+        var renamed = viewModel.RenameTileset("forest", "dungeon");
 
         Assert.False(renamed);
         Assert.Equal(["dungeon", "forest"], viewModel.TilesetNames);
-        Assert.Contains("already exists", viewModel.Editor.StatusMessage);
+        Assert.Contains("already exists", viewModel.Editor().StatusMessage);
     }
 
     [AvaloniaFact]
@@ -101,31 +105,31 @@ public class MultipleTilesetsTests : IDisposable
     {
         var viewModel = TwoTilesets();
 
-        Assert.False(viewModel.RenameSelectedTileset("   "));
+        Assert.False(viewModel.RenameTileset("forest", "   "));
         Assert.Equal("forest", viewModel.SelectedTilesetName);
     }
 
     [AvaloniaFact]
-    public void RemovingSelectsANeighbourAndRemovingTheLastLeavesAnEmptyProject()
+    public void RemovingClosesItsTabAndRemovingTheLastLeavesAnEmptyProject()
     {
         var viewModel = TwoTilesets();
 
-        viewModel.RemoveSelectedTileset();
+        viewModel.RemoveTileset("forest");
         Assert.Equal(["dungeon"], viewModel.TilesetNames);
-        Assert.Equal("dungeon", viewModel.SelectedTilesetName);
-        Assert.Equal(32, viewModel.Editor.ImageWidth);
+        Assert.Equal(["dungeon"], viewModel.OpenTabs.Select(tab => tab.Title));
+        Assert.Equal(32, viewModel.Editor().ImageWidth);
 
-        viewModel.RemoveSelectedTileset();
+        viewModel.RemoveTileset("dungeon");
         Assert.Empty(viewModel.TilesetNames);
+        Assert.Empty(viewModel.OpenTabs);
         Assert.True(viewModel.IsProjectEmpty);
-        Assert.Null(viewModel.SelectedTilesetName);
     }
 
     [AvaloniaFact]
-    public void ExportsActOnTheSelectedTileset()
+    public void ExportsActOnTheActiveTileset()
     {
         var viewModel = TwoTilesets();
-        viewModel.SelectTileset("dungeon");
+        viewModel.OpenTileset("dungeon");
         var xmlPath = Path.Combine(_directory, "out.xml");
         var pngPath = Path.Combine(_directory, "out.png");
 
@@ -141,50 +145,53 @@ public class MultipleTilesetsTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void SavingAndReopeningRestoresAllTilesetsWithTheirEdits()
+    public void SavingAndReopeningRestoresAllTilesetsWithTheirEditsAndOpensNoTabs()
     {
         var path = Path.Combine(_directory, "p.ashlar");
         var viewModel = TwoTilesets();
-        viewModel.SelectTileset("dungeon");
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.OpenTileset("dungeon");
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
         viewModel.SaveProject(path);
 
         var reopened = new MainViewModel();
         reopened.OpenProject(path);
 
         Assert.Equal(["dungeon", "forest"], reopened.TilesetNames);
-        Assert.Equal("dungeon", reopened.SelectedTilesetName);
-        Assert.Equal(3, reopened.Editor.Tiles.Count);
-        reopened.SelectTileset("forest");
-        Assert.Equal(16, reopened.Editor.Tiles.Count);
+        Assert.Empty(reopened.OpenTabs);
+        reopened.OpenTileset("dungeon");
+        Assert.Equal(3, reopened.Editor().Tiles.Count);
+        reopened.OpenTileset("forest");
+        Assert.Equal(16, reopened.Editor().Tiles.Count);
         Assert.Equal(2, ProjectFile.Load(path).Tilesets.Count);
     }
 
     [AvaloniaFact]
-    public void SelectingInTheListSwitchesTheEditedTileset()
+    public void TheExplorerListsTheTilesetsAndSelectingOneDoesNotOpenIt()
     {
         var viewModel = TwoTilesets();
+        viewModel.CloseTab(viewModel.ActiveTab!);
+        viewModel.CloseTab(viewModel.ActiveTab!);
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
-        var list = window.GetLogicalDescendants().OfType<ListBox>().Single(l => l.Name == "TilesetList");
-        Assert.Equal(["dungeon", "forest"], list.Items.Cast<string>());
-        Assert.Equal("forest", list.SelectedItem);
+        var tree = window.GetLogicalDescendants().OfType<TreeView>().Single(t => t.Name == "ExplorerTree");
+        Assert.Equal(["Tilesets", "Maps"], viewModel.ExplorerRoots.Select(node => node.Name));
+        Assert.Equal(["dungeon", "forest"], viewModel.TilesetsGroup.Children.Select(node => node.Name));
 
-        list.SelectedItem = "dungeon";
+        tree.SelectedItem = viewModel.TilesetsGroup.Children[0];
 
         Assert.Equal("dungeon", viewModel.SelectedTilesetName);
-        Assert.Equal(32, viewModel.Editor.ImageWidth);
+        Assert.Empty(viewModel.OpenTabs);
         window.Close();
     }
 
     [AvaloniaFact]
-    public void TheListIsHiddenWithoutAnOpenProject()
+    public void TheExplorerIsHiddenWithoutAnOpenProject()
     {
         var viewModel = new MainViewModel();
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
-        var panel = window.GetLogicalDescendants().OfType<Border>().Single(b => b.Name == "TilesetListPanel");
+        var panel = window.GetLogicalDescendants().OfType<Border>().Single(b => b.Name == "ExplorerPanel");
         Assert.False(panel.IsVisible);
 
         viewModel.NewProject();

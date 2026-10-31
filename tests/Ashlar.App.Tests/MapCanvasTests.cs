@@ -20,13 +20,13 @@ public class MapCanvasTests : IDisposable
     public void CellsAreResolvedToTheirTilesRegionsAndEmptyCellsHaveNone()
     {
         var viewModel = ProjectWithForestMap(width: 3, height: 2);
-        var map = viewModel.MapEditor.SelectedMap!;
+        var map = viewModel.MapEditor().Map;
         map[0, 0] = "forest_0001";
         map[2, 1] = "forest_0006";
 
-        viewModel.MapEditor.RefreshTileset();
+        viewModel.MapEditor().RefreshTileset();
 
-        var regions = viewModel.MapEditor.CellRegions;
+        var regions = viewModel.MapEditor().CellRegions;
         Assert.Equal(6, regions.Length);
         Assert.Equal(("forest_0001", 0, 0), (regions[0]!.Name, regions[0]!.X, regions[0]!.Y));
         Assert.Equal(("forest_0006", 16, 16), (regions[5]!.Name, regions[5]!.X, regions[5]!.Y));
@@ -37,38 +37,38 @@ public class MapCanvasTests : IDisposable
     public void CellsWhoseTileWasDeletedFromTheTilesetShowAsEmpty()
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 1);
-        viewModel.MapEditor.SelectedMap![0, 0] = "forest_0001";
-        viewModel.MapEditor.SelectedMap![1, 0] = "forest_0002";
-        viewModel.Editor.HandleCanvasClick(5, 5, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        var mapEditor = viewModel.MapEditor();
+        mapEditor.Map[0, 0] = "forest_0001";
+        mapEditor.Map[1, 0] = "forest_0002";
+        viewModel.OpenTileset("forest");
+        viewModel.Editor().HandleCanvasClick(5, 5, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
-
-        var regions = viewModel.MapEditor.CellRegions;
+        var regions = mapEditor.CellRegions;
         Assert.Null(regions[0]);
         Assert.Equal("forest_0002", regions[1]!.Name);
     }
 
     [AvaloniaFact]
-    public void ThePaletteListsTheTilesOfTheMapsTilesetAndFollowsTheSelectedMap()
+    public void EachMapTabHasThePaletteOfItsTileset()
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 2);
-        viewModel.MapEditor.CreateMap("cave", 2, 2, "dungeon");
+        viewModel.CreateMap("cave", 2, 2, "dungeon");
 
-        Assert.Equal(4, viewModel.MapEditor.PaletteTiles.Count);
-        Assert.All(viewModel.MapEditor.PaletteTiles, tile => Assert.StartsWith("dungeon_", tile.Name));
+        Assert.Equal(4, viewModel.MapEditor().PaletteTiles.Count);
+        Assert.All(viewModel.MapEditor().PaletteTiles, tile => Assert.StartsWith("dungeon_", tile.Name));
 
-        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps[0];
+        viewModel.OpenMap("level1");
 
-        Assert.Equal(16, viewModel.MapEditor.PaletteTiles.Count);
-        Assert.All(viewModel.MapEditor.PaletteTiles, tile => Assert.StartsWith("forest_", tile.Name));
+        Assert.Equal(16, viewModel.MapEditor().PaletteTiles.Count);
+        Assert.All(viewModel.MapEditor().PaletteTiles, tile => Assert.StartsWith("forest_", tile.Name));
     }
 
     [AvaloniaFact]
     public void ThePaletteTracksASingleSelectedTile()
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 2);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         Assert.Null(editor.SelectedPaletteTile);
 
         editor.SelectedPaletteTile = editor.PaletteTiles[3];
@@ -86,12 +86,12 @@ public class MapCanvasTests : IDisposable
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 2);
         var window = OpenMapsTab(viewModel);
-        var palette = window.GetVisualDescendants().OfType<MapEditorView>().Single().FindControl<ListBox>("PaletteList")!;
+        var palette = MapView(window).FindControl<ListBox>("PaletteList")!;
 
         Assert.Equal(16, palette.ItemCount);
         palette.SelectedIndex = 2;
 
-        Assert.Equal("forest_0003", viewModel.MapEditor.SelectedPaletteTile!.Name);
+        Assert.Equal("forest_0003", viewModel.MapEditor().SelectedPaletteTile!.Name);
         window.Close();
     }
 
@@ -104,9 +104,9 @@ public class MapCanvasTests : IDisposable
 
         Assert.Equal((80, 48), (content.Bounds.Width, content.Bounds.Height));
 
-        viewModel.MapEditor.ZoomLevel = 2;
+        viewModel.MapEditor().ZoomLevel = 2;
 
-        Assert.Equal((160, 96), (viewModel.MapEditor.ScaledMapWidth, viewModel.MapEditor.ScaledMapHeight));
+        Assert.Equal((160, 96), (viewModel.MapEditor().ScaledMapWidth, viewModel.MapEditor().ScaledMapHeight));
         Assert.Equal((80, 48), (content.Bounds.Width, content.Bounds.Height));
         window.Close();
     }
@@ -120,7 +120,7 @@ public class MapCanvasTests : IDisposable
 
         Assert.True(scroll.Extent.Width > scroll.Viewport.Width);
         Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
-        Assert.Equal(1600, viewModel.MapEditor.MapPixelWidth);
+        Assert.Equal(1600, viewModel.MapEditor().MapPixelWidth);
         // Only the visible cells are drawn.
         var visible = MapView(window).FindControl<TileMapCanvas>("MapCells")!.VisibleArea;
         Assert.NotNull(visible);
@@ -133,7 +133,7 @@ public class MapCanvasTests : IDisposable
     {
         var viewModel = ProjectWithForestMap(width: 50, height: 50);
         var window = OpenMapsTab(viewModel);
-        viewModel.MapEditor.CreateMap("big", 50, 50, "forest");
+        viewModel.CreateMap("big", 50, 50, "forest");
         Dispatcher.UIThread.RunJobs();
 
         AssertVisibleAreaMatchesViewport(window);
@@ -144,31 +144,31 @@ public class MapCanvasTests : IDisposable
     public void TheVisibleAreaStaysCorrectAfterSwitchingMapsTabsZoomingResizingAndPanning()
     {
         var viewModel = ProjectWithForestMap(width: 50, height: 50);
-        viewModel.MapEditor.CreateMap("other", 80, 80, "forest");
+        viewModel.CreateMap("other", 80, 80, "forest");
         var window = OpenMapsTab(viewModel);
         Dispatcher.UIThread.RunJobs();
         var scroll = MapView(window).FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
 
-        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps.Single(map => map.Name == "level1");
+        viewModel.OpenMap("level1");
         Dispatcher.UIThread.RunJobs();
         AssertVisibleAreaMatchesViewport(window);
 
-        viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+        viewModel.OpenTileset("forest");
         Dispatcher.UIThread.RunJobs();
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
-        Dispatcher.UIThread.RunJobs();
-        AssertVisibleAreaMatchesViewport(window);
-
-        viewModel.MapEditor.ZoomIn();
+        viewModel.OpenMap("level1");
         Dispatcher.UIThread.RunJobs();
         AssertVisibleAreaMatchesViewport(window);
 
-        viewModel.MapEditor.ZoomOut();
-        viewModel.MapEditor.ZoomOut();
+        viewModel.MapEditor().ZoomIn();
         Dispatcher.UIThread.RunJobs();
         AssertVisibleAreaMatchesViewport(window);
 
-        viewModel.MapEditor.ResizeSelectedMap(70, 60);
+        viewModel.MapEditor().ZoomOut();
+        viewModel.MapEditor().ZoomOut();
+        Dispatcher.UIThread.RunJobs();
+        AssertVisibleAreaMatchesViewport(window);
+
+        viewModel.ResizeMap("level1", 70, 60);
         Dispatcher.UIThread.RunJobs();
         AssertVisibleAreaMatchesViewport(window);
 
@@ -215,38 +215,15 @@ public class MapCanvasTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void AMapSelectedWhileTheMapsTabIsHiddenStartsAtTheTopLeftOnceShown()
+    public void AMapTabOpenedWhileAnotherTabIsShownStartsAtTheTopLeftOnceShown()
     {
         var viewModel = ProjectWithForestMap(width: 200, height: 200);
-        viewModel.MapEditor.CreateMap("small", 2, 2, "forest");
+        viewModel.CreateMap("small", 2, 2, "forest");
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
-        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps.Single(map => map.Name == "level1");
         Dispatcher.UIThread.RunJobs();
 
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
-        Dispatcher.UIThread.RunJobs();
-
-        var view = MapView(window);
-        var scroll = view.FindControl<ScrollViewer>("MapCanvasScrollViewer")!;
-        var padding = view.FindControl<Border>("MapCanvasPadding")!.Padding;
-        Assert.True(padding.Left > 0);
-        Assert.Equal((padding.Left, padding.Top), (scroll.Offset.X, scroll.Offset.Y));
-        window.Close();
-    }
-
-    [AvaloniaFact]
-    public void AMapSelectedWhileAwayStartsAtTheTopLeftWhenTheMapsTabIsShownAgain()
-    {
-        var viewModel = ProjectWithForestMap(width: 200, height: 200);
-        viewModel.MapEditor.CreateMap("small", 2, 2, "forest");
-        var window = OpenMapsTab(viewModel);
-        Dispatcher.UIThread.RunJobs();
-
-        viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
-        viewModel.MapEditor.SelectedMap = viewModel.MapEditor.Maps.Single(map => map.Name == "level1");
-        Dispatcher.UIThread.RunJobs();
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        viewModel.OpenMap("level1");
         Dispatcher.UIThread.RunJobs();
 
         var view = MapView(window);
@@ -258,7 +235,7 @@ public class MapCanvasTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void APannedMapKeepsItsOffsetAcrossATilesetsToMapsRoundTrip()
+    public void APannedMapKeepsItsOffsetWhileAnotherTabIsShown()
     {
         var viewModel = ProjectWithForestMap(width: 200, height: 200);
         var window = OpenMapsTab(viewModel);
@@ -268,32 +245,12 @@ public class MapCanvasTests : IDisposable
         Dispatcher.UIThread.RunJobs();
         var panned = scroll.Offset;
 
-        viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
+        viewModel.OpenTileset("forest");
         Dispatcher.UIThread.RunJobs();
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        viewModel.OpenMap("level1");
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(panned, MapView(window).FindControl<ScrollViewer>("MapCanvasScrollViewer")!.Offset);
-        window.Close();
-    }
-
-    [AvaloniaFact]
-    public void VisitingTheMapsTabSeveralTimesLeavesOneHandlerOnTheViewModel()
-    {
-        var viewModel = ProjectWithForestMap(width: 2, height: 2);
-        var window = OpenMapsTab(viewModel);
-        for (var visit = 0; visit < 3; visit++)
-        {
-            viewModel.SelectedTabIndex = MainViewModel.TilesetsTabIndex;
-            Dispatcher.UIThread.RunJobs();
-            viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
-            Dispatcher.UIThread.RunJobs();
-        }
-
-        var field = typeof(MapEditorViewModel).GetField(nameof(MapEditorViewModel.MapShown),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-        var handlers = ((Delegate?)field.GetValue(viewModel.MapEditor))!.GetInvocationList();
-        Assert.Single(handlers);
         window.Close();
     }
 
@@ -303,13 +260,13 @@ public class MapCanvasTests : IDisposable
         var viewModel = ProjectWithForestMap(width: 2, height: 2);
         var window = OpenMapsTab(viewModel);
         Dispatcher.UIThread.RunJobs();
-        viewModel.MapEditor.SelectedPaletteTile = viewModel.MapEditor.PaletteTiles[5];
+        viewModel.MapEditor().SelectedPaletteTile = viewModel.MapEditor().PaletteTiles[5];
 
-        viewModel.MapEditor.RenameSelectedMap("renamed");
+        viewModel.RenameMap("level1", "renamed");
         Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal("renamed", viewModel.MapEditor.SelectedMap!.Name);
-        Assert.Equal("forest_0006", viewModel.MapEditor.SelectedPaletteTile?.Name);
+        Assert.Equal("renamed", viewModel.MapEditor().Map.Name);
+        Assert.Equal("forest_0006", viewModel.MapEditor().SelectedPaletteTile?.Name);
         window.Close();
     }
 
@@ -317,7 +274,7 @@ public class MapCanvasTests : IDisposable
     public void ZoomingStaysWithinTheLimitsOfTheTilesetEditor()
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 2);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
 
         for (var i = 0; i < 500; i++)
             editor.ZoomIn();
@@ -336,18 +293,17 @@ public class MapCanvasTests : IDisposable
     {
         var viewModel = ProjectWithForestMap(width: 2, height: 2);
 
-        viewModel.RenameSelectedTileset("woods");
+        viewModel.RenameTileset("forest", "woods");
 
-        Assert.Equal("woods", viewModel.MapEditor.SelectedMap!.TilesetName);
-        Assert.Equal(16, viewModel.MapEditor.PaletteTiles.Count);
-        Assert.Equal(4, viewModel.MapEditor.CellRegions.Length);
+        Assert.Equal("woods", viewModel.MapEditor().Map.TilesetName);
+        Assert.Equal(16, viewModel.MapEditor().PaletteTiles.Count);
+        Assert.Equal(4, viewModel.MapEditor().CellRegions.Length);
     }
 
-    private static MapEditorView MapView(Window window) => window.GetVisualDescendants().OfType<MapEditorView>().Single();
+    private static MapEditorView MapView(Window window) => window.GetVisualDescendants().OfType<MapEditorView>().Single(view => view.IsEffectivelyVisible);
 
     private static Window OpenMapsTab(MainViewModel viewModel)
     {
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
         return window;
@@ -358,7 +314,7 @@ public class MapCanvasTests : IDisposable
         var viewModel = new MainViewModel();
         viewModel.LoadTileset(WriteImage("dungeon", 32, 32), 16, 16);
         viewModel.LoadTileset(WriteImage("forest", 64, 64), 16, 16);
-        viewModel.MapEditor.CreateMap("level1", width, height, "forest");
+        viewModel.CreateMap("level1", width, height, "forest");
         return viewModel;
     }
 

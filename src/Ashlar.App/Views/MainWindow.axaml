@@ -34,77 +34,147 @@
                 <MenuItem Header="Open project..." Click="OnOpenProjectClick" InputGesture="Ctrl+Shift+O" />
                 <MenuItem Header="Open tileset..." Click="OnOpenTilesetClick" InputGesture="Ctrl+O" />
                 <Separator />
-                <MenuItem Header="Export XML..." Click="OnExportXmlClick" InputGesture="Ctrl+E"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Save image..." Click="OnSaveImageClick"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Export map..." Click="OnExportMapClick" InputGesture="Ctrl+E"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="!IsTilesetsTabActive" /><Binding Path="MapEditor.HasSelectedMap" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Export XML..." Click="OnExportXmlClick" IsEnabled="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Export map..." Click="OnExportMapClick" IsEnabled="{Binding HasSelectedMap}" />
                 <MenuItem Header="Save project" Click="OnSaveProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+S" />
                 <MenuItem Header="Save project as..." Click="OnSaveProjectAsClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+Shift+S" />
                 <Separator />
-                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+W" />
+                <MenuItem Header="Close tab" Click="OnCloseTabClick" IsEnabled="{Binding HasOpenTabs}" InputGesture="Ctrl+W" />
+                <MenuItem Header="Close project" Click="OnCloseProjectClick" IsEnabled="{Binding IsProjectOpen}" InputGesture="Ctrl+Shift+W" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding CanUndo}" InputGesture="Ctrl+Z" />
-                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding CanRedo}" InputGesture="Ctrl+Y" />
+                <MenuItem Header="Undo" Click="OnUndoClick" IsEnabled="{Binding ActiveTab.CanUndo, FallbackValue=False}" InputGesture="Ctrl+Z" />
+                <MenuItem Header="Redo" Click="OnRedoClick" IsEnabled="{Binding ActiveTab.CanRedo, FallbackValue=False}" InputGesture="Ctrl+Y" />
                 <Separator />
-                <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" InputGesture="Delete"
+                          IsVisible="{Binding IsTilesetTabActive}" IsEnabled="{Binding ActiveTileset.HasSelectedTiles, FallbackValue=False}" />
+                <MenuItem Header="Delete" Click="OnDeleteSelectedCellsClick" InputGesture="Delete"
+                          IsVisible="{Binding IsMapTabActive}" IsEnabled="{Binding ActiveMap.HasSelectedCells, FallbackValue=False}" />
                 <Separator />
-                <MenuItem Header="Delete" Click="OnDeleteSelectedTilesClick" InputGesture="Delete"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasSelectedTiles" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <Separator />
-                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding Editor.IsRectangleToolActive}" InputGesture="Ctrl+R"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding Editor.IsMoveToolActive}" InputGesture="M"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding Editor.IsDrawToolActive}" InputGesture="B"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Bucket" ToggleType="CheckBox" IsChecked="{Binding Editor.IsBucketToolActive}" InputGesture="G"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Pipette" ToggleType="CheckBox" IsChecked="{Binding Editor.IsPipetteToolActive}" InputGesture="I"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding ActiveTileset.IsRectangleToolActive}" InputGesture="Ctrl+R" IsVisible="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding ActiveTileset.IsMoveToolActive}" InputGesture="M" IsVisible="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding ActiveTileset.IsDrawToolActive}" InputGesture="B" IsVisible="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Bucket" ToggleType="CheckBox" IsChecked="{Binding ActiveTileset.IsBucketToolActive}" InputGesture="G" IsVisible="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Pipette" ToggleType="CheckBox" IsChecked="{Binding ActiveTileset.IsPipetteToolActive}" InputGesture="I" IsVisible="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Rectangle selection" ToggleType="CheckBox" IsChecked="{Binding ActiveMap.IsRectangleToolActive}" IsVisible="{Binding IsMapTabActive}" />
+                <MenuItem Header="Move" ToggleType="CheckBox" IsChecked="{Binding ActiveMap.IsMoveToolActive}" IsVisible="{Binding IsMapTabActive}" />
+                <MenuItem Header="Draw" ToggleType="CheckBox" IsChecked="{Binding ActiveMap.IsDrawToolActive}" IsVisible="{Binding IsMapTabActive}" />
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="Zoom In" Click="OnZoomInClick" InputGesture="Ctrl+OemPlus"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" InputGesture="Ctrl+OemMinus"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
-                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" InputGesture="Ctrl+D0"><MenuItem.IsEnabled><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsTilesetsTabActive" /><Binding Path="Editor.HasImage" /></MultiBinding></MenuItem.IsEnabled></MenuItem>
+                <MenuItem Header="Zoom In" Click="OnZoomInClick" InputGesture="Ctrl+OemPlus" IsEnabled="{Binding HasOpenTabs}" />
+                <MenuItem Header="Zoom Out" Click="OnZoomOutClick" InputGesture="Ctrl+OemMinus" IsEnabled="{Binding HasOpenTabs}" />
+                <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" InputGesture="Ctrl+D0" IsEnabled="{Binding HasOpenTabs}" />
+            </MenuItem>
+            <MenuItem Header="_Tileset">
+                <MenuItem Header="Add tileset..." Click="OnOpenTilesetClick" />
+                <MenuItem Header="Rename" Click="OnRenameSelectedTilesetClick" InputGesture="F2" IsEnabled="{Binding HasSelectedTileset}" />
+                <MenuItem Header="Remove" Click="OnRemoveSelectedTilesetClick" IsEnabled="{Binding HasSelectedTileset}" />
+                <MenuItem Header="Change tile size..." Click="OnChangeTileSizeClick" IsEnabled="{Binding IsTilesetTabActive}" />
+                <Separator />
+                <MenuItem Header="Export XML..." Click="OnExportXmlClick" InputGesture="Ctrl+E" IsEnabled="{Binding IsTilesetTabActive}" />
+                <MenuItem Header="Save image..." Click="OnSaveImageClick" IsEnabled="{Binding IsTilesetTabActive}" />
+            </MenuItem>
+            <MenuItem Header="_Map">
+                <MenuItem Header="Create map..." Click="OnCreateMapClick" IsEnabled="{Binding CanCreateMap}" />
+                <MenuItem Header="Rename" Click="OnRenameSelectedMapClick" InputGesture="F2" IsEnabled="{Binding HasSelectedMap}" />
+                <MenuItem Header="Resize..." Click="OnResizeSelectedMapClick" IsEnabled="{Binding HasSelectedMap}" />
+                <MenuItem Header="Delete" Click="OnDeleteSelectedMapClick" IsEnabled="{Binding HasSelectedMap}" />
+                <Separator />
+                <MenuItem Header="Export map..." Click="OnExportMapClick" InputGesture="Ctrl+E" IsEnabled="{Binding HasSelectedMap}" />
             </MenuItem>
         </Menu>
 
         <Border Classes="panelHeader" DockPanel.Dock="Bottom" Margin="0" BorderThickness="0,1,0,0" Padding="12,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock x:Name="TilesetStatusText" Classes="secondary" Text="{Binding Editor.StatusMessage}" IsVisible="{Binding IsTilesetsTabActive}" />
-                <TextBlock x:Name="MapStatusText" Classes="secondary" Text="{Binding MapEditor.StatusMessage}" IsVisible="{Binding !IsTilesetsTabActive}" />
-                <TextBlock Classes="secondary" Text="{Binding Editor.ZoomPercentageText}" IsVisible="{Binding Editor.HasImage}" />
-                <TextBlock Classes="secondary" Text="{Binding Editor.TileSizeText}" IsVisible="{Binding Editor.HasImage}" />
+                <TextBlock x:Name="StatusText" Classes="secondary" Text="{Binding StatusText}" />
+                <TextBlock Classes="secondary" Text="{Binding ActiveTileset.ZoomPercentageText}" IsVisible="{Binding IsTilesetTabActive}" />
+                <TextBlock Classes="secondary" Text="{Binding ActiveTileset.TileSizeText}" IsVisible="{Binding IsTilesetTabActive}" />
+                <TextBlock Classes="secondary" Text="{Binding ActiveMap.ZoomPercentageText}" IsVisible="{Binding IsMapTabActive}" />
             </StackPanel>
         </Border>
 
-        <Border x:Name="TilesetListPanel" Classes="panelHeader" DockPanel.Dock="Left" Width="200" Margin="0" BorderThickness="0,0,1,0"
+        <Border x:Name="ExplorerPanel" Classes="panelHeader" DockPanel.Dock="Left" Width="200" Margin="0" BorderThickness="0,0,1,0"
                 Padding="8" IsVisible="{Binding IsProjectOpen}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Tilesets" FontWeight="SemiBold" Margin="0,0,0,6" />
-                <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,6,0,0">
-                    <TextBox x:Name="TilesetNameBox" PlaceholderText="Tileset name" IsEnabled="{Binding HasTilesets}" />
-                    <Button x:Name="RenameTilesetButton" Content="Rename" Click="OnRenameTilesetClick" IsEnabled="{Binding HasTilesets}" />
-                    <Button x:Name="RemoveTilesetButton" Content="Remove" Click="OnRemoveTilesetClick" IsEnabled="{Binding HasTilesets}" />
-                    <Button x:Name="AddTilesetButton" Content="Add tileset..." Click="OnOpenTilesetClick" />
-                </StackPanel>
-                <ListBox x:Name="TilesetList" ItemsSource="{Binding TilesetNames}" SelectedItem="{Binding SelectedTilesetName, Mode=OneWay}"
-                         SelectionChanged="OnTilesetSelectionChanged" />
+                <TextBlock DockPanel.Dock="Top" Text="Project" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <TreeView x:Name="ExplorerTree" ItemsSource="{Binding ExplorerRoots}" SelectedItem="{Binding ExplorerSelection}"
+                          DoubleTapped="OnExplorerDoubleTapped" KeyDown="OnExplorerKeyDown">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="True" />
+                        </Style>
+                    </TreeView.Styles>
+                    <TreeView.DataTemplates>
+                        <TreeDataTemplate DataType="vm:ExplorerNode" ItemsSource="{Binding Children}">
+                            <Panel Background="Transparent" DataContextChanged="OnExplorerEntryDataContextChanged">
+                                <TextBlock Text="{Binding Name}" IsVisible="{Binding IsGroup}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Name}">
+                                    <TextBlock.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="!IsGroup" />
+                                            <Binding Path="!IsRenaming" />
+                                        </MultiBinding>
+                                    </TextBlock.IsVisible>
+                                </TextBlock>
+                                <TextBox Text="{Binding RenameText, Mode=TwoWay}" IsVisible="{Binding IsRenaming}" MinHeight="0" Padding="4,2"
+                                         KeyDown="OnRenameBoxKeyDown" LostFocus="OnRenameBoxLostFocus"
+                                         PropertyChanged="OnRenameBoxPropertyChanged" />
+                            </Panel>
+                        </TreeDataTemplate>
+                    </TreeView.DataTemplates>
+                </TreeView>
             </DockPanel>
         </Border>
 
-        <ContentControl x:Name="ToolBarHost" DockPanel.Dock="Left" VerticalAlignment="Top" Content="{Binding ActiveToolBar}" />
+        <ContentControl x:Name="ToolBarHost" DockPanel.Dock="Left" VerticalAlignment="Top" Content="{Binding ActiveTab}" />
 
-        <TabControl x:Name="EditorTabs" SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem x:Name="TilesetsTab" Header="Tilesets">
-                <Panel>
-                    <views:TilesetEditorView x:Name="EditorView" DataContext="{Binding Editor}" />
-                    <Border x:Name="EmptyProjectPanel" Classes="canvas" Margin="6" IsVisible="{Binding IsProjectEmpty}">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                            <TextBlock Text="This project has no tileset yet" FontSize="18" HorizontalAlignment="Center" />
-                            <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center" />
+        <DockPanel>
+            <TabStrip x:Name="EditorTabs" DockPanel.Dock="Top" ItemsSource="{Binding OpenTabs}" SelectedItem="{Binding ActiveTab}"
+                      IsVisible="{Binding HasOpenTabs}">
+                <TabStrip.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EditorTabViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Background="Transparent" PointerReleased="OnTabHeaderPointerReleased">
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                            <Button Content="x" Padding="4,0" MinHeight="0" MinWidth="0" Background="Transparent" Click="OnTabCloseClick"
+                                    ToolTip.Tip="Close tab" />
                         </StackPanel>
-                    </Border>
-                </Panel>
-            </TabItem>
-            <TabItem x:Name="MapsTab" Header="Maps">
-                <views:MapEditorView x:Name="MapView" DataContext="{Binding MapEditor}" />
-            </TabItem>
-        </TabControl>
+                    </DataTemplate>
+                </TabStrip.ItemTemplate>
+            </TabStrip>
+
+            <Panel>
+                <!-- Every open tab keeps its own live view so its scroll position survives switching; only the active one is shown. -->
+                <ItemsControl x:Name="EditorHost" ItemsSource="{Binding OpenTabs}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Panel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.Styles>
+                        <Style Selector="ItemsControl#EditorHost > ContentPresenter">
+                            <Setter Property="IsVisible" Value="{ReflectionBinding IsActive}" />
+                        </Style>
+                    </ItemsControl.Styles>
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="vm:TilesetEditorViewModel">
+                            <views:TilesetEditorView />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:MapEditorViewModel">
+                            <views:MapEditorView />
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+
+                <Border x:Name="EmptyEditorPanel" Classes="canvas" Margin="6" IsVisible="{Binding !HasOpenTabs}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                        <TextBlock x:Name="EmptyEditorText" Text="{Binding EmptyEditorText}" FontSize="18" HorizontalAlignment="Center" />
+                        <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center"
+                                IsVisible="{Binding !HasTilesets}" />
+                    </StackPanel>
+                </Border>
+            </Panel>
+        </DockPanel>
     </DockPanel>
 
 </Window>

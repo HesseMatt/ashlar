@@ -25,17 +25,17 @@
 
     <Border Classes="panel" Margin="6,6,0,6" Padding="4" VerticalAlignment="Top">
         <StackPanel Spacing="4">
-            <ToggleButton Classes="tool" x:Name="MapRectangleSelectButton" IsChecked="{Binding IsRectangleToolActive}" IsEnabled="{Binding HasSelectedMap}"
+            <ToggleButton Classes="tool" x:Name="MapRectangleSelectButton" IsChecked="{Binding IsRectangleToolActive}"
                           ToolTip.Tip="Rectangle select">
                 <Path Data="{StaticResource RectangleSelectIcon}"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
             </ToggleButton>
-            <ToggleButton Classes="tool" x:Name="MapMoveButton" IsChecked="{Binding IsMoveToolActive}" IsEnabled="{Binding HasSelectedMap}"
+            <ToggleButton Classes="tool" x:Name="MapMoveButton" IsChecked="{Binding IsMoveToolActive}"
                           ToolTip.Tip="Move">
                 <Path Data="{StaticResource MoveIcon}"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />
             </ToggleButton>
-            <ToggleButton Classes="tool" x:Name="MapDrawButton" IsChecked="{Binding IsDrawToolActive}" IsEnabled="{Binding HasSelectedMap}"
+            <ToggleButton Classes="tool" x:Name="MapDrawButton" IsChecked="{Binding IsDrawToolActive}"
                           ToolTip.Tip="Draw">
                 <Path Data="{StaticResource DrawIcon}"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter, Tree=Visual}}" />

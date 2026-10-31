@@ -11,31 +11,31 @@ public class RectangleSelectionTests : IDisposable
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
     private static string[] SelectedNames(MainViewModel viewModel) =>
-        viewModel.Editor.SelectedTiles.Select(t => t.Name).ToArray();
+        viewModel.Editor().SelectedTiles.Select(t => t.Name).ToArray();
 
     [AvaloniaFact]
     public void DraggingSelectsEveryTouchedTile()
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginSelectionDrag(10, 10, addToSelection: false);
-        viewModel.Editor.UpdateSelectionDrag(20, 20);
-        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor().BeginSelectionDrag(10, 10, addToSelection: false);
+        viewModel.Editor().UpdateSelectionDrag(20, 20);
+        viewModel.Editor().EndSelectionDrag();
 
         Assert.Equal(["tiles_0001", "tiles_0002", "tiles_0005", "tiles_0006"], SelectedNames(viewModel));
-        Assert.Equal("Selected 4 tiles.", viewModel.Editor.StatusMessage);
+        Assert.Equal("Selected 4 tiles.", viewModel.Editor().StatusMessage);
     }
 
     [AvaloniaFact]
     public void ShrinkingTheRectangleDeselectsTilesItNoLongerTouches()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.BeginSelectionDrag(1, 1, addToSelection: false);
+        viewModel.Editor().BeginSelectionDrag(1, 1, addToSelection: false);
 
-        viewModel.Editor.UpdateSelectionDrag(40, 1);
-        Assert.Equal(3, viewModel.Editor.SelectedTiles.Count);
+        viewModel.Editor().UpdateSelectionDrag(40, 1);
+        Assert.Equal(3, viewModel.Editor().SelectedTiles.Count);
 
-        viewModel.Editor.UpdateSelectionDrag(20, 1);
+        viewModel.Editor().UpdateSelectionDrag(20, 1);
         Assert.Equal(["tiles_0001", "tiles_0002"], SelectedNames(viewModel));
     }
 
@@ -43,11 +43,11 @@ public class RectangleSelectionTests : IDisposable
     public void WithoutCtrlTheRectangleReplacesThePreviousSelection()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(49, 49, addToSelection: false);
+        viewModel.Editor().HandleCanvasClick(49, 49, addToSelection: false);
 
-        viewModel.Editor.BeginSelectionDrag(1, 1, addToSelection: false);
-        viewModel.Editor.UpdateSelectionDrag(20, 1);
-        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor().BeginSelectionDrag(1, 1, addToSelection: false);
+        viewModel.Editor().UpdateSelectionDrag(20, 1);
+        viewModel.Editor().EndSelectionDrag();
 
         Assert.Equal(["tiles_0001", "tiles_0002"], SelectedNames(viewModel));
     }
@@ -56,18 +56,18 @@ public class RectangleSelectionTests : IDisposable
     public void WithCtrlTheRectangleAddsToThePreviousSelection()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
 
-        viewModel.Editor.BeginSelectionDrag(1, 1, addToSelection: true);
-        viewModel.Editor.UpdateSelectionDrag(20, 1);
-        viewModel.Editor.UpdateSelectionDrag(1, 1);
-        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor().BeginSelectionDrag(1, 1, addToSelection: true);
+        viewModel.Editor().UpdateSelectionDrag(20, 1);
+        viewModel.Editor().UpdateSelectionDrag(1, 1);
+        viewModel.Editor().EndSelectionDrag();
 
         Assert.Equal(["tiles_0001"], SelectedNames(viewModel));
 
-        viewModel.Editor.BeginSelectionDrag(33, 33, addToSelection: true);
-        viewModel.Editor.UpdateSelectionDrag(40, 40);
-        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor().BeginSelectionDrag(33, 33, addToSelection: true);
+        viewModel.Editor().UpdateSelectionDrag(40, 40);
+        viewModel.Editor().EndSelectionDrag();
 
         Assert.Equal(["tiles_0001", "tiles_0011"], SelectedNames(viewModel));
     }
@@ -76,14 +76,14 @@ public class RectangleSelectionTests : IDisposable
     public void CancellingTheDragRestoresTheSelectionFromBeforeIt()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(49, 49, addToSelection: false);
-        viewModel.Editor.BeginSelectionDrag(1, 1, addToSelection: false);
-        viewModel.Editor.UpdateSelectionDrag(40, 40);
+        viewModel.Editor().HandleCanvasClick(49, 49, addToSelection: false);
+        viewModel.Editor().BeginSelectionDrag(1, 1, addToSelection: false);
+        viewModel.Editor().UpdateSelectionDrag(40, 40);
 
-        viewModel.Editor.CancelSelectionDrag();
+        viewModel.Editor().CancelSelectionDrag();
 
         Assert.Equal(["tiles_0016"], SelectedNames(viewModel));
-        Assert.Null(viewModel.Editor.SelectionRectangle);
+        Assert.Null(viewModel.Editor().SelectionRectangle);
     }
 
     [AvaloniaFact]
@@ -91,9 +91,9 @@ public class RectangleSelectionTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginSelectionDrag(-30, -30, addToSelection: false);
-        viewModel.Editor.UpdateSelectionDrag(5, 5);
-        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor().BeginSelectionDrag(-30, -30, addToSelection: false);
+        viewModel.Editor().UpdateSelectionDrag(5, 5);
+        viewModel.Editor().EndSelectionDrag();
 
         Assert.Equal(["tiles_0001"], SelectedNames(viewModel));
     }
@@ -102,39 +102,39 @@ public class RectangleSelectionTests : IDisposable
     public void DeleteRemovesAllTilesSelectedByRectangle()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.BeginSelectionDrag(1, 1, addToSelection: false);
-        viewModel.Editor.UpdateSelectionDrag(20, 20);
-        viewModel.Editor.EndSelectionDrag();
+        viewModel.Editor().BeginSelectionDrag(1, 1, addToSelection: false);
+        viewModel.Editor().UpdateSelectionDrag(20, 20);
+        viewModel.Editor().EndSelectionDrag();
 
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().DeleteSelectedTiles();
 
-        Assert.Equal(12, viewModel.Editor.Tiles.Count);
-        Assert.Empty(viewModel.Editor.SelectedTiles);
+        Assert.Equal(12, viewModel.Editor().Tiles.Count);
+        Assert.Empty(viewModel.Editor().SelectedTiles);
     }
 
     [AvaloniaFact]
     public void DeletingDuringADragEndsTheDragInsteadOfRestoringDeletedTiles()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.BeginSelectionDrag(33, 33, addToSelection: true);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().BeginSelectionDrag(33, 33, addToSelection: true);
+        viewModel.Editor().DeleteSelectedTiles();
 
-        viewModel.Editor.UpdateSelectionDrag(40, 40);
+        viewModel.Editor().UpdateSelectionDrag(40, 40);
 
-        Assert.Empty(viewModel.Editor.SelectedTiles);
-        Assert.Null(viewModel.Editor.SelectionRectangle);
+        Assert.Empty(viewModel.Editor().SelectedTiles);
+        Assert.Null(viewModel.Editor().SelectionRectangle);
     }
 
     [AvaloniaFact]
     public void RectangleToolResetsWhenANewTilesetIsOpened()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.IsRectangleToolActive = true;
+        viewModel.Editor().IsRectangleToolActive = true;
 
         viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
-        Assert.False(viewModel.Editor.IsRectangleToolActive);
+        Assert.False(viewModel.Editor().IsRectangleToolActive);
     }
 
     private MainViewModel OpenImage()
