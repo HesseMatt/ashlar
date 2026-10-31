@@ -144,7 +144,6 @@ public class NewProjectTests : IDisposable
         // The logical tree can yield the same control twice.
         var panel = window.GetLogicalDescendants().OfType<Border>().Where(b => b.Name == "EmptyEditorPanel").Distinct().Single();
         Assert.True(panel.IsVisible);
-        Assert.Contains(panel.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "No project open");
 
         viewModel.NewProject();
         Assert.True(panel.IsVisible);
@@ -162,7 +161,40 @@ public class NewProjectTests : IDisposable
 
         viewModel.CloseProject();
         Assert.True(panel.IsVisible);
-        Assert.Contains(panel.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "No project open");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void StartPanelsReplaceTheHintWhileNoProjectIsOpen()
+    {
+        var viewModel = new MainViewModel();
+        var window = new MainWindow { DataContext = viewModel, Width = 800, Height = 600 };
+        window.Show();
+        var newPanel = window.FindControl<Button>("NewProjectPanel")!;
+        var openPanel = window.FindControl<Button>("OpenProjectPanel")!;
+        var hint = window.FindControl<StackPanel>("ProjectHint")!;
+        var importButton = window.FindControl<Button>("ImportTilesetButton")!;
+
+        Assert.True(newPanel.IsEffectivelyVisible);
+        Assert.True(openPanel.IsEffectivelyVisible);
+        Assert.False(hint.IsEffectivelyVisible);
+        Assert.True(newPanel.Focusable);
+        Assert.True(openPanel.Focusable);
+
+        viewModel.NewProject();
+        Assert.False(newPanel.IsEffectivelyVisible);
+        Assert.False(openPanel.IsEffectivelyVisible);
+        Assert.True(hint.IsEffectivelyVisible);
+        Assert.True(importButton.IsEffectivelyVisible);
+
+        viewModel.LoadTileset(WriteImage(), 16, 16);
+        viewModel.CloseTab(viewModel.ActiveTab!);
+        Assert.True(hint.IsEffectivelyVisible);
+        Assert.False(importButton.IsEffectivelyVisible);
+
+        viewModel.CloseProject();
+        Assert.True(newPanel.IsEffectivelyVisible);
+        Assert.False(hint.IsEffectivelyVisible);
         window.Close();
     }
 

@@ -37,7 +37,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsProjectEmpty), nameof(EmptyEditorText))]
+    [NotifyPropertyChangedFor(nameof(IsProjectEmpty))]
     private bool _isProjectOpen;
 
     // Whether the project is open but still without a tileset.
@@ -102,7 +102,7 @@ public partial class MainViewModel : ViewModelBase
     public string StatusText => ActiveTab?.StatusMessage ?? _shellStatusMessage;
 
     public string EmptyEditorText =>
-        !IsProjectOpen ? "No project open" : HasTilesets ? "Double-click a tileset or map in the project explorer to open it" : "This project has no tileset yet";
+        HasTilesets ? "Double-click a tileset or map in the project explorer to open it" : "This project has no tileset yet";
 
     private string _shellStatusMessage = InitialStatusMessage;
 
