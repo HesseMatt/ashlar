@@ -1,12 +1,12 @@
 Third-party notices
 ===================
 
-Toolbar icons
--------------
+Icons
+-----
 
 The tool palette icons (rectangle select, move, draw, bucket, pipette, delete)
-are taken from Lucide (https://lucide.dev) and embedded as vector path data in
-src/Ashlar.App/Views/MainWindow.axaml.
+and the start screen icons (file-plus, folder-open) are taken from Lucide
+(https://lucide.dev) and embedded as vector path data in src/Ashlar.App/Views.
 
 Lucide is licensed under the ISC License:
 

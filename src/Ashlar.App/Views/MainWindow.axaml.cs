@@ -347,7 +347,7 @@ public partial class MainWindow : Window
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open tileset project",
+            Title = "Open project",
             AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("Ashlar project") { Patterns = ["*.ashlar"] }],
         });

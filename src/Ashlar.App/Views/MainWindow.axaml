@@ -18,6 +18,12 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
+    <Window.Resources>
+        <!-- Icon paths are from Lucide (https://lucide.dev), 24x24 viewBox, stroked. See NOTICE. -->
+        <StreamGeometry x:Key="FilePlusIcon">M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z M14 2v5a1 1 0 0 0 1 1h5 M9 15h6 M12 18v-6</StreamGeometry>
+        <StreamGeometry x:Key="FolderOpenIcon">m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2</StreamGeometry>
+    </Window.Resources>
+
     <Window.DataTemplates>
         <DataTemplate DataType="vm:TilesetEditorViewModel">
             <views:TilesetToolBar />
@@ -174,11 +180,29 @@
                 </ItemsControl>
 
                 <Border x:Name="EmptyEditorPanel" Classes="canvas" Margin="6" IsVisible="{Binding !HasOpenTabs}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                        <TextBlock x:Name="EmptyEditorText" Text="{Binding EmptyEditorText}" FontSize="18" HorizontalAlignment="Center" />
-                        <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center"
-                                IsVisible="{Binding !HasTilesets}" />
-                    </StackPanel>
+                    <Panel>
+                        <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    IsVisible="{Binding !IsProjectOpen}">
+                            <Button x:Name="NewProjectPanel" Classes="startPanel" Click="OnNewProjectClick">
+                                <StackPanel Spacing="12">
+                                    <Path Data="{StaticResource FilePlusIcon}" />
+                                    <TextBlock Text="Create a new project" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="OpenProjectPanel" Classes="startPanel" Click="OnOpenProjectClick">
+                                <StackPanel Spacing="12">
+                                    <Path Data="{StaticResource FolderOpenIcon}" />
+                                    <TextBlock Text="Open existing project" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel x:Name="ProjectHint" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding IsProjectOpen}">
+                            <TextBlock x:Name="EmptyEditorText" Text="{Binding EmptyEditorText}" FontSize="18" HorizontalAlignment="Center" />
+                            <Button x:Name="ImportTilesetButton" Content="Import tileset image..." Click="OnOpenTilesetClick" HorizontalAlignment="Center"
+                                    IsVisible="{Binding !HasTilesets}" />
+                        </StackPanel>
+                    </Panel>
                 </Border>
             </Panel>
         </DockPanel>
