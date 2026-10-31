@@ -15,72 +15,72 @@ public class HasEditsTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        Assert.False(viewModel.Editor.HasEdits);
+        Assert.False(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void DeletingATileCountsAsAnEdit()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
 
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().DeleteSelectedTiles();
 
-        Assert.True(viewModel.Editor.HasEdits);
+        Assert.True(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void MovingATileCountsAsAnEdit()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
 
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(17, 1);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(17, 1);
+        viewModel.Editor().CommitMoveDrag();
 
-        Assert.True(viewModel.Editor.HasEdits);
+        Assert.True(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void MoveWithoutNetOffsetIsNotAnEdit()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
 
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(17, 1);
-        viewModel.Editor.UpdateMoveDrag(5, 5);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(17, 1);
+        viewModel.Editor().UpdateMoveDrag(5, 5);
+        viewModel.Editor().CommitMoveDrag();
 
-        Assert.False(viewModel.Editor.HasEdits);
+        Assert.False(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void TilesetStaysEditedAfterFurtherEdits()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
-        viewModel.Editor.HandleCanvasClick(17, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(17, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
-        Assert.True(viewModel.Editor.HasEdits);
+        Assert.True(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void ImportingANewImageClearsTheEdits()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
         viewModel.LoadTileset(WriteImage("other.png"), 16, 16);
 
-        Assert.False(viewModel.Editor.HasEdits);
+        Assert.False(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
@@ -90,8 +90,9 @@ public class HasEditsTests : IDisposable
 
         var reopened = new MainViewModel();
         reopened.OpenProject(projectPath);
+        reopened.OpenFirstTileset();
 
-        Assert.False(reopened.Editor.HasEdits);
+        Assert.False(reopened.Editor().HasEdits);
     }
 
     [AvaloniaFact]
@@ -110,9 +111,10 @@ public class HasEditsTests : IDisposable
         viewModel.LoadTileset(path, 16, 16);
         var reopened = new MainViewModel();
         reopened.OpenProject(SaveProject(viewModel));
+        reopened.OpenFirstTileset();
 
-        Assert.Single(reopened.Editor.Tiles);
-        Assert.False(reopened.Editor.HasEdits);
+        Assert.Single(reopened.Editor().Tiles);
+        Assert.False(reopened.Editor().HasEdits);
     }
 
     [AvaloniaFact]
@@ -124,8 +126,9 @@ public class HasEditsTests : IDisposable
 
         var reopened = new MainViewModel();
         reopened.OpenProject(projectPath);
+        reopened.OpenFirstTileset();
 
-        Assert.True(reopened.Editor.HasEdits);
+        Assert.True(reopened.Editor().HasEdits);
     }
 
     [AvaloniaFact]
@@ -133,12 +136,14 @@ public class HasEditsTests : IDisposable
     {
         var unedited = SaveProject(OpenImage());
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
         viewModel.OpenProject(unedited);
 
-        Assert.False(viewModel.Editor.HasEdits);
+        viewModel.OpenFirstTileset();
+
+        Assert.False(viewModel.Editor().HasEdits);
     }
 
     private MainViewModel OpenImage()
@@ -152,11 +157,11 @@ public class HasEditsTests : IDisposable
     // empty cell) the result differs from a grid freshly built from the image.
     private static void MoveFirstTileOneCellRight(MainViewModel viewModel)
     {
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(1 + viewModel.Editor.TileWidth, 1);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(1 + viewModel.Editor().TileWidth, 1);
+        viewModel.Editor().CommitMoveDrag();
     }
 
     private string SaveProject(MainViewModel viewModel)

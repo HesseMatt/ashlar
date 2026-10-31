@@ -21,7 +21,7 @@ public class MapSelectionToolsTests : IDisposable
     [AvaloniaFact]
     public void DraggingARectangleSelectsItsCellsAndANewOneReplacesThem()
     {
-        var editor = ProjectWithMap(5, 4).MapEditor;
+        var editor = ProjectWithMap(5, 4).MapEditor();
         editor.IsRectangleToolActive = true;
 
         editor.BeginSelectionDrag(1, 1, addToSelection: false);
@@ -39,7 +39,7 @@ public class MapSelectionToolsTests : IDisposable
     [AvaloniaFact]
     public void ControlAddsToTheSelectionAndClickTogglesACell()
     {
-        var editor = ProjectWithMap(5, 4).MapEditor;
+        var editor = ProjectWithMap(5, 4).MapEditor();
         editor.IsRectangleToolActive = true;
 
         editor.HandleCanvasClick(0, 0, addToSelection: false);
@@ -58,7 +58,7 @@ public class MapSelectionToolsTests : IDisposable
     [AvaloniaFact]
     public void CancellingTheDragRestoresTheSelectionBefore()
     {
-        var editor = ProjectWithMap(5, 4).MapEditor;
+        var editor = ProjectWithMap(5, 4).MapEditor();
         editor.IsRectangleToolActive = true;
         editor.HandleCanvasClick(0, 0, addToSelection: false);
 
@@ -74,9 +74,9 @@ public class MapSelectionToolsTests : IDisposable
     public void DeleteClearsTheSelectedCellsAndMarksTheProjectChanged()
     {
         var viewModel = ProjectWithMap(3, 3);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         PaintCells(editor, (0, 0), (1, 0), (2, 2));
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.HasUnsavedChanges = false;
         editor.IsRectangleToolActive = true;
         editor.BeginSelectionDrag(0, 0, addToSelection: false);
         editor.UpdateSelectionDrag(1, 0);
@@ -84,22 +84,22 @@ public class MapSelectionToolsTests : IDisposable
 
         editor.DeleteSelectedCells();
 
-        Assert.Null(editor.SelectedMap![0, 0]);
-        Assert.Null(editor.SelectedMap[1, 0]);
-        Assert.NotNull(editor.SelectedMap[2, 2]);
+        Assert.Null(editor.Map![0, 0]);
+        Assert.Null(editor.Map[1, 0]);
+        Assert.NotNull(editor.Map[2, 2]);
         Assert.Equal(1, editor.CellRegions.Count(region => region is not null));
         Assert.False(editor.HasSelectedCells);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void MoveShiftsTheSelectionOverwritesAndDropsCellsOutsideTheMap()
     {
         var viewModel = ProjectWithMap(4, 2);
-        var editor = viewModel.MapEditor;
-        editor.SelectedMap![0, 0] = "forest_0001";
-        editor.SelectedMap[3, 0] = "forest_0002";
-        editor.SelectedMap[2, 1] = "forest_0003";
+        var editor = viewModel.MapEditor();
+        editor.Map![0, 0] = "forest_0001";
+        editor.Map[3, 0] = "forest_0002";
+        editor.Map[2, 1] = "forest_0003";
         editor.RefreshTileset();
         editor.IsRectangleToolActive = true;
         editor.BeginSelectionDrag(0, 0, addToSelection: false);
@@ -115,21 +115,21 @@ public class MapSelectionToolsTests : IDisposable
         editor.CommitMoveDrag();
 
         // (0,0) lands on (2,1) and overwrites it; (3,0) would land outside and is dropped.
-        Assert.Equal("forest_0001", editor.SelectedMap[2, 1]);
-        Assert.Null(editor.SelectedMap[0, 0]);
-        Assert.Null(editor.SelectedMap[3, 0]);
-        Assert.Equal(1, editor.SelectedMap.Cells.Count(cell => cell is not null));
+        Assert.Equal("forest_0001", editor.Map[2, 1]);
+        Assert.Null(editor.Map[0, 0]);
+        Assert.Null(editor.Map[3, 0]);
+        Assert.Equal(1, editor.Map.Cells.Count(cell => cell is not null));
         Assert.Equal("forest_0001", editor.CellRegions[1 * 4 + 2]!.Name);
         Assert.Equal([(2, 1)], editor.SelectedCells);
         Assert.Null(editor.MoveOffset);
-        Assert.Equal(4, editor.SelectedMap.Width);
-        Assert.Equal(2, editor.SelectedMap.Height);
+        Assert.Equal(4, editor.Map.Width);
+        Assert.Equal(2, editor.Map.Height);
     }
 
     [AvaloniaFact]
     public void OnlyOneToolIsActiveAtATime()
     {
-        var editor = ProjectWithMap(3, 3).MapEditor;
+        var editor = ProjectWithMap(3, 3).MapEditor();
 
         editor.IsDrawToolActive = true;
         editor.IsMoveToolActive = true;
@@ -141,22 +141,26 @@ public class MapSelectionToolsTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void SelectionIsResetWhenAnotherMapIsSelected()
+    public void EachMapTabKeepsItsOwnSelection()
     {
-        var editor = ProjectWithMap(3, 3).MapEditor;
+        var viewModel = ProjectWithMap(3, 3);
+        var editor = viewModel.MapEditor();
         editor.IsRectangleToolActive = true;
         editor.HandleCanvasClick(1, 1, addToSelection: false);
 
-        editor.CreateMap("level2", 2, 2, "forest");
+        viewModel.CreateMap("level2", 2, 2, "forest");
 
-        Assert.False(editor.HasSelectedCells);
+        Assert.NotSame(editor, viewModel.MapEditor());
+        Assert.False(viewModel.MapEditor().HasSelectedCells);
+        Assert.False(viewModel.MapEditor().IsRectangleToolActive);
+        Assert.Equal([(1, 1)], editor.SelectedCells);
+        Assert.True(editor.IsRectangleToolActive);
     }
 
     [AvaloniaFact]
     public void ToolBarButtonsToggleTheToolsAndDeleteFollowsTheSelection()
     {
         var viewModel = ProjectWithMap(3, 3);
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
         var toolBar = window.GetVisualDescendants().OfType<MapToolBar>().Single();
@@ -165,14 +169,14 @@ public class MapSelectionToolsTests : IDisposable
         var delete = toolBar.FindControl<Button>("MapDeleteButton")!;
 
         rectangle.IsChecked = true;
-        Assert.True(viewModel.MapEditor.IsRectangleToolActive);
+        Assert.True(viewModel.MapEditor().IsRectangleToolActive);
         move.IsChecked = true;
-        Assert.True(viewModel.MapEditor.IsMoveToolActive);
+        Assert.True(viewModel.MapEditor().IsMoveToolActive);
         Assert.False(rectangle.IsChecked);
 
         Assert.False(delete.IsEnabled);
-        viewModel.MapEditor.IsRectangleToolActive = true;
-        viewModel.MapEditor.HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.MapEditor().IsRectangleToolActive = true;
+        viewModel.MapEditor().HandleCanvasClick(1, 1, addToSelection: false);
         Assert.True(delete.IsEnabled);
         window.Close();
     }
@@ -181,9 +185,8 @@ public class MapSelectionToolsTests : IDisposable
     public void DraggingOnTheCanvasSelectsCellsAndDeleteKeyClearsThem()
     {
         var viewModel = ProjectWithMap(4, 4);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         PaintCells(editor, (0, 0), (1, 0), (1, 1), (3, 3));
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
         editor.IsRectangleToolActive = true;
@@ -202,7 +205,7 @@ public class MapSelectionToolsTests : IDisposable
         content.GetVisualAncestors().OfType<Border>().First(b => b.Name == "MapCanvasPadding").Focus();
         window.KeyPress(Key.Delete, RawInputModifiers.None, PhysicalKey.Delete, null);
 
-        Assert.Equal(1, editor.SelectedMap!.Cells.Count(cell => cell is not null));
+        Assert.Equal(1, editor.Map!.Cells.Count(cell => cell is not null));
         Assert.False(editor.HasSelectedCells);
         window.Close();
     }
@@ -211,12 +214,11 @@ public class MapSelectionToolsTests : IDisposable
     public void DraggingASelectedCellOnTheCanvasMovesTheSelection()
     {
         var viewModel = ProjectWithMap(4, 4);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         PaintCells(editor, (0, 0));
         editor.IsRectangleToolActive = true;
         editor.HandleCanvasClick(0, 0, addToSelection: false);
         editor.IsMoveToolActive = true;
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
         var content = window.GetVisualDescendants().OfType<MapEditorView>().Single().FindControl<Control>("MapCanvasContent")!;
@@ -227,8 +229,8 @@ public class MapSelectionToolsTests : IDisposable
         window.MouseMove(InWindow(40, 24));
         window.MouseUp(InWindow(40, 24), MouseButton.Left);
 
-        Assert.Null(editor.SelectedMap![0, 0]);
-        Assert.Equal("forest_0001", editor.SelectedMap[2, 1]);
+        Assert.Null(editor.Map![0, 0]);
+        Assert.Equal("forest_0001", editor.Map[2, 1]);
         window.Close();
     }
 
@@ -256,7 +258,7 @@ public class MapSelectionToolsTests : IDisposable
             File.WriteAllBytes(path, data.ToArray());
         }
         viewModel.LoadTileset(path, 16, 16);
-        viewModel.MapEditor.CreateMap("level1", width, height, "forest");
+        viewModel.CreateMap("level1", width, height, "forest");
         return viewModel;
     }
 }

@@ -16,7 +16,6 @@ public partial class MapEditorView : UserControl
 {
     private readonly CanvasViewport _viewport;
     private bool _scrollToStartPending;
-    private string? _lastScrolledMapName;
     private MapEditorViewModel? _viewModel;
     private const double DragThreshold = 4;
     private bool _isDrawing;
@@ -41,7 +40,6 @@ public partial class MapEditorView : UserControl
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-            _viewModel.MapShown -= OnMapShown;
             _viewModel.CellsPainted -= OnCellsPainted;
         }
 
@@ -50,19 +48,13 @@ public partial class MapEditorView : UserControl
             return;
 
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        viewModel.MapShown += OnMapShown;
         viewModel.CellsPainted += OnCellsPainted;
         UpdateInterpolation(viewModel);
         UpdateOverscrollPadding();
-        // The tab content is created lazily, so a map selected before that was never scrolled to its start.
-        // Coming back to the same map keeps the position the user panned to.
-        _scrollToStartPending = viewModel.HasSelectedMap && viewModel.SelectedMap?.Name != _lastScrolledMapName;
+        // Each tab keeps its view, so the start is only scrolled to once; after that the user's position stays.
+        _scrollToStartPending = true;
         ScrollToMapStartIfPending();
     }
-
-    // The canvas is still hidden or laid out for the previous map when the event is raised.
-    private void OnMapShown(object? sender, EventArgs e) =>
-        Dispatcher.UIThread.Post(ScrollToMapStart, DispatcherPriority.Loaded);
 
     private void OnCellsPainted(object? sender, EventArgs e) => MapCells.InvalidateVisual();
 
@@ -114,7 +106,7 @@ public partial class MapEditorView : UserControl
 
     private void UpdateOverscrollPadding()
     {
-        if (DataContext is not MapEditorViewModel viewModel || !viewModel.HasSelectedMap)
+        if (DataContext is not MapEditorViewModel viewModel)
             return;
 
         _viewport.UpdateOverscrollPadding(viewModel.ScaledMapWidth, viewModel.ScaledMapHeight,
@@ -126,12 +118,11 @@ public partial class MapEditorView : UserControl
         if (DataContext is not MapEditorViewModel viewModel)
             return;
 
-        // A hidden tab has no viewport yet; scrolling now would be lost, so retry once it is shown.
+        // A tab that is not shown has no viewport yet; scrolling now would be lost, so retry once it is shown.
         _scrollToStartPending = !MapCanvasScrollViewer.IsEffectivelyVisible;
         if (_scrollToStartPending)
             return;
 
-        _lastScrolledMapName = viewModel.SelectedMap?.Name;
         _viewport.ScrollToStart(viewModel.ScaledMapWidth, viewModel.ScaledMapHeight,
             viewModel.TileWidth * viewModel.ZoomLevel, viewModel.TileHeight * viewModel.ZoomLevel);
     }
@@ -166,7 +157,7 @@ public partial class MapEditorView : UserControl
                 viewModel.EndMoveDrag();
                 ResetDrag();
                 break;
-            // Only with the canvas focused, so Delete in the map list or name box never clears cells.
+            // Only with the canvas focused, so Delete in the explorer or a text box never clears cells.
             case Key.Delete when e.Source == MapCanvasPadding && viewModel.HasSelectedCells:
                 e.Handled = true;
                 viewModel.DeleteSelectedCells();
@@ -346,62 +337,5 @@ public partial class MapEditorView : UserControl
         {
             if (zoomIn) viewModel.ZoomIn(); else viewModel.ZoomOut();
         });
-    }
-
-    private async void OnCreateMapClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not MapEditorViewModel viewModel || TopLevel.GetTopLevel(this) is not Window owner)
-            return;
-
-        var dialog = new CreateMapDialog(new CreateMapDialogViewModel(
-            viewModel.CreateUniqueName(), viewModel.TilesetNames, viewModel.PreferredTilesetName ?? viewModel.TilesetNames[0], viewModel.Maps.Select(map => map.Name).ToList()));
-        if (await dialog.ShowDialog<NewMapSettings?>(owner) is { } settings)
-            viewModel.CreateMap(settings.Name, settings.Width, settings.Height, settings.TilesetName);
-    }
-
-    private void OnMapSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is MapEditorViewModel viewModel)
-            MapNameBox.Text = viewModel.SelectedMap?.Name;
-    }
-
-    private void OnRenameMapClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MapEditorViewModel viewModel && viewModel.RenameSelectedMap(MapNameBox.Text ?? string.Empty))
-            MapNameBox.Text = viewModel.SelectedMap?.Name;
-    }
-
-    private async void OnResizeMapClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not MapEditorViewModel { SelectedMap: { } map } viewModel || TopLevel.GetTopLevel(this) is not Window owner)
-            return;
-
-        var dialog = new ResizeMapDialog(new ResizeMapDialogViewModel(map.Width, map.Height));
-        if (await dialog.ShowDialog<(int Width, int Height)?>(owner) is not { } size)
-            return;
-
-        var lostTiles = viewModel.CountTilesLostByResize(size.Width, size.Height);
-        if (lostTiles > 0)
-        {
-            var confirmed = await new ConfirmDialog(
-                "Resize map",
-                $"Shrinking the map '{map.Name}' removes {lostTiles} {(lostTiles == 1 ? "tile" : "tiles")}. Resize anyway?",
-                "Resize").ShowDialog<bool>(owner);
-            if (!confirmed)
-                return;
-        }
-
-        viewModel.ResizeSelectedMap(size.Width, size.Height);
-    }
-
-    private async void OnDeleteMapClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not MapEditorViewModel { SelectedMap: { } map } viewModel || TopLevel.GetTopLevel(this) is not Window owner)
-            return;
-
-        var confirmed = await new ConfirmDialog(
-            "Delete map", $"Delete the map '{map.Name}' from the project?", "Delete").ShowDialog<bool>(owner);
-        if (confirmed)
-            viewModel.DeleteSelectedMap();
     }
 }

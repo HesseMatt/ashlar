@@ -1,120 +1,150 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Ashlar.Core;
+using Ashlar.Core.Editing;
 using Ashlar.Core.Model;
 using Ashlar.Core.Rendering;
 using Ashlar.Core.Serialization;
 
 namespace Ashlar.App.ViewModels;
 
+// The open project: its tilesets and maps, the explorer that lists them and the tabs
+// they are edited in. An element that is open in a tab is edited live there, so its
+// entry in the project lists is only brought up to date when it is needed.
 public partial class MainViewModel : ViewModelBase
 {
-    public const int TilesetsTabIndex = 0;
-    public const int MapsTabIndex = 1;
-
     private const string InitialStatusMessage = "Create a project or open a tileset image to get started.";
 
-    [ObservableProperty]
-    private string _texturePath = string.Empty;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsProjectEmpty))]
-    private bool _isProjectOpen;
-
-    [ObservableProperty]
-    private string? _selectedTilesetName;
-
-    partial void OnSelectedTilesetNameChanged(string? value) => MapEditor.PreferredTilesetName = value;
-
-    public ObservableCollection<string> TilesetNames { get; } = new();
-
-    public bool HasTilesets => _tilesets.Count > 0;
-
-    public TilesetEditorViewModel Editor { get; } = new() { StatusMessage = InitialStatusMessage };
-
-    public MapEditorViewModel MapEditor { get; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActiveToolBar))]
-    [NotifyPropertyChangedFor(nameof(IsTilesetsTabActive), nameof(CanUndo), nameof(CanRedo))]
-    private int _selectedTabIndex;
-
-    partial void OnSelectedTabIndexChanged(int value)
-    {
-        if (value == MapsTabIndex)
-            MapEditor.RefreshTileset();
-    }
-
-    public bool IsTilesetsTabActive => SelectedTabIndex == TilesetsTabIndex;
-
-    // The editor whose tool bar is shown; the window picks the tool bar view by its type.
-    public ViewModelBase ActiveToolBar => SelectedTabIndex == MapsTabIndex ? MapEditor : Editor;
-
-    // Undo and redo act on the editor of the active tab.
-    public bool CanUndo => IsTilesetsTabActive ? Editor.CanUndo : MapEditor.CanUndo;
-
-    public bool CanRedo => IsTilesetsTabActive ? Editor.CanRedo : MapEditor.CanRedo;
-
-    public void Undo()
-    {
-        if (IsTilesetsTabActive)
-            Editor.Undo();
-        else
-            MapEditor.Undo();
-    }
-
-    public void Redo()
-    {
-        if (IsTilesetsTabActive)
-            Editor.Redo();
-        else
-            MapEditor.Redo();
-    }
-
-    public bool IsProjectEmpty => IsProjectOpen && !Editor.HasImage;
-
     private readonly List<ProjectTileset> _tilesets = new();
-    private int _selectedIndex = -1;
+    private readonly List<TileMap> _maps = new();
 
     public MainViewModel()
     {
-        MapEditor = new MapEditorViewModel(TilesetNames, FindTileset);
-        Editor.PropertyChanged += (_, e) =>
+        ExplorerRoots = [TilesetsGroup, MapsGroup];
+        OpenTabs.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasOpenTabs));
+        TilesetsGroup.Children.CollectionChanged += (_, _) =>
         {
-            if (e.PropertyName == nameof(TilesetEditorViewModel.HasImage))
-                OnPropertyChanged(nameof(IsProjectEmpty));
-            else if (e.PropertyName == nameof(TilesetEditorViewModel.CanUndo))
-                OnPropertyChanged(nameof(CanUndo));
-            else if (e.PropertyName == nameof(TilesetEditorViewModel.CanRedo))
-                OnPropertyChanged(nameof(CanRedo));
+            OnPropertyChanged(nameof(HasTilesets));
+            OnPropertyChanged(nameof(IsProjectEmpty));
+            OnPropertyChanged(nameof(CanCreateMap));
+            OnPropertyChanged(nameof(EmptyEditorText));
         };
-        MapEditor.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(MapEditorViewModel.CanUndo))
-                OnPropertyChanged(nameof(CanUndo));
-            else if (e.PropertyName == nameof(MapEditorViewModel.CanRedo))
-                OnPropertyChanged(nameof(CanRedo));
-        };
-        Editor.TilesDeleted += (_, names) =>
-        {
-            if (SelectedTilesetName is { } tilesetName)
-                MapEditor.ClearDeletedTiles(tilesetName, names);
-        };
-        MapEditor.MapsChanged += (_, _) => Editor.HasUnsavedChanges = true;
+        MapsGroup.Children.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasMaps));
     }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProjectEmpty), nameof(EmptyEditorText))]
+    private bool _isProjectOpen;
+
+    // Whether the project is open but still without a tileset.
+    public bool IsProjectEmpty => IsProjectOpen && !HasTilesets;
+
+    // Whether the project differs from what was last saved.
+    [ObservableProperty]
+    private bool _hasUnsavedChanges;
 
     // The file a plain Save writes to; null until the project was saved or opened.
     public string? ProjectPath { get; private set; }
 
     public string SuggestedProjectFileName =>
-        Editor.SourceFileName is null ? "project" : Path.GetFileNameWithoutExtension(Editor.SourceFileName);
+        _tilesets.FirstOrDefault() is { } first ? Path.GetFileNameWithoutExtension(first.ImageFileName) : "project";
 
-    // Reads an image for the tile size dialog without touching the open
-    // tileset, so cancelling the import leaves everything as it was.
+    public ExplorerNode TilesetsGroup { get; } = new(ExplorerNodeKind.TilesetGroup, "Tilesets");
+
+    public ExplorerNode MapsGroup { get; } = new(ExplorerNodeKind.MapGroup, "Maps");
+
+    public IReadOnlyList<ExplorerNode> ExplorerRoots { get; }
+
+    public bool HasTilesets => TilesetsGroup.Children.Count > 0;
+
+    public bool HasMaps => MapsGroup.Children.Count > 0;
+
+    public IReadOnlyList<string> TilesetNames => TilesetsGroup.Children.Select(node => node.Name).ToList();
+
+    public IReadOnlyList<string> MapNames => MapsGroup.Children.Select(node => node.Name).ToList();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedTilesetName), nameof(SelectedMapName), nameof(HasSelectedTileset), nameof(HasSelectedMap))]
+    private ExplorerNode? _explorerSelection;
+
+    public string? SelectedTilesetName => ExplorerSelection is { IsTileset: true } node ? node.Name : null;
+
+    public string? SelectedMapName => ExplorerSelection is { IsMap: true } node ? node.Name : null;
+
+    public bool HasSelectedTileset => SelectedTilesetName is not null;
+
+    public bool HasSelectedMap => SelectedMapName is not null;
+
+    public ObservableCollection<EditorTabViewModel> OpenTabs { get; } = new();
+
+    public bool HasOpenTabs => OpenTabs.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveTileset), nameof(ActiveMap), nameof(IsTilesetTabActive), nameof(IsMapTabActive), nameof(StatusText))]
+    private EditorTabViewModel? _activeTab;
+
+    // The view model whose tool bar is shown; the window picks the tool bar view by its type.
+    public TilesetEditorViewModel? ActiveTileset => ActiveTab as TilesetEditorViewModel;
+
+    public MapEditorViewModel? ActiveMap => ActiveTab as MapEditorViewModel;
+
+    public bool IsTilesetTabActive => ActiveTab is TilesetEditorViewModel;
+
+    public bool IsMapTabActive => ActiveTab is MapEditorViewModel;
+
+    // Maps can only be created once there is a tileset to draw from.
+    public bool CanCreateMap => HasTilesets;
+
+    public string StatusText => ActiveTab?.StatusMessage ?? _shellStatusMessage;
+
+    public string EmptyEditorText =>
+        !IsProjectOpen ? "No project open" : HasTilesets ? "Double-click a tileset or map in the project explorer to open it" : "This project has no tileset yet";
+
+    private string _shellStatusMessage = InitialStatusMessage;
+
+    partial void OnActiveTabChanged(EditorTabViewModel? oldValue, EditorTabViewModel? newValue)
+    {
+        if (oldValue is not null)
+            oldValue.IsActive = false;
+        if (newValue is null)
+            return;
+
+        newValue.IsActive = true;
+        // The tileset may have been edited in another tab since this map was last shown.
+        (newValue as MapEditorViewModel)?.RefreshTileset();
+        ExplorerSelection = FindNode(newValue);
+    }
+
+    private ExplorerNode? FindNode(EditorTabViewModel tab)
+    {
+        var group = tab is TilesetEditorViewModel ? TilesetsGroup : MapsGroup;
+        return group.Children.FirstOrDefault(node => node.Name == tab.Title);
+    }
+
+    // The status bar shows the active tab's message, so shell-level messages go to that tab.
+    private void ReportStatus(string message)
+    {
+        if (ActiveTab is { } tab)
+            tab.StatusMessage = message;
+        else
+        {
+            _shellStatusMessage = message;
+            OnPropertyChanged(nameof(StatusText));
+        }
+    }
+
+    private void MarkChanged() => HasUnsavedChanges = true;
+
+    public void Undo() => ActiveTab?.Undo();
+
+    public void Redo() => ActiveTab?.Redo();
+
+    // Reads an image for the tile size dialog without touching the project,
+    // so cancelling the import leaves everything as it was.
     public EditableTilesetImage? ReadImage(string filePath)
     {
         try
@@ -126,103 +156,6 @@ public partial class MainViewModel : ViewModelBase
             ReportStatus($"Could not open '{Path.GetFileName(filePath)}': {ex.Message}");
             return null;
         }
-    }
-
-    // Adds the image as a new tileset and selects it. The undo history is
-    // per editor session, so it is reset whenever another tileset is selected.
-    public void LoadTileset(string filePath, int tileWidth, int tileHeight)
-    {
-        var image = ReadImage(filePath);
-        if (image is null)
-            return;
-
-        CaptureSelectedTileset();
-        var fileName = Path.GetFileName(filePath);
-        var name = CreateUniqueName(Path.GetFileNameWithoutExtension(filePath));
-        // Opened first so the tileset list is already laid out when the canvas positions the new image.
-        IsProjectOpen = true;
-        Editor.LoadNewTileset(image, fileName, tileWidth, tileHeight);
-        TexturePath = Path.GetFileNameWithoutExtension(filePath);
-        _tilesets.Add(CreateSnapshot(name));
-        TilesetNames.Add(name);
-        _selectedIndex = _tilesets.Count - 1;
-        SelectedTilesetName = name;
-        OnPropertyChanged(nameof(HasTilesets));
-        ReportStatus($"{fileName} ({image.Width}x{image.Height}) - tile size {Editor.TileSizeText}.");
-    }
-
-    public void SelectTileset(string name)
-    {
-        var index = TilesetNames.IndexOf(name);
-        if (index < 0 || index == _selectedIndex)
-            return;
-
-        CaptureSelectedTileset();
-        ActivateTileset(index);
-    }
-
-    // Names must stay unique because they identify tilesets in the project file.
-    public bool RenameSelectedTileset(string newName)
-    {
-        if (_selectedIndex < 0)
-            return false;
-
-        newName = newName.Trim();
-        if (newName.Length == 0)
-        {
-            ReportStatus("A tileset name cannot be empty.");
-            return false;
-        }
-
-        var existingIndex = TilesetNames.IndexOf(newName);
-        if (existingIndex >= 0 && existingIndex != _selectedIndex)
-        {
-            ReportStatus($"A tileset named '{newName}' already exists in this project.");
-            return false;
-        }
-
-        if (newName == TilesetNames[_selectedIndex])
-            return true;
-
-        var oldName = TilesetNames[_selectedIndex];
-        _tilesets[_selectedIndex] = _tilesets[_selectedIndex] with { Name = newName };
-        // The names are updated first so the maps can find their renamed tileset.
-        TilesetNames[_selectedIndex] = newName;
-        MapEditor.RenameTileset(oldName, newName);
-        SelectedTilesetName = newName;
-        Editor.HasUnsavedChanges = true;
-        ReportStatus($"Renamed the tileset to '{newName}'.");
-        return true;
-    }
-
-    public void RemoveSelectedTileset()
-    {
-        if (_selectedIndex < 0)
-            return;
-
-        var removedName = TilesetNames[_selectedIndex];
-        var removedIndex = _selectedIndex;
-        _tilesets.RemoveAt(removedIndex);
-        TilesetNames.RemoveAt(removedIndex);
-        // The editor still holds the removed tileset; maps must not look it up as the live one.
-        _selectedIndex = -1;
-        MapEditor.DeleteMapsUsing(removedName);
-
-        if (_tilesets.Count == 0)
-        {
-            Editor.Close();
-            TexturePath = string.Empty;
-            _selectedIndex = -1;
-            SelectedTilesetName = null;
-        }
-        else
-        {
-            ActivateTileset(Math.Min(removedIndex, _tilesets.Count - 1));
-        }
-
-        OnPropertyChanged(nameof(HasTilesets));
-        Editor.HasUnsavedChanges = true;
-        ReportStatus($"Removed the tileset '{removedName}'.");
     }
 
     public void NewProject()
@@ -251,57 +184,199 @@ public partial class MainViewModel : ViewModelBase
         foreach (var tileset in project.Tilesets)
         {
             _tilesets.Add(tileset);
-            TilesetNames.Add(tileset.Name);
+            TilesetsGroup.Children.Add(new ExplorerNode(ExplorerNodeKind.Tileset, tileset.Name));
         }
 
-        MapEditor.Load(project.Maps);
-
-        OnPropertyChanged(nameof(HasTilesets));
-        if (_tilesets.Count == 0)
+        foreach (var map in project.Maps)
         {
-            ReportStatus($"Resumed project {Path.GetFileName(filePath)} (no tilesets).");
-            return;
+            _maps.Add(map);
+            MapsGroup.Children.Add(new ExplorerNode(ExplorerNodeKind.Map, map.Name));
         }
 
-        ActivateTileset(0);
-        ReportStatus($"Resumed project {Path.GetFileName(filePath)} ({_tilesets.Count} tilesets).");
+        ReportStatus($"Resumed project {Path.GetFileName(filePath)} ({_tilesets.Count} tilesets, {_maps.Count} maps).");
     }
 
     public void CloseProject()
     {
         ResetProject(isOpen: false);
-        Editor.StatusMessage = InitialStatusMessage;
-        MapEditor.StatusMessage = InitialStatusMessage;
+        ReportStatus(InitialStatusMessage);
     }
 
     private void ResetProject(bool isOpen)
     {
-        Editor.Close();
-        MapEditor.Clear();
+        foreach (var tab in OpenTabs.ToList())
+            CloseTab(tab, keepChanges: false);
+
         _tilesets.Clear();
-        TilesetNames.Clear();
-        _selectedIndex = -1;
-        SelectedTilesetName = null;
-        OnPropertyChanged(nameof(HasTilesets));
+        _maps.Clear();
+        TilesetsGroup.Children.Clear();
+        MapsGroup.Children.Clear();
+        ExplorerSelection = null;
         ProjectPath = null;
-        TexturePath = string.Empty;
+        HasUnsavedChanges = false;
         IsProjectOpen = isOpen;
     }
 
+    public bool SaveProject(string outputPath)
+    {
+        if (!IsProjectOpen)
+            return false;
+
+        try
+        {
+            CaptureOpenTabs();
+            ProjectFile.Save(new Project(_tilesets.ToList(), _maps.ToList()), outputPath);
+            ProjectPath = outputPath;
+            HasUnsavedChanges = false;
+            ReportStatus($"Saved project to {Path.GetFileName(outputPath)}.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ReportStatus($"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}");
+            return false;
+        }
+    }
+
+    // Brings the project lists up to date with the elements that are being edited.
+    private void CaptureOpenTabs()
+    {
+        foreach (var tab in OpenTabs)
+            Capture(tab);
+    }
+
+    private void Capture(EditorTabViewModel tab)
+    {
+        switch (tab)
+        {
+            case TilesetEditorViewModel editor:
+                _tilesets[IndexOfTileset(editor.Title)] = editor.ToProjectTileset();
+                break;
+            case MapEditorViewModel editor:
+                _maps[IndexOfMap(editor.Title)] = editor.Map;
+                break;
+        }
+    }
+
+    public void OpenTab(ExplorerNode node)
+    {
+        if (node.IsTileset)
+            OpenTileset(node.Name);
+        else if (node.IsMap)
+            OpenMap(node.Name);
+    }
+
+    public void CloseActiveTab()
+    {
+        if (ActiveTab is { } tab)
+            CloseTab(tab);
+    }
+
+    // Closing never asks: the changes already live in the project. The tab's undo history is dropped with it.
+    public void CloseTab(EditorTabViewModel tab) => CloseTab(tab, keepChanges: true);
+
+    private void CloseTab(EditorTabViewModel tab, bool keepChanges)
+    {
+        var index = OpenTabs.IndexOf(tab);
+        if (index < 0)
+            return;
+
+        if (keepChanges)
+            Capture(tab);
+
+        // The tab strip selects another tab on its own once the active one is removed, so the choice is made here.
+        var wasActive = ActiveTab == tab;
+        Detach(tab);
+        OpenTabs.RemoveAt(index);
+        if (wasActive)
+            ActiveTab = OpenTabs.Count == 0 ? null : OpenTabs[Math.Max(index - 1, 0)];
+    }
+
+    private void Attach(EditorTabViewModel tab)
+    {
+        tab.PropertyChanged += OnTabPropertyChanged;
+        switch (tab)
+        {
+            case TilesetEditorViewModel editor:
+                editor.Changed += OnElementChanged;
+                editor.TilesDeleted += OnTilesDeleted;
+                break;
+            case MapEditorViewModel editor:
+                editor.Changed += OnElementChanged;
+                break;
+        }
+
+        OpenTabs.Add(tab);
+        ActiveTab = tab;
+    }
+
+    private void Detach(EditorTabViewModel tab)
+    {
+        tab.PropertyChanged -= OnTabPropertyChanged;
+        switch (tab)
+        {
+            case TilesetEditorViewModel editor:
+                editor.Changed -= OnElementChanged;
+                editor.TilesDeleted -= OnTilesDeleted;
+                editor.Close();
+                break;
+            case MapEditorViewModel editor:
+                editor.Changed -= OnElementChanged;
+                break;
+        }
+
+        tab.IsActive = false;
+    }
+
+    private void OnTabPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(EditorTabViewModel.StatusMessage) && sender == ActiveTab)
+            OnPropertyChanged(nameof(StatusText));
+    }
+
+    private void OnElementChanged(object? sender, EventArgs e) => MarkChanged();
+
+    private T? FindTab<T>(string name) where T : EditorTabViewModel =>
+        OpenTabs.OfType<T>().FirstOrDefault(tab => tab.Title == name);
+
+    private int IndexOfTileset(string name) => TilesetsGroup.Children.ToList().FindIndex(node => node.Name == name);
+
+    private int IndexOfMap(string name) => MapsGroup.Children.ToList().FindIndex(node => node.Name == name);
+
+    // Open elements are read live, so edits not yet captured into the project are included.
+    private ProjectTileset? FindTileset(string name)
+    {
+        if (FindTab<TilesetEditorViewModel>(name) is { } editor)
+            return editor.ToProjectTileset();
+
+        return _tilesets.FirstOrDefault(tileset => tileset.Name == name);
+    }
+
+    private TileMap? FindMap(string name) =>
+        FindTab<MapEditorViewModel>(name)?.Map ?? _maps.FirstOrDefault(map => map.Name == name);
+
+    public void RenameNode(ExplorerNode node, string newName)
+    {
+        if (node.IsTileset)
+            RenameTileset(node.Name, newName);
+        else if (node.IsMap)
+            RenameMap(node.Name, newName);
+    }
+
     public ExportDialogViewModel CreateExportDialogViewModel() =>
-        new(TexturePath, Editor.TileWidth, Editor.TileHeight, Editor.Tiles);
+        new(ActiveTileset!.TexturePath, ActiveTileset.TileWidth, ActiveTileset.TileHeight, ActiveTileset.Tiles);
 
     public void ExportXml(string outputPath)
     {
-        if (Editor.SourceFileName is null)
+        if (ActiveTileset is not { SourceFileName: not null } editor)
             return;
 
-        var tileset = new Tileset(TexturePath, Editor.TileWidth, Editor.TileHeight, Editor.Tiles);
+        var tileset = new Tileset(editor.TexturePath, editor.TileWidth, editor.TileHeight, editor.Tiles);
 
         try
         {
             TextureAtlasXmlWriter.Write(tileset, outputPath);
-            ReportStatus($"Exported {Editor.Tiles.Count} tiles to {Path.GetFileName(outputPath)}.");
+            ReportStatus($"Exported {editor.Tiles.Count} tiles to {Path.GetFileName(outputPath)}.");
         }
         catch (Exception ex)
         {
@@ -309,10 +384,26 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    public void SaveImage(string outputPath)
+    {
+        if (ActiveTileset?.Image is not { } image)
+            return;
+
+        try
+        {
+            image.SaveAsPng(outputPath);
+            ReportStatus($"Saved image to {Path.GetFileName(outputPath)}.");
+        }
+        catch (Exception ex)
+        {
+            ReportStatus($"Could not save image to '{Path.GetFileName(outputPath)}': {ex.Message}");
+        }
+    }
+
     // Null when no map is selected or its tileset no longer exists.
     public ExportMapDialogViewModel? CreateExportMapDialogViewModel()
     {
-        if (MapEditor.SelectedMap is not { } map || FindTileset(map.TilesetName) is not { } tileset)
+        if (SelectedMapName is not { } name || FindMap(name) is not { } map || FindTileset(map.TilesetName) is not { } tileset)
             return null;
 
         return new ExportMapDialogViewModel(map, ToTileset(tileset));
@@ -321,7 +412,7 @@ public partial class MainViewModel : ViewModelBase
     // Either path may be null to skip that file. The tileset is read live, so edits not yet saved to the project are included.
     public void ExportMap(string? xmlPath, string? imagePath)
     {
-        if (MapEditor.SelectedMap is not { } map || FindTileset(map.TilesetName) is not { } tileset)
+        if (SelectedMapName is not { } name || FindMap(name) is not { } map || FindTileset(map.TilesetName) is not { } tileset)
             return;
 
         try
@@ -347,100 +438,4 @@ public partial class MainViewModel : ViewModelBase
 
     private static Tileset ToTileset(ProjectTileset tileset) =>
         new(tileset.TexturePath, tileset.TileWidth, tileset.TileHeight, tileset.Tiles);
-
-    public void SaveImage(string outputPath)
-    {
-        if (Editor.Image is not { } image)
-            return;
-
-        try
-        {
-            image.SaveAsPng(outputPath);
-            ReportStatus($"Saved image to {Path.GetFileName(outputPath)}.");
-        }
-        catch (Exception ex)
-        {
-            ReportStatus($"Could not save image to '{Path.GetFileName(outputPath)}': {ex.Message}");
-        }
-    }
-
-    // The status bar shows the active tab's message, so shell-level messages go to that editor.
-    private void ReportStatus(string message)
-    {
-        if (IsTilesetsTabActive)
-            Editor.StatusMessage = message;
-        else
-            MapEditor.StatusMessage = message;
-    }
-
-    public bool SaveProject(string outputPath)
-    {
-        if (!IsProjectOpen)
-            return false;
-
-        try
-        {
-            ProjectFile.Save(BuildProject(), outputPath);
-            ProjectPath = outputPath;
-            Editor.HasUnsavedChanges = false;
-            ReportStatus($"Saved project to {Path.GetFileName(outputPath)}.");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            ReportStatus($"Could not save project to '{Path.GetFileName(outputPath)}': {ex.Message}");
-            return false;
-        }
-    }
-
-    private Project BuildProject()
-    {
-        CaptureSelectedTileset();
-        return new Project(_tilesets.ToList(), MapEditor.Maps.ToList());
-    }
-
-    // The editor holds the live state of the selected tileset; the list entry
-    // is only brought up to date when it is needed.
-    private void CaptureSelectedTileset()
-    {
-        if (_selectedIndex >= 0)
-            _tilesets[_selectedIndex] = CreateSnapshot(_tilesets[_selectedIndex].Name);
-    }
-
-    // The selected tileset is edited live, so its list entry can be stale.
-    private ProjectTileset? FindTileset(string name)
-    {
-        var index = TilesetNames.IndexOf(name);
-        if (index < 0)
-            return null;
-
-        return index == _selectedIndex ? CreateSnapshot(name) : _tilesets[index];
-    }
-
-    private ProjectTileset CreateSnapshot(string name)
-    {
-        var drawColor = Editor.DrawColor;
-        return new ProjectTileset(name, Editor.SourceFileName!, Editor.Image!.EncodeToPng(), TexturePath,
-            Editor.TileWidth, Editor.TileHeight, Editor.Tiles.ToList(), new PixelColor(drawColor.R, drawColor.G, drawColor.B, drawColor.A));
-    }
-
-    private void ActivateTileset(int index)
-    {
-        var tileset = _tilesets[index];
-        var hadUnsavedChanges = Editor.HasUnsavedChanges;
-        Editor.LoadProject(tileset, EditableTilesetImage.Load(tileset.ImagePng));
-        Editor.HasUnsavedChanges = hadUnsavedChanges;
-        TexturePath = tileset.TexturePath;
-        _selectedIndex = index;
-        SelectedTilesetName = tileset.Name;
-        ReportStatus($"{tileset.Name} ({Editor.Tiles.Count} tiles) - tile size {Editor.TileSizeText}.");
-    }
-
-    private string CreateUniqueName(string baseName)
-    {
-        var name = baseName;
-        for (var suffix = 2; TilesetNames.Contains(name); suffix++)
-            name = $"{baseName} {suffix}";
-        return name;
-    }
 }

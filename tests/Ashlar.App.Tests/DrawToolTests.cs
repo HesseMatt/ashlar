@@ -16,20 +16,20 @@ public class DrawToolTests : IDisposable
     public void StrokeIsIgnoredUnlessTheDrawToolIsActive()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.IsDrawToolActive = false;
+        viewModel.Editor().IsDrawToolActive = false;
 
-        Assert.False(viewModel.Editor.BeginStroke(1, 1));
-        Assert.False(viewModel.Editor.HasEdits);
+        Assert.False(viewModel.Editor().BeginStroke(1, 1));
+        Assert.False(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void ClickPaintsOnePixelWithThePickedColorWithoutBlending()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.DrawColor = Color.FromArgb(128, 10, 20, 30);
+        viewModel.Editor().DrawColor = Color.FromArgb(128, 10, 20, 30);
 
-        viewModel.Editor.BeginStroke(1, 1);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(1, 1);
+        viewModel.Editor().CommitStroke();
 
         Assert.Equal([10, 20, 30, 128], PixelAt(viewModel, 1, 1));
         Assert.Equal([255, 0, 0, 255], PixelAt(viewModel, 2, 1));
@@ -41,9 +41,9 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(2, 2);
-        viewModel.Editor.ContinueStroke(12, 7);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(2, 2);
+        viewModel.Editor().ContinueStroke(12, 7);
+        viewModel.Editor().CommitStroke();
 
         var painted = Enumerable.Range(0, 64).SelectMany(y => Enumerable.Range(0, 64).Select(x => (x, y)))
             .Where(p => PixelAt(viewModel, p.x, p.y) is [0, 0, 0, 255])
@@ -57,10 +57,10 @@ public class DrawToolTests : IDisposable
     public void PaintingWithAlphaZeroErasesThePixel()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.DrawColor = Color.FromArgb(0, 0, 0, 0);
+        viewModel.Editor().DrawColor = Color.FromArgb(0, 0, 0, 0);
 
-        viewModel.Editor.BeginStroke(1, 1);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(1, 1);
+        viewModel.Editor().CommitStroke();
 
         Assert.Equal(0, PixelAt(viewModel, 1, 1)[3]);
     }
@@ -70,13 +70,13 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(-5, 3);
-        viewModel.Editor.ContinueStroke(70, 3);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(-5, 3);
+        viewModel.Editor().ContinueStroke(70, 3);
+        viewModel.Editor().CommitStroke();
 
         Assert.Equal(0, PixelAt(viewModel, 0, 3)[0]);
         Assert.Equal(0, PixelAt(viewModel, 63, 3)[0]);
-        Assert.Equal(64, viewModel.Editor.ImageWidth);
+        Assert.Equal(64, viewModel.Editor().ImageWidth);
     }
 
     [AvaloniaFact]
@@ -84,11 +84,11 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(-5, -5);
-        viewModel.Editor.ContinueStroke(-1, -1);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(-5, -5);
+        viewModel.Editor().ContinueStroke(-1, -1);
+        viewModel.Editor().CommitStroke();
 
-        Assert.False(viewModel.Editor.CanUndo);
+        Assert.False(viewModel.Editor().CanUndo);
     }
 
     [AvaloniaFact]
@@ -96,37 +96,37 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(40, 40);
-        viewModel.Editor.ContinueStroke(40, 20);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(40, 40);
+        viewModel.Editor().ContinueStroke(40, 20);
+        viewModel.Editor().CommitStroke();
 
-        Assert.Equal(["tiles_0001", "tiles_0002", "tiles_0003"], viewModel.Editor.Tiles.Select(t => t.Name));
-        Assert.Equal([(0, 0), (32, 32), (32, 16)], viewModel.Editor.Tiles.Select(t => (t.X, t.Y)));
+        Assert.Equal(["tiles_0001", "tiles_0002", "tiles_0003"], viewModel.Editor().Tiles.Select(t => t.Name));
+        Assert.Equal([(0, 0), (32, 32), (32, 16)], viewModel.Editor().Tiles.Select(t => (t.X, t.Y)));
     }
 
     [AvaloniaFact]
     public void PaintingAlphaZeroIntoAnEmptyCellCreatesNoTile()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.DrawColor = Color.FromArgb(0, 0, 0, 0);
+        viewModel.Editor().DrawColor = Color.FromArgb(0, 0, 0, 0);
 
-        viewModel.Editor.BeginStroke(40, 40);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(40, 40);
+        viewModel.Editor().CommitStroke();
 
-        Assert.Single(viewModel.Editor.Tiles);
+        Assert.Single(viewModel.Editor().Tiles);
     }
 
     [AvaloniaFact]
     public void ErasingAllPixelsOfATileKeepsTheTile()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.DrawColor = Color.FromArgb(0, 0, 0, 0);
+        viewModel.Editor().DrawColor = Color.FromArgb(0, 0, 0, 0);
 
-        viewModel.Editor.BeginStroke(0, 0);
-        viewModel.Editor.ContinueStroke(15, 15);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(0, 0);
+        viewModel.Editor().ContinueStroke(15, 15);
+        viewModel.Editor().CommitStroke();
 
-        Assert.Single(viewModel.Editor.Tiles);
+        Assert.Single(viewModel.Editor().Tiles);
     }
 
     [AvaloniaFact]
@@ -134,20 +134,20 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(20, 40);
-        viewModel.Editor.ContinueStroke(50, 40);
-        viewModel.Editor.CommitStroke();
-        Assert.Equal(4, viewModel.Editor.Tiles.Count);
+        viewModel.Editor().BeginStroke(20, 40);
+        viewModel.Editor().ContinueStroke(50, 40);
+        viewModel.Editor().CommitStroke();
+        Assert.Equal(4, viewModel.Editor().Tiles.Count);
 
-        viewModel.Editor.Undo();
+        viewModel.Editor().Undo();
 
-        Assert.False(viewModel.Editor.CanUndo);
-        Assert.Single(viewModel.Editor.Tiles);
+        Assert.False(viewModel.Editor().CanUndo);
+        Assert.Single(viewModel.Editor().Tiles);
         Assert.Equal(0, PixelAt(viewModel, 30, 40)[3]);
 
-        viewModel.Editor.Redo();
+        viewModel.Editor().Redo();
 
-        Assert.Equal(4, viewModel.Editor.Tiles.Count);
+        Assert.Equal(4, viewModel.Editor().Tiles.Count);
         Assert.Equal([0, 0, 0, 255], PixelAt(viewModel, 30, 40));
     }
 
@@ -156,13 +156,13 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(20, 40);
-        viewModel.Editor.ContinueStroke(50, 40);
-        viewModel.Editor.CancelStroke();
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(20, 40);
+        viewModel.Editor().ContinueStroke(50, 40);
+        viewModel.Editor().CancelStroke();
+        viewModel.Editor().CommitStroke();
 
-        Assert.False(viewModel.Editor.CanUndo);
-        Assert.Single(viewModel.Editor.Tiles);
+        Assert.False(viewModel.Editor().CanUndo);
+        Assert.Single(viewModel.Editor().Tiles);
         Assert.Equal(0, PixelAt(viewModel, 30, 40)[3]);
     }
 
@@ -171,24 +171,24 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = OpenImage();
 
-        viewModel.Editor.BeginStroke(1, 1);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(1, 1);
+        viewModel.Editor().CommitStroke();
 
-        Assert.True(viewModel.Editor.HasEdits);
+        Assert.True(viewModel.Editor().HasEdits);
     }
 
     [AvaloniaFact]
     public void PreviewBitmapIsUpdatedInPlaceDuringTheStroke()
     {
         var viewModel = OpenImage();
-        var bitmap = viewModel.Editor.PreviewBitmap;
+        var bitmap = viewModel.Editor().PreviewBitmap;
         var redrawn = 0;
-        viewModel.Editor.PreviewPixelsChanged += (_, _) => redrawn++;
+        viewModel.Editor().PreviewPixelsChanged += (_, _) => redrawn++;
 
-        viewModel.Editor.BeginStroke(1, 1);
-        viewModel.Editor.ContinueStroke(5, 1);
+        viewModel.Editor().BeginStroke(1, 1);
+        viewModel.Editor().ContinueStroke(5, 1);
 
-        Assert.Same(bitmap, viewModel.Editor.PreviewBitmap);
+        Assert.Same(bitmap, viewModel.Editor().PreviewBitmap);
         Assert.Equal(2, redrawn);
         Assert.Equal([0, 0, 0, 255], PreviewPixelAt(viewModel, 5, 1));
     }
@@ -197,12 +197,12 @@ public class DrawToolTests : IDisposable
     public void UndoIsIgnoredWhileAStrokeIsInProgress()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.BeginStroke(1, 1);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(1, 1);
+        viewModel.Editor().CommitStroke();
 
-        viewModel.Editor.BeginStroke(5, 5);
-        viewModel.Editor.Undo();
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(5, 5);
+        viewModel.Editor().Undo();
+        viewModel.Editor().CommitStroke();
 
         Assert.Equal([0, 0, 0, 255], PixelAt(viewModel, 5, 5));
     }
@@ -211,7 +211,7 @@ public class DrawToolTests : IDisposable
     {
         var viewModel = new MainViewModel();
         viewModel.LoadTileset(WriteImage(), 16, 16);
-        viewModel.Editor.IsDrawToolActive = true;
+        viewModel.Editor().IsDrawToolActive = true;
         return viewModel;
     }
 
@@ -241,7 +241,7 @@ public class DrawToolTests : IDisposable
 
     private static unsafe byte[] PreviewPixelAt(MainViewModel viewModel, int x, int y)
     {
-        using var framebuffer = viewModel.Editor.PreviewBitmap!.Lock();
+        using var framebuffer = viewModel.Editor().PreviewBitmap!.Lock();
         var pixel = (byte*)framebuffer.Address + y * framebuffer.RowBytes + x * 4;
         return [pixel[0], pixel[1], pixel[2], pixel[3]];
     }

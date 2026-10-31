@@ -13,13 +13,13 @@ public class UnsavedChangesTests : IDisposable
     [AvaloniaFact]
     public void NothingIsUnsavedBeforeAnythingIsOpened()
     {
-        Assert.False(new MainViewModel().Editor.HasUnsavedChanges);
+        Assert.False(new MainViewModel().HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void FreshlyImportedTilesetCountsAsUnsaved()
     {
-        Assert.True(OpenImage().Editor.HasUnsavedChanges);
+        Assert.True(OpenImage().HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -30,7 +30,9 @@ public class UnsavedChangesTests : IDisposable
 
         viewModel.OpenProject(projectPath);
 
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        viewModel.OpenFirstTileset();
+
+        Assert.False(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -41,7 +43,7 @@ public class UnsavedChangesTests : IDisposable
         var saved = viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
 
         Assert.True(saved);
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        Assert.False(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -52,7 +54,7 @@ public class UnsavedChangesTests : IDisposable
         var saved = viewModel.SaveProject(Path.Combine(_directory, "missing", "a.ashlar"));
 
         Assert.False(saved);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -61,13 +63,14 @@ public class UnsavedChangesTests : IDisposable
         var viewModel = OpenImage();
         var projectPath = SaveProject(viewModel);
         viewModel.OpenProject(projectPath);
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.OpenFirstTileset();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
         viewModel.SaveImage(Path.Combine(_directory, "out.png"));
         viewModel.ExportXml(Path.Combine(_directory, "out.xml"));
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -75,64 +78,64 @@ public class UnsavedChangesTests : IDisposable
     {
         var viewModel = OpenSavedProject();
 
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void DrawingMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
-        viewModel.Editor.IsDrawToolActive = true;
+        viewModel.Editor().IsDrawToolActive = true;
 
-        viewModel.Editor.BeginStroke(1, 1);
-        viewModel.Editor.CommitStroke();
+        viewModel.Editor().BeginStroke(1, 1);
+        viewModel.Editor().CommitStroke();
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void MovingMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
 
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(17, 1);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(17, 1);
+        viewModel.Editor().CommitMoveDrag();
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void AssigningAGroupMarksTheSavedStateAsUnsaved()
     {
         var viewModel = OpenSavedProject();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.GroupNameInput = "walls";
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().GroupNameInput = "walls";
 
-        viewModel.Editor.ConfirmGroupNameInput();
+        viewModel.Editor().ConfirmGroupNameInput();
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void UndoAndRedoMarkTheSavedStateAsUnsaved()
     {
         var viewModel = OpenImage();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
 
         viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
-        viewModel.Editor.Undo();
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        viewModel.Editor().Undo();
+        Assert.True(viewModel.HasUnsavedChanges);
 
         viewModel.SaveProject(Path.Combine(_directory, "a.ashlar"));
-        viewModel.Editor.Redo();
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        viewModel.Editor().Redo();
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -140,9 +143,9 @@ public class UnsavedChangesTests : IDisposable
     {
         var viewModel = OpenSavedProject();
 
-        viewModel.Editor.ChangeTileSize(32, 32);
+        viewModel.Editor().ChangeTileSize(32, 32);
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -150,25 +153,18 @@ public class UnsavedChangesTests : IDisposable
     {
         var viewModel = OpenImage();
         var initial = new MainViewModel();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
-        viewModel.Editor.ZoomIn();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
+        viewModel.Editor().ZoomIn();
 
         viewModel.CloseProject();
 
-        Assert.False(viewModel.Editor.HasImage);
-        Assert.Null(viewModel.Editor.PreviewBitmap);
-        Assert.Empty(viewModel.Editor.Tiles);
-        Assert.Empty(viewModel.Editor.SelectedTiles);
-        Assert.Empty(viewModel.Editor.GroupNames);
-        Assert.False(viewModel.Editor.HasEdits);
-        Assert.False(viewModel.Editor.CanUndo);
-        Assert.False(viewModel.Editor.CanRedo);
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
-        Assert.Equal(1.0, viewModel.Editor.ZoomLevel);
-        Assert.Equal(initial.Editor.StatusMessage, viewModel.Editor.StatusMessage);
-        Assert.Equal(initial.Editor.TileSizeText, viewModel.Editor.TileSizeText);
-        Assert.Equal(string.Empty, viewModel.TexturePath);
+        Assert.Empty(viewModel.OpenTabs);
+        Assert.Null(viewModel.ActiveTab);
+        Assert.Empty(viewModel.TilesetNames);
+        Assert.False(viewModel.IsProjectOpen);
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Equal(initial.StatusText, viewModel.StatusText);
     }
 
     [AvaloniaFact]
@@ -179,14 +175,15 @@ public class UnsavedChangesTests : IDisposable
 
         viewModel.LoadTileset(WriteImage("again.png"), 32, 32);
 
-        Assert.True(viewModel.Editor.HasImage);
-        Assert.Equal(4, viewModel.Editor.Tiles.Count);
+        Assert.True(viewModel.Editor().HasImage);
+        Assert.Equal(4, viewModel.Editor().Tiles.Count);
     }
 
     private MainViewModel OpenSavedProject()
     {
         var viewModel = new MainViewModel();
         viewModel.OpenProject(SaveProject(OpenImage()));
+        viewModel.OpenFirstTileset();
         return viewModel;
     }
 

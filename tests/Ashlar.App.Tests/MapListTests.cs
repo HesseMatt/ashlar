@@ -17,94 +17,95 @@ public class MapListTests : IDisposable
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
     [AvaloniaFact]
-    public void CreatingAMapAddsAndSelectsItAndMarksTheProjectChanged()
+    public void CreatingAMapAddsItListsItOpensItsTabAndMarksTheProjectChanged()
     {
         var viewModel = TwoTilesets();
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.HasUnsavedChanges = false;
 
-        var created = viewModel.MapEditor.CreateMap("level1", 10, 8, "forest");
+        var created = viewModel.CreateMap("level1", 10, 8, "forest");
 
         Assert.True(created);
-        var map = Assert.Single(viewModel.MapEditor.Maps);
+        var map = viewModel.GetMap("level1")!;
         Assert.Equal(("level1", "forest", 10, 8), (map.Name, map.TilesetName, map.Width, map.Height));
-        Assert.Same(map, viewModel.MapEditor.SelectedMap);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.Equal(["level1"], viewModel.MapNames);
+        Assert.Same(map, viewModel.MapEditor().Map);
+        Assert.Equal("level1", viewModel.SelectedMapName);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void CreatingAMapWithATakenOrEmptyNameIsRefused()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 10, 8, "forest");
+        viewModel.CreateMap("level1", 10, 8, "forest");
 
-        Assert.False(viewModel.MapEditor.CreateMap(" level1 ", 4, 4, "dungeon"));
-        Assert.False(viewModel.MapEditor.CreateMap("  ", 4, 4, "dungeon"));
+        Assert.False(viewModel.CreateMap(" level1 ", 4, 4, "dungeon"));
+        Assert.False(viewModel.CreateMap("  ", 4, 4, "dungeon"));
 
-        Assert.Single(viewModel.MapEditor.Maps);
-        Assert.Contains("empty", viewModel.MapEditor.StatusMessage);
+        Assert.Single(viewModel.MapNames);
+        Assert.Contains("empty", viewModel.StatusText);
     }
 
     [AvaloniaFact]
-    public void RenamingKeepsSizeTilesetAndSelectionAndMarksTheProjectChanged()
+    public void RenamingKeepsSizeTilesetAndTabAndMarksTheProjectChanged()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 10, 8, "forest");
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.CreateMap("level1", 10, 8, "forest");
+        var editor = viewModel.MapEditor();
+        viewModel.HasUnsavedChanges = false;
 
-        var renamed = viewModel.MapEditor.RenameSelectedMap(" cave ");
+        var renamed = viewModel.RenameMap("level1", " cave ");
 
         Assert.True(renamed);
-        var map = Assert.Single(viewModel.MapEditor.Maps);
+        var map = viewModel.GetMap("cave")!;
         Assert.Equal(("cave", "forest", 10, 8), (map.Name, map.TilesetName, map.Width, map.Height));
-        Assert.Same(map, viewModel.MapEditor.SelectedMap);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.Equal(["cave"], viewModel.MapNames);
+        Assert.Same(editor, viewModel.MapEditor());
+        Assert.Equal("cave", editor.Title);
+        Assert.Same(map, editor.Map);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void RenamingToAnotherMapsNameIsRefused()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("a", 2, 2, "forest");
-        viewModel.MapEditor.CreateMap("b", 2, 2, "forest");
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.CreateMap("a", 2, 2, "forest");
+        viewModel.CreateMap("b", 2, 2, "forest");
+        viewModel.HasUnsavedChanges = false;
 
-        Assert.False(viewModel.MapEditor.RenameSelectedMap("a"));
-        Assert.False(viewModel.MapEditor.RenameSelectedMap(""));
+        Assert.False(viewModel.RenameMap("b", "a"));
+        Assert.False(viewModel.RenameMap("b", ""));
 
-        Assert.Equal(["a", "b"], viewModel.MapEditor.Maps.Select(map => map.Name));
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        Assert.Equal(["a", "b"], viewModel.MapNames);
+        Assert.False(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void ARefusedRenameShowsItsMessageInTheStatusBar()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("a", 2, 2, "forest");
-        viewModel.MapEditor.CreateMap("b", 2, 2, "forest");
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        viewModel.CreateMap("a", 2, 2, "forest");
+        viewModel.CreateMap("b", 2, 2, "forest");
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
 
-        viewModel.MapEditor.RenameSelectedMap("a");
+        viewModel.RenameMap("b", "a");
 
-        var status = window.FindControl<TextBlock>("MapStatusText")!;
-        Assert.True(status.IsVisible);
-        Assert.Contains("already exists", status.Text);
-        Assert.False(window.FindControl<TextBlock>("TilesetStatusText")!.IsVisible);
+        Assert.Contains("already exists", window.FindControl<TextBlock>("StatusText")!.Text);
         window.Close();
     }
 
     [AvaloniaFact]
-    public void SavingFromTheMapsTabReportsInTheStatusBar()
+    public void SavingReportsInTheStatusBarOfTheActiveTab()
     {
         var viewModel = TwoTilesets();
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        viewModel.CreateMap("a", 2, 2, "forest");
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
-        var status = window.FindControl<TextBlock>("MapStatusText")!;
+        var status = window.FindControl<TextBlock>("StatusText")!;
 
         viewModel.SaveProject(Path.Combine(_directory, "p.ashlar"));
-        Assert.True(status.IsVisible);
         Assert.Contains("Saved project", status.Text);
 
         viewModel.SaveProject(Path.Combine(_directory, "missing", "x.ashlar"));
@@ -113,31 +114,32 @@ public class MapListTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void DeletingSelectsANeighbourAndMarksTheProjectChanged()
+    public void DeletingClosesTheTabAndMarksTheProjectChanged()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("a", 2, 2, "forest");
-        viewModel.MapEditor.CreateMap("b", 2, 2, "forest");
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.CreateMap("a", 2, 2, "forest");
+        viewModel.CreateMap("b", 2, 2, "forest");
+        viewModel.HasUnsavedChanges = false;
 
-        viewModel.MapEditor.DeleteSelectedMap();
-        Assert.Equal("a", viewModel.MapEditor.SelectedMap?.Name);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        viewModel.DeleteMap("b");
+        Assert.Equal(["a"], viewModel.MapNames);
+        Assert.DoesNotContain(viewModel.OpenTabs, tab => tab.Title == "b");
+        Assert.True(viewModel.HasUnsavedChanges);
 
-        viewModel.MapEditor.DeleteSelectedMap();
-        Assert.Empty(viewModel.MapEditor.Maps);
-        Assert.Null(viewModel.MapEditor.SelectedMap);
+        viewModel.DeleteMap("a");
+        Assert.Empty(viewModel.MapNames);
+        Assert.Null(viewModel.ActiveMap);
     }
 
     [AvaloniaFact]
-    public void TheSelectedTilesetIsOfferedForNewMaps()
+    public void ANewMapDefaultsToTheSelectedTileset()
     {
         var viewModel = TwoTilesets();
-        Assert.Equal("forest", viewModel.MapEditor.PreferredTilesetName);
+        Assert.Equal("forest", viewModel.SuggestedTilesetName);
 
-        viewModel.SelectTileset("dungeon");
+        viewModel.OpenTileset("dungeon");
 
-        Assert.Equal("dungeon", viewModel.MapEditor.PreferredTilesetName);
+        Assert.Equal("dungeon", viewModel.SuggestedTilesetName);
     }
 
     [AvaloniaFact]
@@ -145,55 +147,27 @@ public class MapListTests : IDisposable
     {
         var viewModel = new MainViewModel();
         viewModel.NewProject();
-        Assert.False(viewModel.MapEditor.CanCreateMap);
+        Assert.False(viewModel.CanCreateMap);
 
         viewModel.LoadTileset(WriteImage("dungeon", 32, 32), 16, 16);
-        Assert.True(viewModel.MapEditor.CanCreateMap);
+        Assert.True(viewModel.CanCreateMap);
 
-        viewModel.RemoveSelectedTileset();
-        Assert.False(viewModel.MapEditor.CanCreateMap);
+        viewModel.RemoveTileset("dungeon");
+        Assert.False(viewModel.CanCreateMap);
     }
 
     [AvaloniaFact]
-    public void TheMapsTabExplainsWhyCreatingIsUnavailableWithoutATileset()
-    {
-        var viewModel = new MainViewModel();
-        viewModel.NewProject();
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
-        var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
-        window.Show();
-        var mapView = window.GetVisualDescendants().OfType<MapEditorView>().Single();
-
-        var createButton = mapView.FindControl<Button>("CreateMapButton")!;
-        var explanation = mapView.FindControl<TextBlock>("NoTilesetText")!;
-        Assert.False(createButton.IsEnabled);
-        Assert.True(explanation.IsVisible);
-
-        viewModel.LoadTileset(WriteImage("dungeon", 32, 32), 16, 16);
-
-        Assert.True(createButton.IsEnabled);
-        Assert.False(explanation.IsVisible);
-        window.Close();
-    }
-
-    [AvaloniaFact]
-    public void TheSelectedMapIsShownAsAPlaceholderAndListed()
+    public void TheMapTabShowsTitleSizeAndTileset()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 10, 8, "forest");
-        viewModel.MapEditor.CreateMap("level2", 3, 4, "dungeon");
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
+        viewModel.CreateMap("level1", 10, 8, "forest");
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
         var mapView = window.GetVisualDescendants().OfType<MapEditorView>().Single();
-        var list = mapView.FindControl<ListBox>("MapList")!;
-
-        list.SelectedItem = viewModel.MapEditor.Maps[0];
 
         Assert.Equal("level1", mapView.FindControl<TextBlock>("MapTitleText")!.Text);
         Assert.Equal("10 x 8 cells", mapView.FindControl<TextBlock>("MapSizeText")!.Text);
         Assert.Equal("Tileset: forest", mapView.FindControl<TextBlock>("MapTilesetText")!.Text);
-        Assert.Equal("level1", mapView.FindControl<TextBox>("MapNameBox")!.Text);
         window.Close();
     }
 
@@ -202,65 +176,67 @@ public class MapListTests : IDisposable
     {
         var path = Path.Combine(_directory, "p.ashlar");
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 10, 8, "forest");
-        viewModel.MapEditor.CreateMap("level2", 3, 4, "dungeon");
-        viewModel.MapEditor.Maps[1][1, 2] = "dungeon_0001";
+        viewModel.CreateMap("level1", 10, 8, "forest");
+        viewModel.CreateMap("level2", 3, 4, "dungeon");
+        viewModel.GetMap("level2")![1, 2] = "dungeon_0001";
 
         viewModel.SaveProject(path);
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        Assert.False(viewModel.HasUnsavedChanges);
 
         var reopened = new MainViewModel();
         reopened.OpenProject(path);
 
-        Assert.Equal(["level1", "level2"], reopened.MapEditor.Maps.Select(map => map.Name));
-        Assert.Equal("dungeon", reopened.MapEditor.Maps[1].TilesetName);
-        Assert.Equal((3, 4), (reopened.MapEditor.Maps[1].Width, reopened.MapEditor.Maps[1].Height));
-        Assert.Equal("dungeon_0001", reopened.MapEditor.Maps[1][1, 2]);
-        Assert.False(reopened.Editor.HasUnsavedChanges);
+        Assert.Equal(["level1", "level2"], reopened.MapNames);
+        var level2 = reopened.GetMap("level2")!;
+        Assert.Equal("dungeon", level2.TilesetName);
+        Assert.Equal((3, 4), (level2.Width, level2.Height));
+        Assert.Equal("dungeon_0001", level2[1, 2]);
+        Assert.False(reopened.HasUnsavedChanges);
         Assert.Equal(2, ProjectFile.Load(path).Maps.Count);
     }
 
     [AvaloniaFact]
-    public void ClosingAndStartingANewProjectDropsTheMaps()
+    public void ClosingAndStartingANewProjectDropsTheMapsAndTabs()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 10, 8, "forest");
+        viewModel.CreateMap("level1", 10, 8, "forest");
 
         viewModel.NewProject();
 
-        Assert.Empty(viewModel.MapEditor.Maps);
-        Assert.Null(viewModel.MapEditor.SelectedMap);
+        Assert.Empty(viewModel.MapNames);
+        Assert.Empty(viewModel.OpenTabs);
+        Assert.Null(viewModel.ActiveTab);
     }
 
     [AvaloniaFact]
     public void RenamingATilesetUpdatesTheMapsUsingIt()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("a", 2, 2, "forest");
-        viewModel.MapEditor.CreateMap("b", 2, 2, "dungeon");
-        viewModel.MapEditor.Maps[0][0, 0] = "forest_0001";
+        viewModel.CreateMap("a", 2, 2, "forest");
+        viewModel.CreateMap("b", 2, 2, "dungeon");
+        viewModel.GetMap("a")![0, 0] = "forest_0001";
 
-        viewModel.RenameSelectedTileset("woods");
+        viewModel.RenameTileset("forest", "woods");
 
-        Assert.Equal(["woods", "dungeon"], viewModel.MapEditor.Maps.Select(map => map.TilesetName));
-        Assert.Equal("forest_0001", viewModel.MapEditor.Maps[0][0, 0]);
+        Assert.Equal(["woods", "dungeon"], viewModel.MapNames.Select(name => viewModel.GetMap(name)!.TilesetName));
+        Assert.Equal("forest_0001", viewModel.GetMap("a")![0, 0]);
     }
 
     [AvaloniaFact]
-    public void RemovingATilesetDeletesItsMapsAndKeepsTheOthers()
+    public void RemovingATilesetDeletesItsMapsAndTabsAndKeepsTheOthers()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("a", 2, 2, "forest");
-        viewModel.MapEditor.CreateMap("b", 2, 2, "dungeon");
-        viewModel.MapEditor.CreateMap("c", 2, 2, "forest");
-        Assert.Equal(2, viewModel.MapEditor.CountMapsUsing("forest"));
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.CreateMap("a", 2, 2, "forest");
+        viewModel.CreateMap("b", 2, 2, "dungeon");
+        viewModel.CreateMap("c", 2, 2, "forest");
+        Assert.Equal(2, viewModel.CountMapsUsing("forest"));
+        viewModel.HasUnsavedChanges = false;
 
-        viewModel.RemoveSelectedTileset();
+        viewModel.RemoveTileset("forest");
 
-        Assert.Equal(["b"], viewModel.MapEditor.Maps.Select(map => map.Name));
-        Assert.Equal("b", viewModel.MapEditor.SelectedMap?.Name);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.Equal(["b"], viewModel.MapNames);
+        Assert.Equal(["dungeon", "b"], viewModel.OpenTabs.Select(tab => tab.Title));
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -288,66 +264,81 @@ public class MapListTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void ResizingKeepsTheOverlapMarksTheProjectChangedAndKeepsTheSelectedMap()
+    public void ResizingKeepsTheOverlapMarksTheProjectChangedAndKeepsTheTabsMap()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 3, 2, "forest");
-        var editor = viewModel.MapEditor;
-        editor.SelectedMap![2, 1] = "forest_0001";
-        editor.SelectedMap![0, 0] = "forest_0002";
+        viewModel.CreateMap("level1", 3, 2, "forest");
+        var editor = viewModel.MapEditor();
+        editor.Map[2, 1] = "forest_0001";
+        editor.Map[0, 0] = "forest_0002";
         editor.SelectedCells = [(0, 0), (2, 1)];
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.HasUnsavedChanges = false;
 
-        editor.ResizeSelectedMap(5, 2);
+        viewModel.ResizeMap("level1", 5, 2);
 
-        var map = Assert.Single(editor.Maps);
-        Assert.Same(map, editor.SelectedMap);
+        var map = viewModel.GetMap("level1")!;
+        Assert.Same(map, editor.Map);
         Assert.Equal((5, 2), (map.Width, map.Height));
         Assert.Equal("forest_0002", map[0, 0]);
         Assert.Equal("forest_0001", map[2, 1]);
         Assert.Equal(2, map.Cells.Count(cell => cell is not null));
         Assert.Equal("5 x 2 cells", editor.SelectedMapSizeText);
         Assert.Equal(10, editor.CellRegions.Length);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void ShrinkingCropsTheMapAndDropsSelectedCellsOutsideIt()
     {
         var viewModel = TwoTilesets();
-        var editor = viewModel.MapEditor;
-        editor.CreateMap("level1", 3, 2, "forest");
+        viewModel.CreateMap("level1", 3, 2, "forest");
+        var editor = viewModel.MapEditor();
         editor.SelectedCells = [(0, 0), (2, 1)];
 
-        editor.ResizeSelectedMap(2, 2);
+        viewModel.ResizeMap("level1", 2, 2);
 
-        Assert.Equal((2, 2), (editor.SelectedMap!.Width, editor.SelectedMap.Height));
+        Assert.Equal((2, 2), (editor.Map.Width, editor.Map.Height));
         Assert.Equal([(0, 0)], editor.SelectedCells);
+    }
+
+    [AvaloniaFact]
+    public void ResizingAMapWithoutATabChangesTheProject()
+    {
+        var viewModel = TwoTilesets();
+        viewModel.CreateMap("level1", 3, 2, "forest");
+        viewModel.CloseTab(viewModel.ActiveTab!);
+        viewModel.HasUnsavedChanges = false;
+
+        viewModel.ResizeMap("level1", 4, 4);
+
+        Assert.Equal((4, 4), (viewModel.GetMap("level1")!.Width, viewModel.GetMap("level1")!.Height));
+        Assert.True(viewModel.HasUnsavedChanges);
+        Assert.DoesNotContain(viewModel.OpenTabs, tab => tab is MapEditorViewModel);
     }
 
     [AvaloniaFact]
     public void OnlyTilesInTheCroppedAreaCountAsLost()
     {
         var viewModel = TwoTilesets();
-        var editor = viewModel.MapEditor;
-        editor.CreateMap("level1", 3, 2, "forest");
-        editor.SelectedMap![0, 0] = "forest_0001";
+        viewModel.CreateMap("level1", 3, 2, "forest");
+        var editor = viewModel.MapEditor();
+        editor.Map[0, 0] = "forest_0001";
 
-        Assert.Equal(0, editor.CountTilesLostByResize(1, 1));
-        editor.SelectedMap![2, 0] = "forest_0001";
-        Assert.Equal(1, editor.CountTilesLostByResize(2, 2));
+        Assert.Equal(0, viewModel.CountTilesLostByResize("level1", 1, 1));
+        editor.Map[2, 0] = "forest_0001";
+        Assert.Equal(1, viewModel.CountTilesLostByResize("level1", 2, 2));
     }
 
     [AvaloniaFact]
     public void ResizingToTheSameSizeDoesNotMarkTheProjectChanged()
     {
         var viewModel = TwoTilesets();
-        viewModel.MapEditor.CreateMap("level1", 3, 2, "forest");
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.CreateMap("level1", 3, 2, "forest");
+        viewModel.HasUnsavedChanges = false;
 
-        viewModel.MapEditor.ResizeSelectedMap(3, 2);
+        viewModel.ResizeMap("level1", 3, 2);
 
-        Assert.False(viewModel.Editor.HasUnsavedChanges);
+        Assert.False(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]

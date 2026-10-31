@@ -7,32 +7,7 @@
              x:DataType="vm:MapEditorViewModel">
 
     <DockPanel>
-        <Border Classes="panelHeader" DockPanel.Dock="Left" Width="200" Margin="0" BorderThickness="0,0,1,0" Padding="8">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Maps" FontWeight="SemiBold" Margin="0,0,0,6" />
-                <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,6,0,0">
-                    <TextBlock Name="NoTilesetText" Classes="secondary" TextWrapping="Wrap"
-                               Text="Add a tileset to the project before creating a map."
-                               IsVisible="{Binding !CanCreateMap}" />
-                    <TextBox Name="MapNameBox" PlaceholderText="Map name" IsEnabled="{Binding HasSelectedMap}" />
-                    <Button Name="RenameMapButton" Content="Rename" Click="OnRenameMapClick" IsEnabled="{Binding HasSelectedMap}" />
-                    <Button Name="ResizeMapButton" Content="Resize..." Click="OnResizeMapClick" IsEnabled="{Binding HasSelectedMap}" />
-                    <Button Name="DeleteMapButton" Content="Delete" Click="OnDeleteMapClick" IsEnabled="{Binding HasSelectedMap}" />
-                    <Button Name="CreateMapButton" Content="Create map..." Click="OnCreateMapClick" IsEnabled="{Binding CanCreateMap}" />
-                </StackPanel>
-                <ListBox Name="MapList" ItemsSource="{Binding Maps}" SelectedItem="{Binding SelectedMap}"
-                         SelectionChanged="OnMapSelectionChanged">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="model:TileMap">
-                            <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-        </Border>
-
-        <Border Classes="panel" DockPanel.Dock="Right" Width="220" Margin="0,6,6,6" ClipToBounds="True"
-                IsVisible="{Binding HasSelectedMap}">
+        <Border Classes="panel" DockPanel.Dock="Right" Width="220" Margin="0,6,6,6" ClipToBounds="True">
             <DockPanel>
                 <Border Classes="panelHeader" DockPanel.Dock="Top">
                     <TextBlock Classes="panelHeaderText" Text="PALETTE" />
@@ -59,15 +34,12 @@
 
         <Border Classes="canvas" Margin="6">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="8,4" IsVisible="{Binding HasSelectedMap}">
-                    <TextBlock Name="MapTitleText" Text="{Binding SelectedMap.Name}" FontWeight="SemiBold" />
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="8,4">
+                    <TextBlock Name="MapTitleText" Text="{Binding Map.Name}" FontWeight="SemiBold" />
                     <TextBlock Name="MapSizeText" Classes="secondary" Text="{Binding SelectedMapSizeText}" />
                     <TextBlock Name="MapTilesetText" Classes="secondary" Text="{Binding SelectedMapTilesetText}" />
                 </StackPanel>
-                <TextBlock Name="NoMapText" Text="No map selected" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           IsVisible="{Binding !HasSelectedMap}" />
-                <ScrollViewer x:Name="MapCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                              IsVisible="{Binding HasSelectedMap}">
+                <ScrollViewer x:Name="MapCanvasScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                     <!-- Same structure as the tileset canvas: the padding is the overscroll margin and
                          is set from code; Left/Top alignment keeps the scaled content anchored to the wrapper. -->
                     <Border x:Name="MapCanvasPadding" Background="Transparent" Focusable="True"
@@ -83,7 +55,7 @@
                                 <controls:TransparencyCheckerboard ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
                                                                    TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
                                 <controls:TileMapCanvas x:Name="MapCells" Image="{Binding TilesetImage}" CellRegions="{Binding CellRegions}"
-                                                        MapWidth="{Binding SelectedMap.Width, FallbackValue=0}"
+                                                        MapWidth="{Binding Map.Width}"
                                                         TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
                                 <controls:TileGridOverlay x:Name="MapGrid" ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
                                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"

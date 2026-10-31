@@ -21,12 +21,18 @@ stone block laid in a regular grid, much like the tiles of a tileset.
 
 A project is the working document. It holds any number of tilesets and maps
 and is saved as a single self-contained file (`*.ashlar`, embeds the images).
-The window has a **Tilesets** tab and a **Maps** tab. In the Tilesets tab, a
-list on the left lets you switch between, add, rename, and remove tilesets.
+A project explorer on the left lists the project's tilesets and maps.
+Double-click an entry (or press Enter) to open it in its own tab; opening an
+element that is open already focuses its tab. Every tab keeps its own zoom,
+selection, tool, and undo history. Closing a tab (the x, middle click, or
+Ctrl+W) never asks for confirmation, because all changes already live in the
+project; it only discards that tab's undo history. Right-click an entry for its
+actions (add, rename, remove, resize, delete), or press F2 to rename it in
+place. The same actions are in the **Tileset** and **Map** menus.
 
 - **File > New project** (Ctrl+N), **Open project...** (Ctrl+Shift+O),
   **Save project** (Ctrl+S), **Save project as...** (Ctrl+Shift+S),
-  **Close project** (Ctrl+W)
+  **Close tab** (Ctrl+W), **Close project** (Ctrl+Shift+W)
 - **File > Open tileset...** (Ctrl+O) imports an image as a new tileset
 - Images are only ever imported to start a new tileset; the export files are
   outputs and cannot be reopened.
@@ -52,9 +58,9 @@ The tile size can be changed later via **Edit > Change tile size...**.
 ### Map editor
 
 A map is a grid of tiles from exactly one tileset of the project. The tileset
-is chosen when the map is created and cannot be changed afterwards. In the
-Maps tab you can create, rename, delete, and resize maps from the list on the
-left. A tileset has to be added to the project before a map can be created.
+is chosen when the map is created and cannot be changed afterwards. Maps are
+created, renamed, deleted, and resized from the project explorer or the **Map**
+menu. A tileset has to be added to the project before a map can be created.
 
 - Tile palette on the right showing every tile of the map's tileset
 - Draw tool paints the selected palette tile into cells
@@ -65,9 +71,9 @@ left. A tileset has to be added to the project before a map can be created.
 
 ### Export
 
-All exports are in the **File** menu.
+The exports are in the **File** menu and in the **Tileset** and **Map** menus.
 
-**Export XML...** (Ctrl+E on the Tilesets tab) writes the tileset
+**Export XML...** (Ctrl+E on a tileset tab) writes the tileset
 metadata in the `TextureAtlas` format, with a texture path of your choice:
 
 ```xml
@@ -84,7 +90,7 @@ metadata in the `TextureAtlas` format, with a texture path of your choice:
 
 **Save image...** writes the edited tileset image as a PNG.
 
-**Export map...** (Ctrl+E on the Maps tab) writes the selected map as a
+**Export map...** (Ctrl+E with a map selected) writes the selected map as a
 `Tilemap` XML file, a PNG image of the map, or both. The XML names the
 tileset's tile size and texture path and lists one map row per line. Each
 cell is the index of its tile in the tileset's tile list, zero-padded to the

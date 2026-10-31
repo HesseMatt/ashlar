@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SkiaSharp;
 using Ashlar.App.ViewModels;
@@ -159,8 +160,9 @@ public class TileCanvasZoomTests
 
         private readonly Window _window;
         private readonly MainViewModel _viewModel;
-        private readonly ScrollViewer _scrollViewer;
-        private readonly Panel _content;
+        // The tab's view is only created by the first layout pass after the tileset was loaded.
+        private ScrollViewer _scrollViewer => _window.FindEditorControl<ScrollViewer>("TileCanvasScrollViewer")!;
+        private Panel _content => _window.FindEditorControl<Panel>("TileCanvasContent")!;
         private readonly string _imagePath;
 
         private TileCanvas(Window window, MainViewModel viewModel, string imagePath)
@@ -168,8 +170,6 @@ public class TileCanvasZoomTests
             _window = window;
             _viewModel = viewModel;
             _imagePath = imagePath;
-            _scrollViewer = window.FindEditorControl<ScrollViewer>("TileCanvasScrollViewer")!;
-            _content = window.FindEditorControl<Panel>("TileCanvasContent")!;
         }
 
         public Size Viewport => _scrollViewer.Viewport;
@@ -204,7 +204,7 @@ public class TileCanvasZoomTests
 
         public void SetZoom(double zoomLevel)
         {
-            _viewModel.Editor.ZoomLevel = zoomLevel;
+            _viewModel.Editor().ZoomLevel = zoomLevel;
             Layout();
         }
 
@@ -216,7 +216,7 @@ public class TileCanvasZoomTests
 
         public void SetTileSize(int size)
         {
-            _viewModel.Editor.ChangeTileSize(size, size);
+            _viewModel.Editor().ChangeTileSize(size, size);
             Layout();
         }
 
@@ -239,7 +239,7 @@ public class TileCanvasZoomTests
             _scrollViewer.TranslatePoint(new Point(Viewport.Width, Viewport.Height), _content)!.Value;
 
         public Rect ImageBoundsInViewport() =>
-            new(ImageOriginInViewport(), new Size(_content.Bounds.Width * _viewModel.Editor.ZoomLevel, _content.Bounds.Height * _viewModel.Editor.ZoomLevel));
+            new(ImageOriginInViewport(), new Size(_content.Bounds.Width * _viewModel.Editor().ZoomLevel, _content.Bounds.Height * _viewModel.Editor().ZoomLevel));
 
         // Where the image's top-left pixel ends up within the viewport.
         public Point ImageOriginInViewport() =>
@@ -251,7 +251,13 @@ public class TileCanvasZoomTests
             File.Delete(_imagePath);
         }
 
-        private void Layout() => _window.GetLayoutManager()?.ExecuteLayoutPass();
+        // The tab's view scrolls to the start of the tileset from a posted job once it is laid out.
+        private void Layout()
+        {
+            _window.GetLayoutManager()?.ExecuteLayoutPass();
+            Dispatcher.UIThread.RunJobs();
+            _window.GetLayoutManager()?.ExecuteLayoutPass();
+        }
 
         private static string CreateSampleImage(int width, int height)
         {

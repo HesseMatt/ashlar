@@ -9,7 +9,7 @@
              x:DataType="vm:TilesetEditorViewModel">
 
     <DockPanel>
-        <Border Classes="panel" DockPanel.Dock="Right" Width="220" Margin="0,6,6,6" ClipToBounds="True">
+        <Border x:Name="InspectorPanel" Classes="panel" DockPanel.Dock="Right" Width="220" Margin="0,6,6,6" ClipToBounds="True">
             <DockPanel>
                 <Border Classes="panelHeader" DockPanel.Dock="Top">
                     <TextBlock Classes="panelHeaderText" Text="INSPECTOR" />

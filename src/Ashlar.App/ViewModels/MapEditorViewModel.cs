@@ -18,44 +18,26 @@ public record PaletteTile(TileRegion Region, IImage Image)
     public string Name => Region.Name;
 }
 
-// Owns the maps of the open project and what the selected map shows: the cells
-// resolved against its tileset, and the palette of that tileset's tiles.
-public partial class MapEditorViewModel : ViewModelBase
+// Edits one map of the project in its own tab: the cells resolved against the
+// map's tileset, the palette of that tileset's tiles, and the tab's own history.
+public partial class MapEditorViewModel : EditorTabViewModel
 {
     private readonly Func<string, ProjectTileset?> _findTileset;
 
-    public MapEditorViewModel(ObservableCollection<string> tilesetNames, Func<string, ProjectTileset?> findTileset)
+    public MapEditorViewModel(TileMap map, Func<string, ProjectTileset?> findTileset) : base(map.Name)
     {
-        TilesetNames = tilesetNames;
+        _map = map;
         _findTileset = findTileset;
-        TilesetNames.CollectionChanged += (_, _) => OnPropertyChanged(nameof(CanCreateMap));
-    }
-
-    public ObservableCollection<TileMap> Maps { get; } = new();
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelectedMap), nameof(SelectedMapSizeText), nameof(SelectedMapTilesetText))]
-    private TileMap? _selectedMap;
-
-    partial void OnSelectedMapChanged(TileMap? value)
-    {
-        EndStroke();
         RefreshTileset();
-        UpdateHistoryState();
-        if (_isReplacingMap)
-            return;
-
-        SelectedCells = [];
-        EndSelectionDrag();
-        EndMoveDrag();
-        ZoomLevel = 1.0;
-        MapShown?.Invoke(this, EventArgs.Empty);
     }
 
-    // A renamed map is a new instance, but the user is still looking at the same map.
-    private bool _isReplacingMap;
+    // The current instance: undo, redo, resize and rename replace it, so the project reads it back from here.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MapPixelWidth), nameof(MapPixelHeight), nameof(ScaledMapWidth), nameof(ScaledMapHeight),
+        nameof(SelectedMapSizeText), nameof(SelectedMapTilesetText))]
+    private TileMap _map;
 
-    // The tileset image and tile size the selected map is drawn with; null/0 without a map.
+    // The tileset image and tile size the map is drawn with; null/0 while its tileset is missing.
     [ObservableProperty]
     private Bitmap? _tilesetImage;
 
@@ -67,7 +49,7 @@ public partial class MapEditorViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(MapPixelHeight), nameof(ScaledMapHeight), nameof(SelectionOutlines))]
     private int _tileHeight;
 
-    // Per cell of the selected map, row-major: the region to draw, or null for an empty cell.
+    // Per cell of the map, row-major: the region to draw, or null for an empty cell.
     [ObservableProperty]
     private TileRegion?[] _cellRegions = [];
 
@@ -115,7 +97,7 @@ public partial class MapEditorViewModel : ViewModelBase
             ActiveTool = CanvasTool.Select;
     }
 
-    // The selected cells of the selected map, as (column, row).
+    // The selected cells of the map, as (column, row).
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedCells), nameof(SelectionOutlines))]
     private IReadOnlyList<(int X, int Y)> _selectedCells = [];
@@ -156,26 +138,20 @@ public partial class MapEditorViewModel : ViewModelBase
 
     private DrawStroke? _stroke;
 
-    // Every map has its own history, found by the map's name (names are unique in
-    // a project). Switching maps or tabs keeps it. The history of a map is dropped
-    // when the map is deleted or closed with the project, and when tiles are
-    // cleared from it because they were deleted from its tileset: those changes
-    // cannot be undone, so the older steps no longer describe the map's cells.
-    private readonly Dictionary<string, EditHistory<MapEditStep>> _histories = new();
+    // Dropped when tiles are cleared from the map because they were deleted from
+    // its tileset: that change cannot be undone, so the older steps no longer
+    // describe the map's cells.
+    private readonly EditHistory<MapEditStep> _history = new();
 
     [ObservableProperty]
-    private bool _canUndo;
-
-    [ObservableProperty]
-    private bool _canRedo;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ScaledMapWidth), nameof(ScaledMapHeight), nameof(PreviewInterpolation))]
+    [NotifyPropertyChangedFor(nameof(ScaledMapWidth), nameof(ScaledMapHeight), nameof(PreviewInterpolation), nameof(ZoomPercentageText))]
     private double _zoomLevel = 1.0;
 
-    public int MapPixelWidth => (SelectedMap?.Width ?? 0) * TileWidth;
+    public string ZoomPercentageText => $"{ZoomLevel:P0}";
 
-    public int MapPixelHeight => (SelectedMap?.Height ?? 0) * TileHeight;
+    public int MapPixelWidth => Map.Width * TileWidth;
+
+    public int MapPixelHeight => Map.Height * TileHeight;
 
     public double ScaledMapWidth => MapPixelWidth * ZoomLevel;
 
@@ -183,22 +159,20 @@ public partial class MapEditorViewModel : ViewModelBase
 
     public BitmapInterpolationMode PreviewInterpolation => TilesetEditorViewModel.InterpolationAt(ZoomLevel);
 
-    // Raised when another map is selected, so the view can scroll to its start.
-    public event EventHandler? MapShown;
-
     // Raised when painting changed cells in place, so the view redraws them.
     public event EventHandler? CellsPainted;
 
-    public double ZoomIn() => ZoomLevel = TilesetEditorViewModel.NextZoomIn(ZoomLevel);
+    public override double ZoomIn() => ZoomLevel = TilesetEditorViewModel.NextZoomIn(ZoomLevel);
 
-    public double ZoomOut() => ZoomLevel = TilesetEditorViewModel.NextZoomOut(ZoomLevel);
+    public override double ZoomOut() => ZoomLevel = TilesetEditorViewModel.NextZoomOut(ZoomLevel);
 
-    public void ResetZoom() => ZoomLevel = 1.0;
+    public override void ResetZoom() => ZoomLevel = 1.0;
 
     // Reads the map's tileset again; the tileset may have been edited since the map was last shown.
     public void RefreshTileset()
     {
-        if (SelectedMap is not { } map || _findTileset(map.TilesetName) is not { } tileset)
+        var map = Map;
+        if (_findTileset(map.TilesetName) is not { } tileset)
         {
             TilesetImage = null;
             TileWidth = 0;
@@ -223,31 +197,18 @@ public partial class MapEditorViewModel : ViewModelBase
         OnPropertyChanged(nameof(ScaledMapHeight));
     }
 
-    // The project's tileset names; maps can only be created once there is a tileset to draw from.
-    public ObservableCollection<string> TilesetNames { get; }
+    public string SelectedMapSizeText => $"{Map.Width} x {Map.Height} cells";
 
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    // The tileset open in the Tilesets tab, offered as the default for a new map.
-    public string? PreferredTilesetName { get; set; }
-
-    public bool HasSelectedMap => SelectedMap is not null;
-
-    public string SelectedMapSizeText => SelectedMap is { } map ? $"{map.Width} x {map.Height} cells" : string.Empty;
-
-    public string SelectedMapTilesetText => SelectedMap is { } map ? $"Tileset: {map.TilesetName}" : string.Empty;
-
-    public bool CanCreateMap => TilesetNames.Count > 0;
+    public string SelectedMapTilesetText => $"Tileset: {Map.TilesetName}";
 
     // Starts a draw stroke at a cell. Returns false when there is nothing to paint with.
     public bool BeginStroke(int cellX, int cellY)
     {
-        if (!IsDrawToolActive || SelectedMap is null || SelectedPaletteTile is null)
+        if (!IsDrawToolActive || SelectedPaletteTile is null)
             return false;
 
         _strokeCell = (cellX, cellY);
-        _stroke = new DrawStroke(SelectedMap, MapState.Capture(SelectedMap));
+        _stroke = new DrawStroke(Map, MapState.Capture(Map));
         Paint(cellX, cellY);
         return true;
     }
@@ -275,9 +236,10 @@ public partial class MapEditorViewModel : ViewModelBase
 
     private void Paint(int fromX, int fromY, int toX, int toY)
     {
-        if (SelectedMap is not { } map || SelectedPaletteTile is not { } tile)
+        if (SelectedPaletteTile is not { } tile)
             return;
 
+        var map = Map;
         var changed = MapPainter.PaintLine(map, fromX, fromY, toX, toY, tile.Name);
         if (changed.Count == 0)
             return;
@@ -286,7 +248,7 @@ public partial class MapEditorViewModel : ViewModelBase
         foreach (var (x, y) in changed)
             CellRegions[y * map.Width + x] = tile.Region;
         CellsPainted?.Invoke(this, EventArgs.Empty);
-        MapsChanged?.Invoke(this, EventArgs.Empty);
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // Whether a drag with the rectangle or move tool is in progress.
@@ -294,9 +256,10 @@ public partial class MapEditorViewModel : ViewModelBase
 
     public void HandleCanvasClick(int cellX, int cellY, bool addToSelection)
     {
-        if (!IsRectangleToolActive || SelectedMap is not { } map)
+        if (!IsRectangleToolActive)
             return;
 
+        var map = Map;
         var cell = (cellX, cellY);
         var isInside = cellX >= 0 && cellX < map.Width && cellY >= 0 && cellY < map.Height;
         if (!addToSelection)
@@ -317,10 +280,10 @@ public partial class MapEditorViewModel : ViewModelBase
 
     public void UpdateSelectionDrag(int cellX, int cellY)
     {
-        if (_selectionDrag is not { } drag || SelectedMap is not { } map)
+        if (_selectionDrag is not { } drag)
             return;
 
-        var touched = MapRectangleSelector.CellsIn(map, drag.StartX, drag.StartY, cellX, cellY);
+        var touched = MapRectangleSelector.CellsIn(Map, drag.StartX, drag.StartY, cellX, cellY);
         SelectionRectangle = touched.Count == 0 ? null : new Rect(
             touched[0].X * TileWidth, touched[0].Y * TileHeight,
             (touched[^1].X - touched[0].X + 1) * TileWidth, (touched[^1].Y - touched[0].Y + 1) * TileHeight);
@@ -353,9 +316,10 @@ public partial class MapEditorViewModel : ViewModelBase
 
     public void DeleteSelectedCells()
     {
-        if (SelectedMap is not { } map || !HasSelectedCells || IsDragInProgress)
+        if (!HasSelectedCells || IsDragInProgress)
             return;
 
+        var map = Map;
         var before = MapState.Capture(map);
         var selectionBefore = SelectedCells;
         var cleared = MapEraser.Clear(map, SelectedCells);
@@ -366,7 +330,7 @@ public partial class MapEditorViewModel : ViewModelBase
 
         RefreshCellRegions();
         RecordEdit(map, $"Delete {cleared.Count} {(cleared.Count == 1 ? "cell" : "cells")}", before, selectionBefore);
-        MapsChanged?.Invoke(this, EventArgs.Empty);
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // Only a press on an already selected cell starts a move; anywhere else the
@@ -395,9 +359,10 @@ public partial class MapEditorViewModel : ViewModelBase
         var isDragged = MoveOffset is not null;
         EndMoveDrag();
 
-        if (!isDragged || SelectedMap is not { } map)
+        if (!isDragged)
             return;
 
+        var map = Map;
         var count = SelectedCells.Count;
         var before = MapState.Capture(map);
         var selectionBefore = SelectedCells;
@@ -408,7 +373,7 @@ public partial class MapEditorViewModel : ViewModelBase
         {
             RefreshCellRegions();
             RecordEdit(map, $"Move {count} {(count == 1 ? "cell" : "cells")}", before, selectionBefore);
-            MapsChanged?.Invoke(this, EventArgs.Empty);
+            Changed?.Invoke(this, EventArgs.Empty);
         }
 
         StatusMessage = dropped == 0
@@ -435,231 +400,100 @@ public partial class MapEditorViewModel : ViewModelBase
 
     private void RefreshCellRegions()
     {
-        if (SelectedMap is { } map && _findTileset(map.TilesetName) is { } tileset)
-            CellRegions = map.ResolveRegions(tileset.Tiles);
+        if (_findTileset(Map.TilesetName) is { } tileset)
+            CellRegions = Map.ResolveRegions(tileset.Tiles);
     }
 
-    // Raised for create, rename, delete and painting, so the project can be marked as changed.
-    public event EventHandler? MapsChanged;
+    // Raised for painting, deleting, moving, undo, redo, resize and rename, so the project can be marked as changed.
+    public event EventHandler? Changed;
 
-    public void Load(IEnumerable<TileMap> maps)
+    public void Rename(string newName)
     {
-        Clear();
-        foreach (var map in maps)
-            Maps.Add(map);
-        SelectedMap = Maps.FirstOrDefault();
+        Title = newName;
+        Adopt(new TileMap(newName, Map.TilesetName, Map.Width, Map.Height, Map.Cells));
     }
 
-    public void Clear()
+    // Keeps the map pointing at an existing tileset when that tileset is renamed.
+    public void RenameTileset(string newName) =>
+        Adopt(new TileMap(Map.Name, newName, Map.Width, Map.Height, Map.Cells));
+
+    public int CountTilesLostByResize(int width, int height) => MapResizer.CountLostTiles(Map, width, height);
+
+    public void Resize(int width, int height)
     {
-        Maps.Clear();
-        SelectedMap = null;
-        _histories.Clear();
-        UpdateHistoryState();
-        StatusMessage = string.Empty;
-    }
-
-    public bool CreateMap(string name, int width, int height, string tilesetName)
-    {
-        name = name.Trim();
-        if (GetNameError(name, null) is { } error)
-        {
-            StatusMessage = error;
-            return false;
-        }
-
-        var map = TileMap.CreateEmpty(name, tilesetName, width, height);
-        Maps.Add(map);
-        SelectedMap = map;
-        StatusMessage = $"Created the map '{name}'.";
-        MapsChanged?.Invoke(this, EventArgs.Empty);
-        return true;
-    }
-
-    public bool RenameSelectedMap(string newName)
-    {
-        if (SelectedMap is not { } map)
-            return false;
-
-        newName = newName.Trim();
-        if (newName == map.Name)
-            return true;
-
-        if (GetNameError(newName, map) is { } error)
-        {
-            StatusMessage = error;
-            return false;
-        }
-
-        if (_histories.Remove(map.Name, out var history))
-            _histories[newName] = history;
-        Replace(map, new TileMap(newName, map.TilesetName, map.Width, map.Height, map.Cells));
-        StatusMessage = $"Renamed the map to '{newName}'.";
-        MapsChanged?.Invoke(this, EventArgs.Empty);
-        return true;
-    }
-
-    public int CountTilesLostByResize(int width, int height) =>
-        SelectedMap is { } map ? MapResizer.CountLostTiles(map, width, height) : 0;
-
-    public void ResizeSelectedMap(int width, int height)
-    {
-        if (SelectedMap is not { } map || (width == map.Width && height == map.Height))
+        var map = Map;
+        if (width == map.Width && height == map.Height)
             return;
 
-        // Replace() skips the cleanup of a map change, but a drag in progress refers to the old size.
+        // A drag in progress refers to the old size.
         EndSelectionDrag();
         EndMoveDrag();
         var before = MapState.Capture(map);
         var selectionBefore = SelectedCells;
         var resized = MapResizer.Resize(map, width, height);
-        Replace(map, resized);
+        Adopt(resized);
         SelectedCells = selectionBefore.Where(cell => cell.X < width && cell.Y < height).ToList();
         RecordEdit(resized, "Resize map", before, selectionBefore);
         StatusMessage = $"Resized the map to {width} x {height} cells.";
-        MapsChanged?.Invoke(this, EventArgs.Empty);
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void DeleteSelectedMap()
+    // Cells whose tile was deleted from the tileset were cleared in the map's cells by the project.
+    // Older and redo steps may still hold the deleted tiles even if no current cell does.
+    public void TilesDeleted()
     {
-        if (SelectedMap is not { } map)
-            return;
-
-        var index = Maps.IndexOf(map);
-        Maps.RemoveAt(index);
-        SelectedMap = Maps.Count == 0 ? null : Maps[Math.Min(index, Maps.Count - 1)];
-        // After the selection moved on, which ends a stroke that was still open on the deleted map.
-        _histories.Remove(map.Name);
-        StatusMessage = $"Deleted the map '{map.Name}'.";
-        MapsChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    public int CountMapsUsing(string tilesetName) => Maps.Count(map => map.TilesetName == tilesetName);
-
-    // Keeps every map pointing at an existing tileset when that tileset is renamed.
-    public void RenameTileset(string oldName, string newName)
-    {
-        foreach (var map in Maps.Where(map => map.TilesetName == oldName).ToList())
-            Replace(map, new TileMap(map.Name, newName, map.Width, map.Height, map.Cells));
-    }
-
-    // Cells whose tile was deleted from the tileset become empty. Undoing that
-    // deletion in the tileset editor restores the tile but not these cells.
-    public void ClearDeletedTiles(string tilesetName, IReadOnlySet<string> deletedTileNames)
-    {
-        var clearedCells = MapTileCleaner.ClearTiles(Maps, tilesetName, deletedTileNames);
-
-        // Older and redo steps of any map of the tileset may still hold the deleted tiles, even if no current cell does.
-        foreach (var map in Maps.Where(map => map.TilesetName == tilesetName))
-            _histories.Remove(map.Name);
+        _history.Clear();
         UpdateHistoryState();
-
-        if (clearedCells == 0)
-            return;
-
-        RefreshCellRegions();
-        MapsChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    // Maps cannot outlive their tileset.
-    public void DeleteMapsUsing(string tilesetName)
-    {
-        foreach (var map in Maps.Where(map => map.TilesetName == tilesetName).ToList())
-        {
-            if (SelectedMap == map)
-                SelectedMap = null;
-            _histories.Remove(map.Name);
-            Maps.Remove(map);
-        }
-
-        SelectedMap ??= Maps.FirstOrDefault();
+        RefreshTileset();
     }
 
     // Ignored mid-drag: the drag's own state would be stale after the cells changed underneath it.
-    public void Undo()
+    public override void Undo()
     {
-        if (SelectedMap is not { } map || !CanUndo || IsDragInProgress || _stroke is not null)
+        if (!CanUndo || IsDragInProgress || _stroke is not null)
             return;
 
-        var step = _histories[map.Name].Undo();
-        Restore(map, step.Before, step.SelectionBefore);
+        var step = _history.Undo();
+        Restore(step.Before, step.SelectionBefore);
         StatusMessage = $"Undid: {step.Description}.";
     }
 
-    public void Redo()
+    public override void Redo()
     {
-        if (SelectedMap is not { } map || !CanRedo || IsDragInProgress || _stroke is not null)
+        if (!CanRedo || IsDragInProgress || _stroke is not null)
             return;
 
-        var step = _histories[map.Name].Redo();
-        Restore(map, step.After, step.SelectionAfter);
+        var step = _history.Redo();
+        Restore(step.After, step.SelectionAfter);
         StatusMessage = $"Redid: {step.Description}.";
     }
 
     // Like the tileset editor, undoing back to the saved state still counts as a
-    // change, because MapsChanged marks the project as unsaved.
-    private void Restore(TileMap map, MapState state, IReadOnlyList<(int X, int Y)> selection)
+    // change, because Changed marks the project as unsaved.
+    private void Restore(MapState state, IReadOnlyList<(int X, int Y)> selection)
     {
-        Replace(map, state.ToMap(map.Name, map.TilesetName));
+        Adopt(state.ToMap(Map.Name, Map.TilesetName));
         SelectedCells = selection.Where(cell => cell.X < state.Width && cell.Y < state.Height).ToList();
         UpdateHistoryState();
-        MapsChanged?.Invoke(this, EventArgs.Empty);
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private void RecordEdit(TileMap map, string description, MapState before, IReadOnlyList<(int X, int Y)> selectionBefore)
     {
-        if (!_histories.TryGetValue(map.Name, out var history))
-            _histories[map.Name] = history = new EditHistory<MapEditStep>();
-
-        history.Record(new MapEditStep(description, before, MapState.Capture(map), selectionBefore, SelectedCells));
+        _history.Record(new MapEditStep(description, before, MapState.Capture(map), selectionBefore, SelectedCells));
         UpdateHistoryState();
     }
 
     private void UpdateHistoryState()
     {
-        var history = SelectedMap is { } map && _histories.TryGetValue(map.Name, out var found) ? found : null;
-        CanUndo = history?.CanUndo ?? false;
-        CanRedo = history?.CanRedo ?? false;
+        CanUndo = _history.CanUndo;
+        CanRedo = _history.CanRedo;
     }
 
-    private void Replace(TileMap oldMap, TileMap newMap)
+    // Swaps in a new instance of the same map; the tab keeps its zoom, selection and brush.
+    private void Adopt(TileMap newMap)
     {
-        var wasSelected = SelectedMap == oldMap;
-        // The map list briefly deselects the map while it is replaced, which resets the brush.
-        var brushName = SelectedPaletteTile?.Name;
-        _isReplacingMap = true;
-        try
-        {
-            Maps[Maps.IndexOf(oldMap)] = newMap;
-            if (wasSelected)
-            {
-                SelectedMap = newMap;
-                SelectedPaletteTile = PaletteTiles.FirstOrDefault(tile => tile.Name == brushName);
-            }
-        }
-        finally
-        {
-            _isReplacingMap = false;
-        }
-    }
-
-    // Names are shown to the user and must stay unique within the project.
-    private string? GetNameError(string name, TileMap? renamed)
-    {
-        if (name.Length == 0)
-            return "A map name cannot be empty.";
-        if (Maps.Any(map => map.Name == name && map != renamed))
-            return $"A map named '{name}' already exists in this project.";
-        return null;
-    }
-
-    public string CreateUniqueName()
-    {
-        for (var number = Maps.Count + 1; ; number++)
-        {
-            var name = $"Map {number}";
-            if (Maps.All(map => map.Name != name))
-                return name;
-        }
+        Map = newMap;
+        RefreshTileset();
     }
 }

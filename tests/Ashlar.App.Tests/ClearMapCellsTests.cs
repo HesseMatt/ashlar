@@ -15,26 +15,26 @@ public class ClearMapCellsTests : IDisposable
     public void DeletingATileEmptiesItsCellsOnlyInMapsOfThatTileset()
     {
         var viewModel = ProjectWithMaps();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.HasUnsavedChanges = false;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.HasUnsavedChanges = false;
 
-        viewModel.Editor.DeleteSelectedTiles();
+        viewModel.Editor().DeleteSelectedTiles();
 
         Assert.Equal<string?[]>([null, "forest_0002", null, null], Map(viewModel, "forestMap").Cells);
         Assert.Equal<string?[]>(["forest_0001", "forest_0002", null, null], Map(viewModel, "dungeonMap").Cells);
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void MovingTilesOutsideTheCanvasEmptiesTheirCells()
     {
         var viewModel = ProjectWithMaps();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
 
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(1, -40);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(1, -40);
+        viewModel.Editor().CommitMoveDrag();
 
         Assert.Equal<string?[]>([null, "forest_0002", null, null], Map(viewModel, "forestMap").Cells);
     }
@@ -43,12 +43,12 @@ public class ClearMapCellsTests : IDisposable
     public void MovingATileOntoAnotherOneEmptiesTheCellsOfTheOverwrittenTile()
     {
         var viewModel = ProjectWithMaps();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
 
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(17, 1);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(17, 1);
+        viewModel.Editor().CommitMoveDrag();
 
         Assert.Equal<string?[]>(["forest_0001", null, null, null], Map(viewModel, "forestMap").Cells);
     }
@@ -57,12 +57,12 @@ public class ClearMapCellsTests : IDisposable
     public void MovingTilesInsideTheCanvasChangesNothingInMaps()
     {
         var viewModel = ProjectWithMaps();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.IsMoveToolActive = true;
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().IsMoveToolActive = true;
 
-        viewModel.Editor.BeginMoveDrag(1, 1);
-        viewModel.Editor.UpdateMoveDrag(1, 33);
-        viewModel.Editor.CommitMoveDrag();
+        viewModel.Editor().BeginMoveDrag(1, 1);
+        viewModel.Editor().UpdateMoveDrag(1, 33);
+        viewModel.Editor().CommitMoveDrag();
 
         Assert.Equal<string?[]>(["forest_0001", "forest_0002", null, null], Map(viewModel, "forestMap").Cells);
     }
@@ -74,7 +74,7 @@ public class ClearMapCellsTests : IDisposable
         var forestMap = Map(viewModel, "forestMap");
         forestMap.Cells[2] = "forest_0016";
 
-        viewModel.Editor.ChangeTileSize(32, 32);
+        viewModel.Editor().ChangeTileSize(32, 32);
 
         Assert.All(forestMap.Cells, Assert.Null);
     }
@@ -83,29 +83,30 @@ public class ClearMapCellsTests : IDisposable
     public void RedoingADeletionEmptiesTheCellsAgain()
     {
         var viewModel = ProjectWithMaps();
-        viewModel.Editor.HandleCanvasClick(1, 1, addToSelection: false);
-        viewModel.Editor.DeleteSelectedTiles();
-        viewModel.Editor.Undo();
+        viewModel.Editor().HandleCanvasClick(1, 1, addToSelection: false);
+        viewModel.Editor().DeleteSelectedTiles();
+        viewModel.Editor().Undo();
         Map(viewModel, "forestMap").Cells[0] = "forest_0001";
 
-        viewModel.Editor.Redo();
+        viewModel.Editor().Redo();
 
         Assert.Null(Map(viewModel, "forestMap").Cells[0]);
     }
 
     private static TileMap Map(MainViewModel viewModel, string name) =>
-        viewModel.MapEditor.Maps.Single(map => map.Name == name);
+        viewModel.GetMap(name)!;
 
     private MainViewModel ProjectWithMaps()
     {
         var viewModel = new MainViewModel();
         viewModel.LoadTileset(WriteImage("dungeon"), 16, 16);
         viewModel.LoadTileset(WriteImage("forest"), 16, 16);
-        viewModel.MapEditor.CreateMap("dungeonMap", 2, 2, "dungeon");
-        viewModel.MapEditor.CreateMap("forestMap", 2, 2, "forest");
+        viewModel.CreateMap("dungeonMap", 2, 2, "dungeon");
+        viewModel.CreateMap("forestMap", 2, 2, "forest");
         // The dungeon map deliberately holds names that exist in the forest tileset.
         PutNames(Map(viewModel, "dungeonMap"));
         PutNames(Map(viewModel, "forestMap"));
+        viewModel.OpenTileset("forest");
         return viewModel;
     }
 

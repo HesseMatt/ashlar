@@ -21,23 +21,23 @@ public class MapDrawToolTests : IDisposable
     public void ClickSetsTheCellToTheSelectedPaletteTile()
     {
         var viewModel = ProjectWithMap(4, 4);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         editor.IsDrawToolActive = true;
         editor.SelectedPaletteTile = editor.PaletteTiles[2];
 
         Assert.True(editor.BeginStroke(1, 3));
         editor.EndStroke();
 
-        Assert.Equal("forest_0003", editor.SelectedMap![1, 3]);
+        Assert.Equal("forest_0003", editor.Map![1, 3]);
         Assert.Equal("forest_0003", editor.CellRegions[3 * 4 + 1]!.Name);
-        Assert.Equal(1, editor.SelectedMap.Cells.Count(cell => cell is not null));
+        Assert.Equal(1, editor.Map.Cells.Count(cell => cell is not null));
     }
 
     [AvaloniaFact]
     public void DraggingFastPaintsEveryCellAlongTheStroke()
     {
         var viewModel = ProjectWithMap(10, 10);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         editor.IsDrawToolActive = true;
         editor.SelectedPaletteTile = editor.PaletteTiles[0];
 
@@ -46,7 +46,7 @@ public class MapDrawToolTests : IDisposable
         editor.ContinueStroke(9, 9);
         editor.EndStroke();
 
-        Assert.Equal(15, editor.SelectedMap!.Cells.Count(cell => cell == "forest_0001"));
+        Assert.Equal(15, editor.Map!.Cells.Count(cell => cell == "forest_0001"));
         Assert.Equal(15, editor.CellRegions.Count(region => region is not null));
     }
 
@@ -54,7 +54,7 @@ public class MapDrawToolTests : IDisposable
     public void CellsOutsideTheMapAreIgnored()
     {
         var viewModel = ProjectWithMap(3, 3);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         editor.IsDrawToolActive = true;
         editor.SelectedPaletteTile = editor.PaletteTiles[0];
 
@@ -62,14 +62,14 @@ public class MapDrawToolTests : IDisposable
         editor.ContinueStroke(6, 1);
         editor.EndStroke();
 
-        Assert.Equal(3, editor.SelectedMap!.Cells.Count(cell => cell is not null));
+        Assert.Equal(3, editor.Map!.Cells.Count(cell => cell is not null));
     }
 
     [AvaloniaFact]
     public void NothingIsPaintedWithoutASelectedTileOrWithTheToolOff()
     {
         var viewModel = ProjectWithMap(3, 3);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
 
         editor.IsDrawToolActive = true;
         Assert.False(editor.BeginStroke(1, 1));
@@ -79,29 +79,28 @@ public class MapDrawToolTests : IDisposable
         editor.IsDrawToolActive = false;
         Assert.False(editor.BeginStroke(1, 1));
 
-        Assert.All(editor.SelectedMap!.Cells, Assert.Null);
+        Assert.All(editor.Map!.Cells, Assert.Null);
     }
 
     [AvaloniaFact]
     public void PaintingMarksTheProjectAsChanged()
     {
         var viewModel = ProjectWithMap(3, 3);
-        var editor = viewModel.MapEditor;
-        viewModel.Editor.HasUnsavedChanges = false;
+        var editor = viewModel.MapEditor();
+        viewModel.HasUnsavedChanges = false;
         editor.IsDrawToolActive = true;
         editor.SelectedPaletteTile = editor.PaletteTiles[0];
 
         editor.BeginStroke(1, 1);
         editor.EndStroke();
 
-        Assert.True(viewModel.Editor.HasUnsavedChanges);
+        Assert.True(viewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
     public void ToolBarButtonTogglesTheDrawToolAndShowsItsState()
     {
         var viewModel = ProjectWithMap(3, 3);
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
 
@@ -109,11 +108,11 @@ public class MapDrawToolTests : IDisposable
         Assert.True(button.IsEnabled);
         Assert.False(button.IsChecked);
 
-        viewModel.MapEditor.IsDrawToolActive = true;
+        viewModel.MapEditor().IsDrawToolActive = true;
         Assert.True(button.IsChecked);
 
         button.IsChecked = false;
-        Assert.False(viewModel.MapEditor.IsDrawToolActive);
+        Assert.False(viewModel.MapEditor().IsDrawToolActive);
         window.Close();
     }
 
@@ -121,10 +120,9 @@ public class MapDrawToolTests : IDisposable
     public void DraggingOnTheCanvasPaintsCellsAndRightDragDoesNot()
     {
         var viewModel = ProjectWithMap(4, 4);
-        var editor = viewModel.MapEditor;
+        var editor = viewModel.MapEditor();
         editor.IsDrawToolActive = true;
         editor.SelectedPaletteTile = editor.PaletteTiles[1];
-        viewModel.SelectedTabIndex = MainViewModel.MapsTabIndex;
         var window = new MainWindow { DataContext = viewModel, Width = 1000, Height = 600 };
         window.Show();
         var content = window.GetVisualDescendants().OfType<MapEditorView>().Single().FindControl<Control>("MapCanvasContent")!;
@@ -133,15 +131,15 @@ public class MapDrawToolTests : IDisposable
         window.MouseDown(InWindow(8, 8), MouseButton.Right);
         window.MouseMove(InWindow(40, 8));
         window.MouseUp(InWindow(40, 8), MouseButton.Right);
-        Assert.All(editor.SelectedMap!.Cells, Assert.Null);
+        Assert.All(editor.Map!.Cells, Assert.Null);
 
         window.MouseDown(InWindow(8, 8), MouseButton.Left);
         window.MouseMove(InWindow(56, 40));
         window.MouseUp(InWindow(56, 40), MouseButton.Left);
 
-        Assert.Equal("forest_0002", editor.SelectedMap[0, 0]);
-        Assert.Equal("forest_0002", editor.SelectedMap[3, 2]);
-        Assert.True(editor.SelectedMap.Cells.Count(cell => cell is not null) >= 4);
+        Assert.Equal("forest_0002", editor.Map[0, 0]);
+        Assert.Equal("forest_0002", editor.Map[3, 2]);
+        Assert.True(editor.Map.Cells.Count(cell => cell is not null) >= 4);
         window.Close();
     }
 
@@ -156,7 +154,7 @@ public class MapDrawToolTests : IDisposable
             File.WriteAllBytes(path, data.ToArray());
         }
         viewModel.LoadTileset(path, 16, 16);
-        viewModel.MapEditor.CreateMap("level1", width, height, "forest");
+        viewModel.CreateMap("level1", width, height, "forest");
         return viewModel;
     }
 }
