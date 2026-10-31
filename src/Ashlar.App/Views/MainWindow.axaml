@@ -132,11 +132,18 @@
         <DockPanel>
             <TabStrip x:Name="EditorTabs" DockPanel.Dock="Top" ItemsSource="{Binding OpenTabs}" SelectedItem="{Binding ActiveTab}"
                       IsVisible="{Binding HasOpenTabs}">
+                <TabStrip.Styles>
+                    <Style Selector="TabStripItem">
+                        <Setter Property="MinHeight" Value="26" />
+                        <Setter Property="Padding" Value="8,0" />
+                        <Setter Property="FontSize" Value="13" />
+                    </Style>
+                </TabStrip.Styles>
                 <TabStrip.ItemTemplate>
                     <DataTemplate x:DataType="vm:EditorTabViewModel">
-                        <StackPanel Orientation="Horizontal" Spacing="6" Background="Transparent" PointerReleased="OnTabHeaderPointerReleased">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" PointerReleased="OnTabHeaderPointerReleased">
                             <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                            <Button Content="x" Padding="4,0" MinHeight="0" MinWidth="0" Background="Transparent" Click="OnTabCloseClick"
+                            <Button Content="x" Padding="4,0" FontSize="12" MinHeight="0" MinWidth="0" Background="Transparent" Click="OnTabCloseClick"
                                     ToolTip.Tip="Close tab" />
                         </StackPanel>
                     </DataTemplate>
