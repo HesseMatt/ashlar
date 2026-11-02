@@ -74,7 +74,7 @@ public partial class MainViewModel
         }
 
         var map = _maps[index];
-        _maps[index] = new TileMap(newName, map.TilesetName, map.Width, map.Height, map.Cells);
+        _maps[index] = new TileMap(newName, map.TilesetName, map.Width, map.Height, map.Cells, map.BackgroundColor);
         MapsGroup.Children[index].Name = newName;
         if (FindTab<MapEditorViewModel>(name) is { } editor)
             editor.Rename(newName);

@@ -178,6 +178,10 @@
         <Setter Property="AccentFillBrush" Value="{DynamicResource AccentFillBrush}" />
     </Style>
 
+    <Style Selector="controls|TileGridOverlay.onDarkBackground">
+        <Setter Property="GridBrush" Value="White" />
+    </Style>
+
     <Style Selector="controls|TransparencyCheckerboard">
         <Setter Property="LightBrush" Value="{DynamicResource CheckerLightBrush}" />
         <Setter Property="DarkBrush" Value="{DynamicResource CheckerDarkBrush}" />

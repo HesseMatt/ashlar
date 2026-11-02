@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Avalonia.LogicalTree;
@@ -143,6 +144,22 @@ public partial class MainWindow : Window
         }
 
         viewModel.ResizeMap(name, size.Width, size.Height);
+    }
+
+    private async void OnBackgroundColorClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel { ActiveMap: { } editor })
+            return;
+
+        var current = editor.Map.BackgroundColor is { } hex ? Color.Parse(hex) : (Color?)null;
+        if (await new BackgroundColorDialog(current).ShowDialog<Color?>(this) is { } color)
+            editor.SetBackgroundColor($"#{color.R:X2}{color.G:X2}{color.B:X2}");
+    }
+
+    private void OnUseCheckerboardClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel { ActiveMap: { } editor })
+            editor.SetBackgroundColor(null);
     }
 
     private async void OnDeleteSelectedMapClick(object? sender, RoutedEventArgs e)

@@ -60,4 +60,10 @@ public class TileMapTests
 
         Assert.Equal(new TileRegion?[] { floor, null }, regions);
     }
+
+    [Fact]
+    public void Constructor_RejectsABackgroundColorThatIsNotHex()
+    {
+        Assert.Throws<ArgumentException>(() => TileMap.CreateEmpty("m", "t", 1, 1).WithBackgroundColor("skyblue"));
+    }
 }

@@ -52,12 +52,14 @@
                                 <Panel.RenderTransform>
                                     <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}" />
                                 </Panel.RenderTransform>
-                                <controls:TransparencyCheckerboard ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
+                                <Border x:Name="MapBackground" Background="{Binding BackgroundBrush}" IsVisible="{Binding HasBackgroundColor}" />
+                                <controls:TransparencyCheckerboard x:Name="MapCheckerboard" IsVisible="{Binding !HasBackgroundColor}"
+                                                                   ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
                                                                    TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
                                 <controls:TileMapCanvas x:Name="MapCells" Image="{Binding TilesetImage}" CellRegions="{Binding CellRegions}"
                                                         MapWidth="{Binding Map.Width}"
                                                         TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}" />
-                                <controls:TileGridOverlay x:Name="MapGrid" ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
+                                <controls:TileGridOverlay x:Name="MapGrid" Classes.onDarkBackground="{Binding IsBackgroundDark}" ImageWidth="{Binding MapPixelWidth}" ImageHeight="{Binding MapPixelHeight}"
                                                           TileWidth="{Binding TileWidth}" TileHeight="{Binding TileHeight}"
                                                           SelectedTiles="{Binding SelectionOutlines}"
                                                           SelectionRectangle="{Binding SelectionRectangle}"

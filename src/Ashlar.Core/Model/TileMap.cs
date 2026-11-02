@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Ashlar.Core.Model;
 
 public class TileMap
@@ -14,22 +16,32 @@ public class TileMap
     // Row-major; null is an empty cell. Tiles are referenced by their stable name.
     public string?[] Cells { get; }
 
-    public TileMap(string name, string tilesetName, int width, int height, string?[] cells)
+    // "#RRGGBB" drawn behind the cells in the map editor; null shows the transparency checkerboard.
+    // A view setting that is saved with the project; exports ignore it.
+    public string? BackgroundColor { get; }
+
+    public TileMap(string name, string tilesetName, int width, int height, string?[] cells, string? backgroundColor = null)
     {
         if (width < 1 || height < 1)
             throw new ArgumentOutOfRangeException(nameof(width), "A map must be at least 1x1 cells.");
         if (cells.Length != width * height)
             throw new ArgumentException("The cell count does not match the map size.", nameof(cells));
+        if (backgroundColor is not null && !Regex.IsMatch(backgroundColor, "^#[0-9A-Fa-f]{6}$"))
+            throw new ArgumentException("The background color must look like #RRGGBB.", nameof(backgroundColor));
 
         Name = name;
         TilesetName = tilesetName;
         Width = width;
         Height = height;
         Cells = cells;
+        BackgroundColor = backgroundColor;
     }
 
     public static TileMap CreateEmpty(string name, string tilesetName, int width, int height) =>
         new(name, tilesetName, width, height, new string?[Math.Max(width, 0) * Math.Max(height, 0)]);
+
+    public TileMap WithBackgroundColor(string? backgroundColor) =>
+        new(Name, TilesetName, Width, Height, Cells, backgroundColor);
 
     public string? this[int x, int y]
     {
