@@ -56,6 +56,49 @@ public class ProjectFileTests
     }
 
     [Fact]
+    public void SaveThenLoad_RoundTripsTheMapBackgroundColor()
+    {
+        var project = new Project(
+            [CreateTileset("dungeon")],
+            [TileMap.CreateEmpty("sky", "dungeon", 2, 2).WithBackgroundColor("#87CEEB"), TileMap.CreateEmpty("plain", "dungeon", 2, 2)]);
+
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            ProjectFile.Save(project, filePath);
+            var loaded = ProjectFile.Load(filePath);
+
+            Assert.Equal("#87CEEB", loaded.Maps[0].BackgroundColor);
+            Assert.Null(loaded.Maps[1].BackgroundColor);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public void Load_ReadsMapsWithoutABackgroundColorAsCheckerboard()
+    {
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath,
+                """
+                {"Tilesets":[
+                  {"Name":"a","ImageFileName":"a.png","ImagePng":"AQID","TexturePath":"a","TileWidth":16,"TileHeight":16,"Tiles":[]}
+                ],"Maps":[{"Name":"m","TilesetName":"a","Width":1,"Height":1,"Cells":[null]}]}
+                """);
+
+            Assert.Null(ProjectFile.Load(filePath).Maps[0].BackgroundColor);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
     public void Load_RejectsDuplicateTilesetNames()
     {
         var filePath = Path.GetTempFileName();

@@ -23,7 +23,7 @@ public class MapStateTests
     {
         var state = new MapState(2, 1, ["forest_0001", null]);
 
-        var map = state.ToMap("level", "forest");
+        var map = state.ToMap("level", "forest", null);
         map[1, 0] = "forest_0003";
 
         Assert.Equal(("level", "forest"), (map.Name, map.TilesetName));

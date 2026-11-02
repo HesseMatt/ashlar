@@ -9,8 +9,8 @@ public record MapState(int Width, int Height, string?[] Cells)
     public static MapState Capture(TileMap map) => new(map.Width, map.Height, (string?[])map.Cells.Clone());
 
     // A new map every time, so restoring a state never shares cells with the history.
-    public TileMap ToMap(string name, string tilesetName) =>
-        new(name, tilesetName, Width, Height, (string?[])Cells.Clone());
+    public TileMap ToMap(string name, string tilesetName, string? backgroundColor) =>
+        new(name, tilesetName, Width, Height, (string?[])Cells.Clone(), backgroundColor);
 }
 
 // Selection is kept as cells because it is not part of the document.

@@ -71,6 +71,9 @@
                 <MenuItem Header="Zoom In" Click="OnZoomInClick" InputGesture="Ctrl+OemPlus" IsEnabled="{Binding HasOpenTabs}" />
                 <MenuItem Header="Zoom Out" Click="OnZoomOutClick" InputGesture="Ctrl+OemMinus" IsEnabled="{Binding HasOpenTabs}" />
                 <MenuItem Header="Reset Zoom" Click="OnResetZoomClick" InputGesture="Ctrl+D0" IsEnabled="{Binding HasOpenTabs}" />
+                <Separator />
+                <MenuItem Name="BackgroundColorMenuItem" Header="Background color..." Click="OnBackgroundColorClick" IsEnabled="{Binding IsMapTabActive}" />
+                <MenuItem Name="UseCheckerboardMenuItem" Header="Use checkerboard" Click="OnUseCheckerboardClick" IsEnabled="{Binding ActiveMap.HasBackgroundColor, FallbackValue=False}" />
             </MenuItem>
             <MenuItem Header="_Tileset">
                 <MenuItem Header="Add tileset..." Click="OnOpenTilesetClick" />

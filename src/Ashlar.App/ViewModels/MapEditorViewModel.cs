@@ -34,7 +34,7 @@ public partial class MapEditorViewModel : EditorTabViewModel
     // The current instance: undo, redo, resize and rename replace it, so the project reads it back from here.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MapPixelWidth), nameof(MapPixelHeight), nameof(ScaledMapWidth), nameof(ScaledMapHeight),
-        nameof(SelectedMapSizeText), nameof(SelectedMapTilesetText))]
+        nameof(SelectedMapSizeText), nameof(SelectedMapTilesetText), nameof(HasBackgroundColor), nameof(BackgroundBrush), nameof(IsBackgroundDark))]
     private TileMap _map;
 
     // The tileset image and tile size the map is drawn with; null/0 while its tileset is missing.
@@ -195,6 +195,25 @@ public partial class MapEditorViewModel : EditorTabViewModel
         OnPropertyChanged(nameof(MapPixelHeight));
         OnPropertyChanged(nameof(ScaledMapWidth));
         OnPropertyChanged(nameof(ScaledMapHeight));
+    }
+
+    public bool HasBackgroundColor => Map.BackgroundColor is not null;
+
+    public IBrush? BackgroundBrush => Map.BackgroundColor is { } color ? new SolidColorBrush(Color.Parse(color)) : null;
+
+    // Decides between a dark and a light grid so it stays visible on the background colour.
+    public bool IsBackgroundDark =>
+        Map.BackgroundColor is { } color && Color.Parse(color) is var c && (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255 < 0.5;
+
+    // A view setting rather than an edit: it marks the project as changed but is not part of the undo history.
+    public void SetBackgroundColor(string? color)
+    {
+        if (color == Map.BackgroundColor)
+            return;
+
+        Map = Map.WithBackgroundColor(color);
+        StatusMessage = color is null ? "Using the checkerboard background." : $"Set the background color to {color}.";
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public string SelectedMapSizeText => $"{Map.Width} x {Map.Height} cells";
@@ -410,12 +429,12 @@ public partial class MapEditorViewModel : EditorTabViewModel
     public void Rename(string newName)
     {
         Title = newName;
-        Adopt(new TileMap(newName, Map.TilesetName, Map.Width, Map.Height, Map.Cells));
+        Adopt(new TileMap(newName, Map.TilesetName, Map.Width, Map.Height, Map.Cells, Map.BackgroundColor));
     }
 
     // Keeps the map pointing at an existing tileset when that tileset is renamed.
     public void RenameTileset(string newName) =>
-        Adopt(new TileMap(Map.Name, newName, Map.Width, Map.Height, Map.Cells));
+        Adopt(new TileMap(Map.Name, newName, Map.Width, Map.Height, Map.Cells, Map.BackgroundColor));
 
     public int CountTilesLostByResize(int width, int height) => MapResizer.CountLostTiles(Map, width, height);
 
@@ -472,7 +491,7 @@ public partial class MapEditorViewModel : EditorTabViewModel
     // change, because Changed marks the project as unsaved.
     private void Restore(MapState state, IReadOnlyList<(int X, int Y)> selection)
     {
-        Adopt(state.ToMap(Map.Name, Map.TilesetName));
+        Adopt(state.ToMap(Map.Name, Map.TilesetName, Map.BackgroundColor));
         SelectedCells = selection.Where(cell => cell.X < state.Width && cell.Y < state.Height).ToList();
         UpdateHistoryState();
         Changed?.Invoke(this, EventArgs.Empty);

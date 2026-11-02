@@ -31,6 +31,20 @@ public class TileMapImageRendererTests
     }
 
     [Fact]
+    public void Render_KeepsEmptyCellsTransparentWhateverTheBackgroundColor()
+    {
+        var (tilesetImage, tiles) = CreateTileset();
+        using var _ = tilesetImage;
+        var map = TileMap.CreateEmpty("m", "t", 2, 1).WithBackgroundColor("#87CEEB");
+        map[0, 0] = "red";
+
+        using var image = TileMapImageRenderer.Render(map, tiles, tilesetImage, 2, 2);
+
+        Assert.Equal(Red, PixelAt(image, 0, 0));
+        Assert.Equal(0, PixelAt(image, 2, 0).A);
+    }
+
+    [Fact]
     public void Render_SizesTheImageByCellsTimesTileSize()
     {
         var (tilesetImage, tiles) = CreateTileset();
